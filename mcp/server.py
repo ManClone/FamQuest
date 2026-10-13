@@ -7,6 +7,7 @@ import base64
 import html
 import os
 import sqlite3
+from urllib.parse import urlsplit
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -133,6 +134,11 @@ async def parent_review(request):
 
 
 async def parent_decide(request):
+    # Browser Basic authentication is ambient: reject cross-site form submissions.
+    origin = request.headers.get("origin", "")
+    host = request.headers.get("host", "")
+    if not origin or urlsplit(origin).netloc != host or urlsplit(origin).scheme not in ("http", "https"):
+        return PlainTextResponse("Origin check failed", status_code=403)
     proposal_id = int(request.path_params["proposal_id"])
     decision = request.path_params["decision"]
     if decision not in ("approved", "rejected"):
