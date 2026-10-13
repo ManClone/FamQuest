@@ -102,3 +102,21 @@ def test_weekly_allowance_rejects_invalid_period_and_amount(client, parent, lena
             post_weekly_allowance(db, lena, -100, dt.date(2026, 10, 5))
         with pytest.raises(ValueError):
             post_weekly_allowance(db, lena, 500, dt.date(2026, 10, 6))
+
+
+def test_money_overview_is_parent_only_and_separates_balances(client, admin, parent, lena, now):
+    from app.money import book_money
+
+    with Session(engine) as db:
+        book_money(db, lena, 500, "allowance", "weekly:2026-10-05")
+        book_money(db, lena, 125, "task_completed", "Bonusquest")
+        db.commit()
+
+    response = client.get(f"/api/members/{lena}/money")
+    assert response.status_code == 200
+    assert response.json() == {
+        "member_id": lena,
+        "allowance_cents": 500,
+        "bonus_cents": 125,
+        "total_cents": 625,
+    }
