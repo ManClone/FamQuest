@@ -346,6 +346,8 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
     if any(chore.assignment_mode == "fixed" and chore.fixed_member_id not in adult_ids
            for chore in due):
         raise ApiError(status.HTTP_409_CONFLICT, "chore.fixed_member_required")
+    if not adult_ids:
+        return WeeklyPreviewOut(week_start=week_start, assignments=[])
     since = today - dt.timedelta(days=29)
     history = db.execute(
         select(ChoreCompletion.member_id, Chore.estimated_minutes)
