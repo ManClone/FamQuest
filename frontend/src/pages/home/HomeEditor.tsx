@@ -96,7 +96,9 @@ export function HomeEditor({
       tiles: tiles.map((tile) => (tile.id === id ? { ...tile, visible: !tile.visible } : tile)),
     })
   // In der Reihenfolge, in der die Bereiche auf der Seite stehen.
-  const ordered = [...tiles].sort((a, b) => TILE_IDS.indexOf(a.id) - TILE_IDS.indexOf(b.id))
+  const ordered = tiles
+    .filter((tile) => tile.id !== 'shopping' && tile.id !== 'events')
+    .sort((a, b) => TILE_IDS.indexOf(a.id) - TILE_IDS.indexOf(b.id))
 
   return (
     <section
@@ -112,7 +114,7 @@ export function HomeEditor({
           Vorschau darunter sichtbar bleibt. */}
       <ol
         className="grid grid-cols-1 gap-2 lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-(--editor-rows)"
-        style={{ '--editor-rows': `repeat(${Math.ceil(tiles.length / 2)}, auto)` } as CSSProperties}
+        style={{ '--editor-rows': `repeat(${Math.ceil(ordered.length / 2)}, auto)` } as CSSProperties}
       >
         {ordered.map((tile) => {
           const { title, icon: Icon } = TILES[tile.id]
