@@ -12,6 +12,7 @@ import {
   updateChore,
   useChoresMutation,
   useApproveChoreCredit,
+  useWeeklyChorePreview,
 } from '../../api/chores'
 import { useMembers } from '../../api/members'
 import { LEVEL_COLORS, byUrgency, intervalText, statusText } from '../../chores'
@@ -43,6 +44,8 @@ export function ChoresSection({
   const members = useMembers()
   const adults = (members.data ?? []).filter((member) => member.role === 'parent')
   const approve = useApproveChoreCredit()
+  const [showWeeklyPreview, setShowWeeklyPreview] = useState(false)
+  const weeklyPreview = useWeeklyChorePreview(showWeeklyPreview)
   const [selectedMembers, setSelectedMembers] = useState<Record<number, number>>({})
   const toggleActive = useChoresMutation((chore: Chore) =>
     updateChore(chore.id, { ...choreData(chore), active: !chore.active }),
@@ -68,6 +71,62 @@ export function ChoresSection({
             {t('chores.add_room')}
           </Button>
         </div>
+      </Section>
+
+      <Section title="Wochenverteilung für Erwachsene">
+        <p className="text-base text-slate-600">
+          Unverbindlicher Vorschlag für die laufende Woche. Feste Aufgaben bleiben zugeordnet;
+          andere werden nach geschätzter Arbeitszeit verteilt. Es wird nichts automatisch geändert.
+        </p>
+        <div className="mt-3">
+          <Button
+            variant="secondary"
+            onClick={() => setShowWeeklyPreview((previous) => !previous)}
+            disabled={plan === undefined}
+          >
+            {showWeeklyPreview ? 'Vorschau ausblenden' : 'Wochenvorschlag anzeigen'}
+          </Button>
+        </div>
+        {showWeeklyPreview && (
+          <div className="mt-4">
+            {weeklyPreview.isPending && <p>Wochenvorschlag wird geladen …</p>}
+            {weeklyPreview.isError && <Alert>{errorMessage(t, weeklyPreview.error)}</Alert>}
+            {weeklyPreview.data && (
+              <>
+                <p className="font-semibold text-slate-700">
+                  Woche ab {weeklyPreview.data.week_start}
+                </p>
+                {weeklyPreview.data.assignments.length === 0 ? (
+                  <p className="mt-2 text-slate-600">Keine Aufgaben für diese Woche vorgeschlagen.</p>
+                ) : (
+                  <ul className="mt-3 flex flex-col gap-3">
+                    {weeklyPreview.data.assignments.map((assignment) => {
+                      const chore = plan?.chores.find((item) => item.id === assignment.chore_id)
+                      const member = adults.find((item) => item.id === assignment.member_id)
+                      return (
+                        <li
+                          key={assignment.chore_id}
+                          className="rounded-xl border border-slate-200 p-3"
+                        >
+                          <span className="font-bold text-slate-800">
+                            {chore?.title ?? `Aufgabe #${assignment.chore_id}`}
+                          </span>
+                          <span className="ml-2 text-slate-600">
+                            → {member?.name ?? `Person #${assignment.member_id}`}
+                          </span>
+                          <p className="text-sm text-slate-600">
+                            {assignment.estimated_minutes} Minuten · {assignment.adult_xp} XP
+                            {chore?.assignment_mode === 'fixed' ? ' · Fest zugeordnet' : ''}
+                          </p>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </Section>
 
       {rooms.map((room) => {
