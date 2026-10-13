@@ -584,6 +584,13 @@ class Chore(Base):
     icon: Mapped[str] = mapped_column(String(100))
     # So viele Tage nach der letzten Erledigung ist sie wieder fällig.
     interval_days: Mapped[int] = mapped_column(SmallInteger)
+    # Metadaten für Erwachsenen-Aufgaben; XP werden noch nicht automatisch gebucht.
+    estimated_minutes: Mapped[int] = mapped_column(SmallInteger, default=15, server_default="15")
+    adult_xp: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    assignment_mode: Mapped[str] = mapped_column(String(12), default="flexible", server_default="flexible")
+    fixed_member_id: Mapped[int | None] = mapped_column(
+        ForeignKey("family_members.id", ondelete="SET NULL"), nullable=True
+    )
     # Gilt als letzte Erledigung, solange es keine echte gibt (Stand beim Anlegen).
     anchor_date: Mapped[dt.date] = mapped_column(Date)
     # Pausierte Aufgaben bleiben gespeichert, erscheinen aber nicht im Putzplan.
