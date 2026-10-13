@@ -7,7 +7,6 @@ import PhotoIcon from '~icons/fluent-emoji-flat/framed-picture'
 import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 import HouseIcon from '~icons/fluent-emoji-flat/house-with-garden'
-import MealIcon from '~icons/fluent-emoji-flat/fork-and-knife-with-plate'
 
 import { usePhotos } from '../api/photos'
 import { useToday } from '../api/today'
@@ -90,12 +89,6 @@ export function AppShell() {
           label={t('nav.rewards')}
           icon={GiftIcon}
           active={pathname.startsWith('/rewards')}
-        />
-        <NavItem
-          to="/meals"
-          label={t('nav.meals')}
-          icon={MealIcon}
-          active={pathname.startsWith('/meals')}
         />
         <NavItem
           to="/household"
