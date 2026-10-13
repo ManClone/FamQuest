@@ -131,3 +131,23 @@ def test_uncredited_chore_can_be_undone_without_parent_unlock(client, parent, no
     response = client.delete(f"/api/chores/{item['id']}/done", headers=csrf(parent))
     assert response.status_code == 200, response.text
     assert response.json()["done_today"] is False
+
+
+def test_legacy_update_validates_fixed_member_changes(client, parent, now):
+    flo = parent_member(client, parent, "Flo", color="blue")
+    from tests.test_tasks import add_member
+    child = add_member(client, parent, name="Tim", color="purple")
+    room = add_room(client, parent)
+    item = add_chore(
+        client, parent, room["id"], assignment_mode="fixed", fixed_member_id=flo,
+    )
+    original = client.get("/api/chores").json()["chores"][0]
+    payload = {
+        "room_id": room["id"], "title": original["title"], "icon": original["icon"],
+        "interval_days": original["interval_days"], "active": True,
+        "fixed_member_id": child,
+    }
+    response = client.put(f"/api/chores/{item['id']}", json=payload, headers=csrf(parent))
+    assert response.status_code == 422, response.text
+    saved = client.get("/api/chores").json()["chores"][0]
+    assert saved["fixed_member_id"] == flo
