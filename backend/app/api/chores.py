@@ -59,6 +59,7 @@ class ChoreOut(BaseModel):
     adult_xp: int
     assignment_mode: Literal["fixed", "rotate", "flexible"]
     fixed_member_id: int | None
+    weekly_member_id: int | None = None
     # Letzte echte Erledigung; None = seit dem Anlegen noch nie.
     last_done: dt.date | None
     done_today: bool
@@ -186,7 +187,7 @@ def _counted_from(chore: Chore, last: ChoreCompletion | None) -> dt.date:
     return max(last.date, chore.anchor_date) if last else chore.anchor_date
 
 
-def _chore_out(chore: Chore, last: ChoreCompletion | None, today: dt.date) -> ChoreOut:
+def _chore_out(chore: Chore, last: ChoreCompletion | None, today: dt.date, weekly_member_id: int | None = None) -> ChoreOut:
     counted_from = _counted_from(chore, last)
     state = chore_state(counted_from, chore.interval_days, today)
     return ChoreOut(
@@ -200,6 +201,7 @@ def _chore_out(chore: Chore, last: ChoreCompletion | None, today: dt.date) -> Ch
         adult_xp=chore.adult_xp,
         assignment_mode=chore.assignment_mode,
         fixed_member_id=chore.fixed_member_id,
+        weekly_member_id=weekly_member_id,
         last_done=last.date if last else None,
         done_today=last is not None and last.date >= today,
         done_by=last.member_id if last else None,
@@ -262,7 +264,11 @@ def _reverse_chore_credits(db: DbSession, completions: list[ChoreCompletion], ti
 
 
 def _one_out(db: DbSession, chore: Chore) -> ChoreOut:
-    return _chore_out(chore, _last_completions(db, [chore.id]).get(chore.id), _today(db))
+    today = _today(db)
+    week_start = today - dt.timedelta(days=today.weekday())
+    assignment = db.get(WeeklyChoreAssignment, (week_start, chore.id))
+    return _chore_out(chore, _last_completions(db, [chore.id]).get(chore.id), today,
+                      assignment.member_id if assignment else None)
 
 
 def _anchor(state: StartState, interval_days: int, today: dt.date) -> dt.date:
@@ -290,10 +296,13 @@ def list_chores(_: CurrentSession, db: DbSession) -> ChoresOut:
     rooms = db.scalars(select(ChoreRoom).order_by(ChoreRoom.position, ChoreRoom.id))
     chores = list(db.scalars(select(Chore).order_by(Chore.id)))
     last = _last_completions(db, [chore.id for chore in chores])
+    week_start = today - dt.timedelta(days=today.weekday())
+    weekly = dict(db.execute(select(WeeklyChoreAssignment.chore_id, WeeklyChoreAssignment.member_id)
+                             .where(WeeklyChoreAssignment.week_start == week_start)))
     return ChoresOut(
         date=today,
         rooms=[_room_out(room) for room in rooms],
-        chores=[_chore_out(chore, last.get(chore.id), today) for chore in chores],
+        chores=[_chore_out(chore, last.get(chore.id), today, weekly.get(chore.id)) for chore in chores],
         todos=[todo_out(todo) for todo in visible_todos(db, today)],
         share_days=SHARE_DAYS,
         shares=_shares(db, today),
