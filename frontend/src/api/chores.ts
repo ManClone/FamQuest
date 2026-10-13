@@ -237,3 +237,21 @@ export function useWeeklyChorePreview(enabled: boolean) {
     staleTime: 60 * 1000,
   })
 }
+
+export const WEEKLY_CONFIRMED_KEY = ['chores', 'weekly-confirmed'] as const
+
+export function useConfirmedWeeklyChores(enabled: boolean) {
+  return useQuery({
+    queryKey: WEEKLY_CONFIRMED_KEY,
+    queryFn: () => apiGet<WeeklyChorePreview>('/chores/weekly-confirmed'),
+    enabled,
+  })
+}
+
+export function usePublishWeeklyChores() {
+  return useParentMutation(
+    (assignments: WeeklyChorePreview['assignments']) =>
+      api<WeeklyChorePreview>('POST', '/chores/weekly-confirmed', { assignments }),
+    [WEEKLY_CONFIRMED_KEY, WEEKLY_CHORE_PREVIEW_KEY],
+  )
+}
