@@ -53,6 +53,10 @@ class ChoreOut(BaseModel):
     icon: str
     interval_days: int
     active: bool
+    estimated_minutes: int
+    adult_xp: int
+    assignment_mode: Literal["fixed", "rotate", "flexible"]
+    fixed_member_id: int | None
     # Letzte echte Erledigung; None = seit dem Anlegen noch nie.
     last_done: dt.date | None
     done_today: bool
@@ -99,6 +103,10 @@ class ChoreIn(BaseModel):
     icon: IconName
     interval_days: IntervalDays
     active: bool = True
+    estimated_minutes: int = Field(default=15, ge=1, le=1440)
+    adult_xp: int = Field(default=0, ge=0, le=1000)
+    assignment_mode: Literal["fixed", "rotate", "flexible"] = "flexible"
+    fixed_member_id: int | None = None
     # „Zuletzt erledigt“ von Hand, z. B. Fenster vor zehn Wochen geputzt; None = nicht anfassen.
     counted_from: dt.date | None = None
 
@@ -147,6 +155,15 @@ def _get_room(db: DbSession, room_id: int) -> ChoreRoom:
     return room
 
 
+def _validate_assignment(db: DbSession, body: ChoreIn) -> None:
+    if body.assignment_mode == "fixed" and body.fixed_member_id is None:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.fixed_member_required")
+    if body.fixed_member_id is not None:
+        member = get_member(db, body.fixed_member_id)
+        if member.role != "parent":
+            raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.parent_required")
+
+
 def _get_chore(db: DbSession, chore_id: int) -> Chore:
     chore = db.get(Chore, chore_id)
     if chore is None:
@@ -177,6 +194,10 @@ def _chore_out(chore: Chore, last: ChoreCompletion | None, today: dt.date) -> Ch
         icon=chore.icon,
         interval_days=chore.interval_days,
         active=chore.active,
+        estimated_minutes=chore.estimated_minutes,
+        adult_xp=chore.adult_xp,
+        assignment_mode=chore.assignment_mode,
+        fixed_member_id=chore.fixed_member_id,
         last_done=last.date if last else None,
         done_today=last is not None and last.date >= today,
         done_by=last.member_id if last else None,
@@ -267,6 +288,7 @@ def list_chores(_: CurrentSession, db: DbSession) -> ChoresOut:
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_chore(body: ChoreCreateIn, _: ParentSession, db: DbSession) -> ChoreOut:
     _get_room(db, body.room_id)
+    _validate_assignment(db, body)
     today = _today(db)
     _check_counted_from(body.counted_from, today)
     chore = Chore(
@@ -275,6 +297,10 @@ def create_chore(body: ChoreCreateIn, _: ParentSession, db: DbSession) -> ChoreO
         icon=body.icon,
         interval_days=body.interval_days,
         active=body.active,
+        estimated_minutes=body.estimated_minutes,
+        adult_xp=body.adult_xp,
+        assignment_mode=body.assignment_mode,
+        fixed_member_id=body.fixed_member_id if body.assignment_mode == "fixed" else None,
         anchor_date=body.counted_from or _anchor(body.state, body.interval_days, today),
     )
     db.add(chore)
@@ -366,6 +392,7 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
     """
     chore = _get_chore(db, chore_id)
     _get_room(db, body.room_id)
+    _validate_assignment(db, body)
     last = _last_completions(db, [chore.id]).get(chore.id)
     # Nur ein geänderter Tag greift ein, damit ein unverändert mitgeschickter nichts löscht.
     if body.counted_from is not None and body.counted_from != _counted_from(chore, last):
@@ -378,6 +405,9 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
         )
     chore.room_id, chore.title, chore.icon = body.room_id, body.title, body.icon
     chore.interval_days, chore.active = body.interval_days, body.active
+    chore.estimated_minutes, chore.adult_xp = body.estimated_minutes, body.adult_xp
+    chore.assignment_mode = body.assignment_mode
+    chore.fixed_member_id = body.fixed_member_id if body.assignment_mode == "fixed" else None
     db.commit()
     return _one_out(db, chore)
 
