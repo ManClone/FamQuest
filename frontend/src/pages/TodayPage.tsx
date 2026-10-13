@@ -7,7 +7,6 @@ import {
   DEFAULT_LAYOUT,
   type HomeLayout,
   type TileId,
-  type WeekMode,
   useHomeLayout,
   useSaveHomeLayout,
   visibleTiles,
@@ -21,12 +20,10 @@ import { ChoresWidget } from './home/ChoresWidget'
 import { HomeEditor, PinDialog } from './home/HomeEditor'
 import { RoutineWidget } from './home/RoutineWidget'
 import { WeatherBadge } from './home/WeatherBadge'
-import { WeekBoard } from './home/WeekBoard'
 
 /**
  * Startseite „Heute“ als Wochen-Dashboard: im Kopf Datum, Wetter und Uhr; darunter die aktuelle
- * Routine der Kinder, der Haushalt und der Einkauf; unten über die ganze Breite die nächsten sieben Tage mit
- * Terminen und Essen. Welche Bereiche sichtbar sind, legen die Eltern über das Zahnrad fest.
+ * Routine der Kinder und der Haushalt. Welche Bereiche sichtbar sind, legen die Eltern über das Zahnrad fest.
  */
 export function TodayPage() {
   const { t, i18n } = useTranslation()
@@ -51,8 +48,7 @@ export function TodayPage() {
   }
 
   return (
-    // Am großen Display genau eine Bildschirmhöhe: Die Woche füllt den Rest, das Essen bleibt
-    // unten sichtbar und nur die Termine scrollen. Beim Bearbeiten darf die Seite scrollen.
+    // Aufgeräumtes Dashboard ohne Kalender, Essen oder Einkauf.
     <main
       className={`flex flex-1 flex-col gap-4 p-4 sm:p-6 ${draft ? '' : 'lg:max-h-dvh lg:overflow-y-auto'}`}
     >
@@ -82,7 +78,7 @@ export function TodayPage() {
         <PinDialog onUnlocked={startEditing} onCancel={() => setEditing(null)} />
       )}
       {draft && <EditMode draft={draft} onChange={setEditing} onClose={() => setEditing(null)} />}
-      <Sections shown={shown} week={current.week} today={today?.date} />
+      <Sections shown={shown} />
     </main>
   )
 }
@@ -127,20 +123,11 @@ const TOP_TILES = ['tasks', 'chores'] as const
 /** Spalten der oberen Reihe: Die Routine der Kinder ist doppelt so breit wie die anderen Kacheln. */
 const TOP_COLUMNS: Record<string, string> = {
   'tasks-2': 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
-  'tasks-3': 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]',
   'other-2': 'lg:grid-cols-2',
 }
 
-/** Routine, Haushalt und Einkauf nebeneinander, darunter die Woche. */
-function Sections({
-  shown,
-  week,
-  today,
-}: {
-  shown: Set<TileId>
-  week: WeekMode
-  today: string | undefined
-}) {
+/** Aufgaben und Haushalt nebeneinander. */
+function Sections({ shown }: { shown: Set<TileId> }) {
   const top = TOP_TILES.filter((id) => shown.has(id))
   const columns = TOP_COLUMNS[`${shown.has('tasks') ? 'tasks' : 'other'}-${top.length}`] ?? ''
   return (
@@ -150,14 +137,6 @@ function Sections({
           {shown.has('tasks') && <RoutineWidget />}
           {shown.has('chores') && <ChoresWidget />}
         </div>
-      )}
-      {today && shown.has('meals') && (
-        <WeekBoard
-          today={today}
-          mode={week}
-          showEvents={false}
-          showMeals={shown.has('meals')}
-        />
       )}
     </>
   )
