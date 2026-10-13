@@ -63,3 +63,29 @@ Nicht wieder einbauen: Kalenderansicht, Kalenderintegration (auch nicht über Ho
 - Welche Bonuskorrekturen Eltern durchführen dürfen und wie sie dem Kind angezeigt werden.
 
 Diese offenen Punkte dürfen nicht durch willkürliche Standardbeträge oder automatische Zahlungen vorweggenommen werden.
+
+
+## Technische Bestandsaufnahme (13.10.2026)
+
+Untersucht auf `develop`:
+
+| Bereich | Bestehende Implementierung | Konsequenz |
+| --- | --- | --- |
+| Euro-Ledger | `backend/app/models.py: MoneyTransaction` mit `member_id`, `amount_cents`, `kind`, `reason`, `completion_id`, `created_at` | Wiederverwenden und gezielt erweitern, kein zweites Ledger |
+| Geldbuchung | `backend/app/money.py: book_money`, `money_balance` | Derzeit ein gemeinsamer Saldo über alle Buchungsarten; Grundtaschengeld und Bonus getrennt ausweisen |
+| Quest-Bonus | `Task.money_cents`, `TaskCompletion.money_cents`, `TaskIn.money_cents` | Bonusbetrag ist schon als Centwert vorgesehen und bei Erledigung gespeichert |
+| Quest-Erledigung | `backend/app/api/today.py` bucht nach unmittelbarer Genehmigung `task_completed` und bei Rücknahme `task_undone` | Gegenbuchungen existieren bereits; auf Idempotenz und Genehmigungswege testen |
+| Punkte | `PointTransaction`, `backend/app/points.py`, `backend/app/api/points.py` | Eigenständiges Punktesystem beibehalten |
+| Belohnungen | `Reward`, `RewardRedemption`, `backend/app/api/rewards.py` | Bisher punktebasierte Belohnungen nicht mit Euro-Auszahlungen vermischen |
+| Grundtaschengeld | In den bisher untersuchten Modellen/API-Routen keine eigenständige Grundtaschengeldverwaltung festgestellt | Vor Implementierung verbleibende API-Routen, Migrationen und Tests prüfen |
+
+### Vor dem ersten Geld-Feature-Commit absichern
+
+1. Sämtliche Genehmigungs-/Ablehnungswege nach `book_money` und `money_cents` durchsuchen; Bonus bei späterer Elternfreigabe genau einmal buchen.
+2. Sicherstellen, dass mehrfaches Erledigen, Bestätigen oder Rückgängigmachen keine Doppelbuchung erzeugt.
+3. Geldbuchungsarten streng unterscheiden; `money_balance` nicht als vermeintliches Grundtaschengeld anzeigen.
+4. Grundtaschengeld separat fällig stellen und mit stabiler Periodenkennung idempotent buchen.
+5. Für Auszahlungen und Korrekturen Berechtigungen, negative Salden und Audit-Trail testen.
+6. Bestehende Migrationen auf `money_transactions` prüfen, bevor Constraints oder Spalten geändert werden.
+
+**Wichtig:** Diese Bestandsaufnahme ist noch kein Nachweis, dass sämtliche Genehmigungswege und Geldbuchungen vollständig korrekt sind. Sie begründet die nächste gezielte Prüfung, nicht die Freigabe für ein Deployment.
