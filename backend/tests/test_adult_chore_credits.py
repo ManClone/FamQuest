@@ -7,9 +7,9 @@ from tests.conftest import csrf
 from tests.test_chores import add_chore, add_room, done
 
 
-def parent_member(client, parent, name):
+def parent_member(client, parent, name, color="blue"):
     response = client.post("/api/members", json={
-        "name": name, "role": "parent", "color": "blue",
+        "name": name, "role": "parent", "color": color,
     }, headers=csrf(parent))
     assert response.status_code == 201, response.text
     return response.json()["id"]
@@ -51,7 +51,7 @@ def test_repeated_approval_and_undo(client, parent, now):
 
 def test_transfer_requires_approval(client, parent, now):
     flo = parent_member(client, parent, "Flo")
-    viola = parent_member(client, parent, "Viola")
+    viola = parent_member(client, parent, "Viola", color="rose")
     room = add_room(client, parent)
     item = add_chore(client, parent, room["id"], adult_xp=15)
     done(client, parent, item["id"], flo)
