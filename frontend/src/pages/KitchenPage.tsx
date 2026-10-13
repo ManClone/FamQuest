@@ -16,9 +16,7 @@ import { RoutineWidget } from './home/RoutineWidget'
 import { WeatherBadge } from './home/WeatherBadge'
 
 export const KITCHEN_PATH = '/kitchen'
-export const KITCHEN_DAYS = 7
 
-/** So viele Tage zeigt die Küchenansicht ab heute; heute ist doppelt so breit. */
 /** Nach so langer Ruhe zeigt die Ansicht wieder die Woche bzw. nachts wieder den Nachtbildschirm. */
 export const KITCHEN_IDLE_MS = 2 * 60 * 1000
 
