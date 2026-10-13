@@ -12,6 +12,7 @@ REPO_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=REPO_ROOT_ENV, extra="ignore")
 
+    quest_import_token: str = ""
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "famquest"
