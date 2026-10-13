@@ -215,3 +215,25 @@ export function useChoresMutation<TVariables, TResult>(
 ) {
   return useParentMutation(request, [CHORES_KEY])
 }
+
+/** Read-only weekly household assignment suggestions; never persists assignments. */
+export interface WeeklyChorePreview {
+  week_start: string
+  assignments: {
+    chore_id: number
+    member_id: number
+    estimated_minutes: number
+    adult_xp: number
+  }[]
+}
+
+export const WEEKLY_CHORE_PREVIEW_KEY = ['chores', 'weekly-preview'] as const
+
+export function useWeeklyChorePreview(enabled: boolean) {
+  return useQuery({
+    queryKey: WEEKLY_CHORE_PREVIEW_KEY,
+    queryFn: () => apiGet<WeeklyChorePreview>('/chores/weekly-preview'),
+    enabled,
+    staleTime: 60 * 1000,
+  })
+}
