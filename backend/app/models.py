@@ -632,3 +632,11 @@ class Todo(Base):
         ForeignKey("family_members.id", ondelete="SET NULL"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class QuestImport(Base):
+    """Idempotent record of an imported parent-approved quest."""
+    __tablename__ = "quest_imports"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    external_id: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), unique=True, nullable=False)
