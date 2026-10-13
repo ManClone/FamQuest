@@ -64,3 +64,41 @@ def test_bonus_and_unconditional_allowance_are_separate(client, parent, lena, no
         assert allowance_balance(db, lena) == 500
         assert bonus_balance(db, lena) == 0
         assert money_balance(db, lena) == 500
+
+
+def test_weekly_allowance_is_unconditional_and_idempotent(client, parent, lena, now):
+    import datetime as dt
+
+    from app.money import allowance_balance, post_weekly_allowance
+
+    monday = dt.date(2026, 10, 5)
+    with Session(engine) as db:
+        assert post_weekly_allowance(db, lena, 500, monday) is True
+        assert post_weekly_allowance(db, lena, 500, monday) is False
+        db.commit()
+        assert allowance_balance(db, lena) == 500
+
+    # Quest completion and reversal cannot change the fixed allowance.
+    task = add_task(client, parent, [lena], money_cents=125)
+    assert complete(client, parent, task, lena).status_code == 204
+    assert undo(client, parent, task, lena).status_code == 204
+    with Session(engine) as db:
+        assert allowance_balance(db, lena) == 500
+        assert post_weekly_allowance(db, lena, 500, monday) is False
+        assert post_weekly_allowance(db, lena, 500, monday + dt.timedelta(days=7)) is True
+        db.commit()
+        assert allowance_balance(db, lena) == 1000
+
+
+def test_weekly_allowance_rejects_invalid_period_and_amount(client, parent, lena, now):
+    import datetime as dt
+
+    import pytest
+
+    from app.money import post_weekly_allowance
+
+    with Session(engine) as db:
+        with pytest.raises(ValueError):
+            post_weekly_allowance(db, lena, -100, dt.date(2026, 10, 5))
+        with pytest.raises(ValueError):
+            post_weekly_allowance(db, lena, 500, dt.date(2026, 10, 6))
