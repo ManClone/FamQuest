@@ -19,9 +19,9 @@ from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
 from app.auth import CurrentSession, DbSession, ParentSession, get_family, is_parent_unlocked
 from app.chores import chore_state
 from app.errors import ApiError
+from app.household_assignment import HouseholdChore, suggest_week
 from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, FamilyMember, Todo
 from app.points import book, lock_member
-from app.household_assignment import HouseholdChore, suggest_week
 from app.schemas import IconName, TaskTitle
 from app.today import family_now
 
