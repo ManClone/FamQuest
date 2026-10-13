@@ -2,8 +2,6 @@ import { type ComponentType, type SVGProps, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import BroomIcon from '~icons/fluent-emoji-flat/broom'
 import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
-import CartIcon from '~icons/fluent-emoji-flat/shopping-cart'
-import CalendarIcon from '~icons/fluent-emoji-flat/spiral-calendar'
 
 import { useMe } from '../api/auth'
 import { DEFAULT_FRAME_SETTINGS, useFrameSettings } from '../api/frame'
@@ -12,18 +10,14 @@ import { useIdleTimeout } from '../useIdleTimeout'
 import { useNow } from '../useNow'
 import { formatLongDate } from '../weekdays'
 import { ChoresPage } from './ChoresPage'
-import { ShoppingPage } from './ShoppingPage'
 import { NightScreen } from './frame/NightScreen'
 import { isNightTime } from './frame/night'
 import { RoutineWidget } from './home/RoutineWidget'
 import { WeatherBadge } from './home/WeatherBadge'
-import { WeekBoard } from './home/WeekBoard'
 
 export const KITCHEN_PATH = '/kitchen'
 
 /** So viele Tage zeigt die Küchenansicht ab heute; heute ist doppelt so breit. */
-export const KITCHEN_DAYS = 5
-
 /** Nach so langer Ruhe zeigt die Ansicht wieder die Woche bzw. nachts wieder den Nachtbildschirm. */
 export const KITCHEN_IDLE_MS = 2 * 60 * 1000
 
@@ -31,16 +25,14 @@ type Icon = ComponentType<SVGProps<SVGSVGElement>>
 
 /** Die Seiten von links nach rechts; das Symbol in der Kopfzeile springt direkt hin. */
 const PAGES: { id: string; label: string; icon: Icon }[] = [
-  { id: 'week', label: 'kitchen.week', icon: CalendarIcon },
   { id: 'tasks', label: 'nav.tasks', icon: StarIcon },
   { id: 'household', label: 'nav.household', icon: BroomIcon },
-  { id: 'shopping', label: 'nav.shopping', icon: CartIcon },
 ]
 
 /**
  * Küchenansicht für ein kleines Tablet im Querformat, ohne Navigationsleiste: zuerst die nächsten
- * Tage mit Terminen und Essen, per Wisch (oder Symbol oben) die Routine der Kinder, der Haushalt
- * und die Einkaufsliste. Nach kurzer Ruhe steht wieder die Woche da. Nachts gilt das Nachtfenster
+ * Aufgaben und Haushalt per Wisch (oder Symbol oben). Nach kurzer Ruhe stehen wieder die Aufgaben da.
+ * Nachts gilt das Nachtfenster
  * des Bilderrahmens; ein Tipp weckt die Ansicht für kurze Zeit.
  */
 export function KitchenPage() {
@@ -120,19 +112,8 @@ export function KitchenPage() {
             aria-label={t(label)}
             className="flex w-full shrink-0 snap-start snap-always flex-col overflow-y-auto p-1"
           >
-            {id === 'week' && today && (
-              <WeekBoard
-                today={today.date}
-                mode="rolling"
-                days={KITCHEN_DAYS}
-                showEvents
-                showMeals
-                row
-              />
-            )}
             {id === 'tasks' && <RoutineWidget from={KITCHEN_PATH} more={false} />}
             {id === 'household' && <ChoresPage />}
-            {id === 'shopping' && <ShoppingPage />}
           </section>
         ))}
       </div>
