@@ -59,3 +59,14 @@ def test_transfer_requires_approval(client, parent, now):
     assert done(client, parent, item["id"], viola).status_code == 409
     assert approve(client, parent, item["id"], viola).status_code == 200
     assert (total(flo), total(viola)) == (0, 15)
+
+
+def test_child_cannot_receive_adult_xp(client, parent, now):
+    from tests.test_tasks import add_member
+
+    child_id = add_member(client, parent)
+    room = add_room(client, parent)
+    item = add_chore(client, parent, room["id"], adult_xp=15)
+    assert done(client, parent, item["id"], child_id).status_code == 200
+    assert approve(client, parent, item["id"], child_id).status_code == 422
+    assert total(child_id) == 0
