@@ -20,7 +20,7 @@ from app.auth import CurrentSession, DbSession, ParentSession, get_family, is_pa
 from app.chores import chore_state
 from app.errors import ApiError
 from app.household_assignment import HouseholdChore, suggest_week
-from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, FamilyMember, Todo
+from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, FamilyMember, Todo, WeeklyChoreAssignment
 from app.points import book, lock_member
 from app.schemas import IconName, TaskTitle
 from app.today import family_now
@@ -362,6 +362,64 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
             for chore in due
         ],
     )
+
+
+class WeeklyPublishIn(BaseModel):
+    assignments: list[WeeklyAssignmentOut] = Field(max_length=500)
+
+
+@router.get("/weekly-confirmed")
+def weekly_confirmed(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
+    today = _today(db)
+    week_start = today - dt.timedelta(days=today.weekday())
+    rows = db.execute(
+        select(WeeklyChoreAssignment, Chore)
+        .join(Chore, Chore.id == WeeklyChoreAssignment.chore_id)
+        .where(WeeklyChoreAssignment.week_start == week_start)
+        .order_by(WeeklyChoreAssignment.chore_id)
+    )
+    return WeeklyPreviewOut(
+        week_start=week_start,
+        assignments=[
+            WeeklyAssignmentOut(
+                chore_id=assignment.chore_id, member_id=assignment.member_id,
+                estimated_minutes=chore.estimated_minutes, adult_xp=chore.adult_xp,
+            )
+            for assignment, chore in rows
+        ],
+    )
+
+
+@router.post("/weekly-confirmed")
+def publish_weekly(body: WeeklyPublishIn, _: ParentSession, db: DbSession) -> WeeklyPreviewOut:
+    """Explicit parent confirmation; atomically replaces this week's assignment plan."""
+    preview = weekly_preview(_, db)
+    expected = {entry.chore_id for entry in preview.assignments}
+    submitted = {entry.chore_id for entry in body.assignments}
+    if len(submitted) != len(body.assignments) or submitted != expected:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.weekly_invalid")
+    adults = set(db.scalars(select(FamilyMember.id).where(FamilyMember.role == "parent")))
+    chores = {chore.id: chore for chore in db.scalars(
+        select(Chore).where(Chore.id.in_(expected))
+    )}
+    for entry in body.assignments:
+        chore = chores[entry.chore_id]
+        if entry.member_id not in adults or (
+            chore.assignment_mode == "fixed" and chore.fixed_member_id != entry.member_id
+        ):
+            raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.weekly_invalid")
+    db.execute(delete(WeeklyChoreAssignment).where(
+        WeeklyChoreAssignment.week_start == preview.week_start
+    ))
+    db.add_all(
+        WeeklyChoreAssignment(
+            week_start=preview.week_start, chore_id=entry.chore_id,
+            member_id=entry.member_id,
+        )
+        for entry in body.assignments
+    )
+    db.commit()
+    return weekly_confirmed(_, db)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
