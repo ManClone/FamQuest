@@ -28,15 +28,12 @@ import { Alert, Button, CenteredCard, Section, TextField } from '../components/u
 import { errorMessage } from '../errors'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { ApprovalsSection } from './parents/ApprovalsSection'
-import { CalendarSection } from './parents/CalendarSection'
 import { ChoreEditor } from './parents/ChoreEditor'
 import { ChoreRoomEditor } from './parents/ChoreRoomEditor'
 import { ChoreWizard } from './parents/ChoreWizard'
 import { ChoresSection } from './parents/ChoresSection'
-import { EventSymbolsSection } from './parents/EventSymbolsSection'
 import { DeviceSection } from './parents/DeviceSection'
 import { FamilySection } from './parents/FamilySection'
-import { MealSettingsSection } from './parents/MealSettingsSection'
 import { MemberEditor } from './parents/MemberEditor'
 import { MembersSection } from './parents/MembersSection'
 import { PointsEditor } from './parents/PointsEditor'
@@ -269,15 +266,12 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
   // Hinweise („… ist gespeichert“) gehören zu dem Bereich, in dem sie entstanden sind.
   const [noticeState, setNoticeState] = useState<{ area: ParentArea; text: string } | null>(() =>
     searchParams.get('calendar') === 'connected'
-      ? { area: 'connections', text: t('calendar.connected') }
+      ? { area: 'settings', text: t('calendar.connected') }
       : null,
   )
   const notice = noticeState?.area === area ? noticeState.text : undefined
   const setNotice = (text: string | undefined) =>
     setNoticeState(text === undefined ? null : { area, text })
-  const [calendarError, setCalendarError] = useState(
-    () => searchParams.get('calendar_error') ?? undefined,
-  )
   const returnedFromGoogle = searchParams.has('calendar') || searchParams.has('calendar_error')
   useEffect(() => {
     if (returnedFromGoogle) setSearchParams({}, { replace: true })
@@ -484,7 +478,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
           </p>
         )}
         {disablePin.isError && <Alert>{errorMessage(t, disablePin.error)}</Alert>}
-        {calendarError && <Alert>{errorMessage(t, calendarError)}</Alert>}
 
         {area === 'review' && (
           <>
@@ -624,23 +617,9 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
             <PhotosSection onMessage={setNotice} />
           </>
         )}
-        {area === 'connections' && (
-          <>
-            <CalendarSection
-              familyLanguage={me.family.default_language}
-              onDisconnected={(email) => {
-                setCalendarError(undefined)
-                setNotice(t('calendar.disconnected', { email }))
-              }}
-            />
-            <EventSymbolsSection />
-            <WeatherSection onSaved={setNotice} />
-          </>
-        )}
         {area === 'settings' && (
           <>
             <FamilySection me={me} onSaved={setNotice} />
-            <MealSettingsSection />
             <Section title={t('parents.pin_section')}>
               <p className="flex items-center gap-3 text-lg text-slate-600">
                 <PinStatusIcon className="size-10 shrink-0" aria-hidden="true" />
