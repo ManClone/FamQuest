@@ -334,8 +334,6 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
     adult_ids = list(db.scalars(
         select(FamilyMember.id).where(FamilyMember.role == "parent").order_by(FamilyMember.id)
     ))
-    if not adult_ids:
-        return WeeklyPreviewOut(week_start=week_start, assignments=[])
     chores = list(db.scalars(select(Chore).where(Chore.active.is_(True)).order_by(Chore.id)))
     last = _last_completions(db, [chore.id for chore in chores])
     due = [
