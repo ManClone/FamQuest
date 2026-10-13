@@ -2,21 +2,50 @@
 
 No bank access, no FamQuest parent-session impersonation, no quest publication.
 """
-import json
+import hmac
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
+import uvicorn
 from pydantic import Field
 
 DB_PATH = Path(os.getenv("QUEST_DB_PATH", "/data/quests.sqlite3"))
 HOST = os.getenv("MCP_HOST", "0.0.0.0")
 PORT = int(os.getenv("MCP_PORT", "8000"))
+TOKEN = os.getenv("FAMQUEST_MCP_TOKEN", "")
+if len(TOKEN) < 32:
+    raise RuntimeError("FAMQUEST_MCP_TOKEN muss mindestens 32 Zeichen lang sein")
+
 mcp = FastMCP("FamQuest Quest Entwürfe", host=HOST, port=PORT, stateless_http=True, json_response=True)
+
+
+class BearerAuth:
+    """Require a shared bearer secret for every HTTP and WebSocket request."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "lifespan":
+            return await self.app(scope, receive, send)
+        headers = dict(scope.get("headers", []))
+        expected = ("Bearer " + TOKEN).encode("utf-8")
+        actual = headers.get(b"authorization", b"")
+        if not hmac.compare_digest(actual, expected):
+            if scope["type"] == "http":
+                await send({"type": "http.response.start", "status": 401,
+                            "headers": [(b"content-type", b"text/plain"),
+                                        (b"www-authenticate", b"Bearer")]})
+                await send({"type": "http.response.body", "body": b"Unauthorized"})
+            else:
+                await send({"type": "websocket.close", "code": 1008})
+            return
+        await self.app(scope, receive, send)
 
 
 @contextmanager
@@ -74,5 +103,4 @@ def list_quest_proposals() -> list[dict]:
 
 
 if __name__ == "__main__":
-    # Bind only to a trusted private network until OAuth / reverse-proxy auth is configured.
-    mcp.run(transport="streamable-http")
+    uvicorn.run(BearerAuth(mcp.streamable_http_app()), host=HOST, port=PORT)
