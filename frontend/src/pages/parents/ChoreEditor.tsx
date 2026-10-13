@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import TrashIcon from '~icons/fluent-emoji-flat/wastebasket'
 
 import { ApiError } from '../../api/client'
+import { useMembers } from '../../api/members'
 import {
   type Chore,
   type ChoreRoom,
@@ -58,6 +59,8 @@ export function ChoreEditor({
   onCancel,
 }: ChoreEditorProps) {
   const { t, i18n } = useTranslation()
+  const members = useMembers()
+  const adults = (members.data ?? []).filter((member) => member.role === 'parent')
   const [title, setTitle] = useState(chore?.title ?? todo?.title ?? '')
   // Bis Eltern selbst ein Symbol wählen, wird es aus dem Titel vorgeschlagen.
   const [chosenIcon, setChosenIcon] = useState<string | null>(chore?.icon ?? todo?.icon ?? null)
@@ -70,6 +73,10 @@ export function ChoreEditor({
   )
   const [countedFrom, setCountedFrom] = useState(chore?.counted_from ?? '')
   const [active, setActive] = useState(chore?.active ?? true)
+  const [minutes, setMinutes] = useState(chore?.estimated_minutes ?? 15)
+  const [adultXp, setAdultXp] = useState(chore?.adult_xp ?? 0)
+  const [assignmentMode, setAssignmentMode] = useState<'fixed' | 'rotate' | 'flexible'>(chore?.assignment_mode ?? 'flexible')
+  const [fixedMemberId, setFixedMemberId] = useState<number | null>(chore?.fixed_member_id ?? null)
   const [pickingIcon, setPickingIcon] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -77,7 +84,11 @@ export function ChoreEditor({
   const icon = chosenIcon ?? suggestIcon(title) ?? DEFAULT_CHORE_ICON
   const days = intervalDays(every.count, every.unit)
   const save = useChoresMutation(() => {
-    const data = { room_id: roomId, title: title.trim(), icon, interval_days: days, active }
+    const data = {
+      room_id: roomId, title: title.trim(), icon, interval_days: days, active,
+      estimated_minutes: minutes, adult_xp: adultXp, assignment_mode: assignmentMode,
+      fixed_member_id: assignmentMode === 'fixed' ? fixedMemberId : null,
+    }
     if (state !== 'date') return createChore({ ...data, state, todo_id: todo?.id })
     if (!chore) return createChore({ ...data, counted_from: countedFrom, todo_id: todo?.id })
     // Nur ein geändertes Datum mitschicken: Wer inzwischen am Display abgehakt hat, bleibt stehen.
@@ -119,7 +130,8 @@ export function ChoreEditor({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
-    if (!title.trim() || dateError || (state === 'date' && !chore && !countedFrom)) return
+    if (!title.trim() || dateError || (state === 'date' && !chore && !countedFrom) ||
+      (assignmentMode === 'fixed' && fixedMemberId === null)) return
     save.mutate(undefined, { onSuccess: (saved) => onSaved(saved.title) })
   }
 
@@ -205,6 +217,45 @@ export function ChoreEditor({
             {t('chores.interval_hint', { interval: intervalText(t, days) })}
           </p>
         </Field>
+
+        <section className="flex flex-col gap-4 rounded-2xl bg-orange-50 p-4">
+          <h2 className="text-xl font-bold text-slate-800">Erwachsenen-Aufgabe</h2>
+          <label className="flex flex-col gap-2 font-semibold text-slate-700">
+            Geschätzte Minuten
+            <input type="number" min={1} max={1440} required value={minutes}
+              onChange={(event) => setMinutes(Number(event.target.value))}
+              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3" />
+          </label>
+          <label className="flex flex-col gap-2 font-semibold text-slate-700">
+            Erwachsenen-XP (noch ohne automatische Gutschrift)
+            <input type="number" min={0} max={1000} required value={adultXp}
+              onChange={(event) => setAdultXp(Number(event.target.value))}
+              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3" />
+          </label>
+          <label className="flex flex-col gap-2 font-semibold text-slate-700">
+            Verteilung
+            <select value={assignmentMode}
+              onChange={(event) => setAssignmentMode(event.target.value as 'fixed' | 'rotate' | 'flexible')}
+              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3">
+              <option value="flexible">Flexibel</option>
+              <option value="rotate">Wechselnd</option>
+              <option value="fixed">Fest zugeordnet</option>
+            </select>
+          </label>
+          {assignmentMode === 'fixed' && (
+            <label className="flex flex-col gap-2 font-semibold text-slate-700">
+              Zuständige Person
+              <select required value={fixedMemberId ?? ''}
+                onChange={(event) => setFixedMemberId(event.target.value ? Number(event.target.value) : null)}
+                className="min-h-12 rounded-xl border border-slate-300 bg-white p-3">
+                <option value="">Bitte auswählen</option>
+                {adults.map((member) => (
+                  <option key={member.id} value={member.id}>{member.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </section>
 
         {!chore && (
           <Field label={t('chores.state')}>
