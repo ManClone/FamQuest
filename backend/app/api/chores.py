@@ -431,9 +431,20 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
             db.delete(completion)
     chore.room_id, chore.title, chore.icon = body.room_id, body.title, body.icon
     chore.interval_days, chore.active = body.interval_days, body.active
-    chore.estimated_minutes, chore.adult_xp = body.estimated_minutes, body.adult_xp
-    chore.assignment_mode = body.assignment_mode
-    chore.fixed_member_id = body.fixed_member_id if body.assignment_mode == "fixed" else None
+    # Older clients do not send adult fields. Preserve existing settings in that case.
+    fields = body.model_fields_set
+    if "estimated_minutes" in fields:
+        chore.estimated_minutes = body.estimated_minutes
+    if "adult_xp" in fields:
+        chore.adult_xp = body.adult_xp
+    if "assignment_mode" in fields:
+        chore.assignment_mode = body.assignment_mode
+    if "fixed_member_id" in fields or "assignment_mode" in fields:
+        chore.fixed_member_id = (
+            body.fixed_member_id if chore.assignment_mode == "fixed" else None
+        )
+    if chore.assignment_mode == "fixed" and chore.fixed_member_id is None:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.fixed_member_required")
     db.commit()
     return _one_out(db, chore)
 
