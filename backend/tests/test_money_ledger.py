@@ -125,3 +125,35 @@ def test_money_overview_is_parent_only_and_separates_balances(client, admin, par
 
     assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
     assert client.get(f"/api/members/{lena}/money").status_code == 403
+
+
+def test_parent_can_credit_weekly_allowance_only_once(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/weekly-allowance"
+    payload = {"amount_cents": 400, "week_start": "2026-10-05"}
+    first = client.post(url, json=payload, headers=csrf(parent))
+    assert first.status_code == 200, first.text
+    assert first.json() == {
+        "member_id": lena,
+        "week_start": "2026-10-05",
+        "booked": True,
+        "allowance_cents": 400,
+    }
+    second = client.post(url, json=payload, headers=csrf(parent))
+    assert second.status_code == 200, second.text
+    assert second.json()["booked"] is False
+    assert second.json()["allowance_cents"] == 400
+
+
+def test_weekly_allowance_requires_parent_and_valid_monday(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/weekly-allowance"
+    assert client.post(
+        url, json={"amount_cents": 400, "week_start": "2026-10-06"}, headers=csrf(parent)
+    ).status_code == 422
+    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
+    assert client.post(
+        url, json={"amount_cents": 400, "week_start": "2026-10-05"}, headers=csrf(parent)
+    ).status_code == 403
