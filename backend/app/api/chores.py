@@ -352,7 +352,17 @@ def update_room(room_id: int, body: RoomIn, _: ParentSession, db: DbSession) -> 
 @router.delete("/rooms/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_room(room_id: int, _: ParentSession, db: DbSession) -> None:
     """Löscht einen Raum mitsamt seinen Aufgaben."""
-    db.delete(_get_room(db, room_id))
+    room = _get_room(db, room_id)
+    chores = list(db.scalars(select(Chore).where(Chore.room_id == room.id)))
+    for chore in chores:
+        completions = list(db.scalars(select(ChoreCompletion).where(
+            ChoreCompletion.chore_id == chore.id,
+        ).with_for_update()))
+        _reverse_chore_credits(db, completions, chore.title)
+        for completion in completions:
+            db.delete(completion)
+    db.flush()
+    db.delete(room)
     db.commit()
 
 
