@@ -247,6 +247,19 @@ def _shares(db: DbSession, today: dt.date) -> list[ShareOut]:
     return [ShareOut(member_id=member_id, count=totals[member_id]) for member_id in sorted(totals)]
 
 
+def _reverse_chore_credits(db: DbSession, completions: list[ChoreCompletion], title: str) -> None:
+    """Reverse booked XP before completions are removed by edits or deletion."""
+    credits = [(completion, db.get(ChoreCredit, completion.id)) for completion in completions]
+    for member_id in sorted({credit.member_id for _, credit in credits if credit is not None}):
+        lock_member(db, member_id)
+    for completion, credit in credits:
+        if credit is not None:
+            book(db, credit.member_id, -credit.amount, "chore_undone",
+                 reason=title, task_date=completion.date)
+            db.delete(credit)
+    db.flush()
+
+
 def _one_out(db: DbSession, chore: Chore) -> ChoreOut:
     return _chore_out(chore, _last_completions(db, [chore.id]).get(chore.id), _today(db))
 
@@ -399,11 +412,13 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
     if body.counted_from is not None and body.counted_from != _counted_from(chore, last):
         _check_counted_from(body.counted_from, _today(db))
         chore.anchor_date = body.counted_from
-        db.execute(
-            delete(ChoreCompletion).where(
-                ChoreCompletion.chore_id == chore.id, ChoreCompletion.date > body.counted_from
-            )
-        )
+        removed = list(db.scalars(select(ChoreCompletion).where(
+            ChoreCompletion.chore_id == chore.id,
+            ChoreCompletion.date > body.counted_from,
+        ).with_for_update()))
+        _reverse_chore_credits(db, removed, chore.title)
+        for completion in removed:
+            db.delete(completion)
     chore.room_id, chore.title, chore.icon = body.room_id, body.title, body.icon
     chore.interval_days, chore.active = body.interval_days, body.active
     chore.estimated_minutes, chore.adult_xp = body.estimated_minutes, body.adult_xp
@@ -415,7 +430,15 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
 
 @router.delete("/{chore_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chore(chore_id: int, _: ParentSession, db: DbSession) -> None:
-    db.delete(_get_chore(db, chore_id))
+    chore = _get_chore(db, chore_id)
+    completions = list(db.scalars(select(ChoreCompletion).where(
+        ChoreCompletion.chore_id == chore.id,
+    ).with_for_update()))
+    _reverse_chore_credits(db, completions, chore.title)
+    for completion in completions:
+        db.delete(completion)
+    db.flush()
+    db.delete(chore)
     db.commit()
 
 
