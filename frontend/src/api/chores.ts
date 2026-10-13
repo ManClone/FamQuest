@@ -22,6 +22,10 @@ export interface Chore {
   /** So viele Tage nach der letzten Erledigung ist sie wieder fällig. */
   interval_days: number
   active: boolean
+  estimated_minutes: number
+  adult_xp: number
+  assignment_mode: 'fixed' | 'rotate' | 'flexible'
+  fixed_member_id: number | null
   /** Letzte Erledigung (ISO-Datum); null = seit dem Anlegen noch nie. */
   last_done: string | null
   done_today: boolean
@@ -72,6 +76,10 @@ export interface ChoreData {
   icon: string
   interval_days: number
   active: boolean
+  estimated_minutes?: number
+  adult_xp?: number
+  assignment_mode?: 'fixed' | 'rotate' | 'flexible'
+  fixed_member_id?: number | null
   /** „Zuletzt erledigt“ von Hand (ISO-Datum); ohne Angabe bleibt der Stand, wie er ist. */
   counted_from?: string
 }
@@ -183,6 +191,10 @@ export const choreData = (chore: Chore): ChoreData => ({
   icon: chore.icon,
   interval_days: chore.interval_days,
   active: chore.active,
+  estimated_minutes: chore.estimated_minutes,
+  adult_xp: chore.adult_xp,
+  assignment_mode: chore.assignment_mode,
+  fixed_member_id: chore.fixed_member_id,
 })
 
 /** Übernimmt die Vorschläge des Einrichtungs-Assistenten; Vorhandenes wird übersprungen. */
