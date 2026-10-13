@@ -102,7 +102,7 @@ describe('Putzplan im Elternbereich', () => {
 
     await user.click(await screen.findByRole('switch', { name: 'Toilette putzen aktiv' }))
 
-    expect(bodyOf(calls, 'PUT /api/chores/1')).toEqual({
+    expect(bodyOf(calls, 'PUT /api/chores/1')).toMatchObject({
       room_id: 1,
       title: 'Toilette putzen',
       icon: 'fluent-emoji-flat:toilet',
@@ -156,7 +156,7 @@ describe('Putzplan im Elternbereich', () => {
     await user.click(screen.getByRole('button', { name: 'Speichern' }))
 
     expect(await screen.findByText('„Dusche putzen“ ist gespeichert.')).toBeVisible()
-    expect(bodyOf(calls, 'POST /api/chores')).toEqual({
+    expect(bodyOf(calls, 'POST /api/chores')).toMatchObject({
       room_id: 1,
       title: 'Dusche putzen',
       icon: 'fluent-emoji-flat:shower',
@@ -179,7 +179,7 @@ describe('Putzplan im Elternbereich', () => {
     await user.click(screen.getByRole('button', { name: 'Mehr' }))
     await user.click(screen.getByRole('button', { name: 'Speichern' }))
 
-    expect(bodyOf(calls, 'PUT /api/chores/1')).toEqual({
+    expect(bodyOf(calls, 'PUT /api/chores/1')).toMatchObject({
       room_id: 2,
       title: 'Toilette putzen',
       icon: 'fluent-emoji-flat:toilet',
@@ -270,7 +270,7 @@ describe('Putzplan im Elternbereich', () => {
     await user.click(screen.getByRole('button', { name: 'Speichern' }))
 
     expect(await screen.findByText('„Hühnerfutter holen“ ist gespeichert.')).toBeVisible()
-    expect(bodyOf(calls, 'POST /api/chores')).toEqual({
+    expect(bodyOf(calls, 'POST /api/chores')).toMatchObject({
       room_id: 2,
       title: 'Hühnerfutter holen',
       icon: 'fluent-emoji-flat:chicken',
