@@ -104,7 +104,7 @@ def test_weekly_allowance_rejects_invalid_period_and_amount(client, parent, lena
             post_weekly_allowance(db, lena, 500, dt.date(2026, 10, 6))
 
 
-def test_money_overview_is_parent_only_and_separates_balances(client, admin, parent, lena, now):
+def test_money_overview_is_parent_only_and_separates_balances(client, parent, lena, now):
     from app.money import book_money
 
     with Session(engine) as db:
