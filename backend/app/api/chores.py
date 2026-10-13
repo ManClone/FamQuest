@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.members import get_member
 from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
-from app.auth import CurrentSession, DbSession, ParentSession, get_family
+from app.auth import CurrentSession, DbSession, ParentSession, get_family, parent_session
 from app.chores import chore_state
 from app.errors import ApiError
 from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, Todo
@@ -530,17 +530,19 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
 
 
 @router.delete("/{chore_id}/done")
-def undo_done(chore_id: int, _: CurrentSession, db: DbSession) -> ChoreOut:
+def undo_done(chore_id: int, auth_session: CurrentSession, db: DbSession) -> ChoreOut:
     """Nimmt die heutige Erledigung zurück; frühere bleiben stehen."""
     chore = _get_chore(db, chore_id)
     completion = db.scalar(
         select(ChoreCompletion).where(
             ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == _today(db)
-        )
+        ).with_for_update()
     )
     if completion is not None:
         credit = db.get(ChoreCredit, completion.id)
         if credit is not None:
+            # Undoing parent-approved XP requires an unlocked parent session.
+            parent_session(auth_session, db)
             lock_member(db, credit.member_id)
             book(db, credit.member_id, -credit.amount, "chore_undone",
                  reason=chore.title, task_date=completion.date)
