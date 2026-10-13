@@ -481,7 +481,10 @@
       "not_found": "This chore no longer exists.",
       "room_not_found": "This room no longer exists.",
       "room_duplicate": "There is already a room with this name.",
-      "counted_from_future": "This day is in the future."
+      "counted_from_future": "This day is in the future.",
+      "credits_invalid": "The XP credit for this chore is invalid.",
+      "fixed_member_required": "A fixed assignment requires an existing adult.",
+      "weekly_invalid": "The weekly assignment is invalid. Please reload the suggestion."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
