@@ -128,6 +128,7 @@ class Task(Base):
     icon: Mapped[str] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(String(500))
     points: Mapped[int]
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     # Erweiterbare Werte (siehe schemas.TIMES_OF_DAY); None = jederzeit.
     time_of_day: Mapped[str | None] = mapped_column(String(20))
     # None = Farbe der jeweiligen Person.
@@ -254,6 +255,7 @@ class TaskCompletion(Base):
     # Gutgeschriebene Punkte; Rückgängig bucht genau diesen Betrag zurück, auch wenn sich
     # der Punktwert der Aufgabe inzwischen geändert hat.
     points: Mapped[int] = mapped_column(server_default="0")
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     # None = wartet auf Kontrolle durch die Eltern.
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approved_by_user_id: Mapped[int | None] = mapped_column(
@@ -261,6 +263,21 @@ class TaskCompletion(Base):
     )
 
     task: Mapped[Task] = relationship(lazy="joined")
+
+
+class MoneyTransaction(Base):
+    """Immutable euro-cent ledger, separate from store XP."""
+
+    __tablename__ = "money_transactions"
+    __table_args__ = (CheckConstraint("amount_cents <> 0", name="money_amount_nonzero"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    amount_cents: Mapped[int]
+    kind: Mapped[str] = mapped_column(String(30))
+    reason: Mapped[str] = mapped_column(String(200))
+    completion_id: Mapped[int | None]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class PointTransaction(Base):
