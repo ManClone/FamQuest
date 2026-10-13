@@ -621,6 +621,20 @@ class ChoreCompletion(Base):
     )
 
 
+class WeeklyChoreAssignment(Base):
+    """Parent-confirmed adult chore owner for one calendar week."""
+
+    __tablename__ = "weekly_chore_assignments"
+
+    week_start: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    chore_id: Mapped[int] = mapped_column(
+        ForeignKey("chores.id", ondelete="CASCADE"), primary_key=True
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE")
+    )
+
+
 class ChoreCredit(Base):
     """Current XP credit snapshot for a chore completion; historical adjustments stay in ledger."""
 
