@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_FRAME_SETTINGS, type FrameSettings } from '../api/frame'
-import type { MealWeek } from '../api/meals'
 import i18n from '../i18n'
 import {
   makeChorePlan,
@@ -17,7 +16,6 @@ import {
   renderApp,
   setupDone,
 } from '../test/utils'
-import { KITCHEN_DAYS } from './KitchenPage'
 
 beforeEach(async () => {
   await i18n.changeLanguage('de')
@@ -38,8 +36,6 @@ function mockKitchen(
     'GET /api/members': Response.json([makeMember()]),
     'GET /api/today': Response.json(makeToday({ tasks: [makeTodayTask({ id: 10 })] })),
     'GET /api/weather': Response.json({ place: null, current: null, days: [] }),
-    'GET /api/calendar/status': Response.json({ enabled: false }),
-    'GET /api/meals/week': Response.json(MEALS),
     'GET /api/dishes': Response.json([]),
     'GET /api/shopping/list': Response.json({
       items: [
