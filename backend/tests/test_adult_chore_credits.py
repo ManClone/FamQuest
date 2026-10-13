@@ -70,3 +70,29 @@ def test_child_cannot_receive_adult_xp(client, parent, now):
     assert done(client, parent, item["id"], child_id).status_code == 200
     assert approve(client, parent, item["id"], child_id).status_code == 422
     assert total(child_id) == 0
+
+
+def test_legacy_update_preserves_adult_settings(client, parent, now):
+    flo = parent_member(client, parent, "Flo")
+    room = add_room(client, parent)
+    item = add_chore(
+        client, parent, room["id"], adult_xp=15,
+        estimated_minutes=60, assignment_mode="fixed", fixed_member_id=flo,
+    )
+    response = client.put(
+        f"/api/chores/{item['id']}",
+        json={
+            "room_id": room["id"],
+            "title": "Wocheneinkauf",
+            "icon": "fluent-emoji-flat:toilet",
+            "interval_days": 7,
+            "active": True,
+        },
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    changed = response.json()
+    assert changed["adult_xp"] == 15
+    assert changed["estimated_minutes"] == 60
+    assert changed["assignment_mode"] == "fixed"
+    assert changed["fixed_member_id"] == flo
