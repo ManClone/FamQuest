@@ -115,3 +115,19 @@ def test_credited_chore_undo_requires_parent_unlock(client, parent, now):
     blocked = client.delete(f"/api/chores/{item['id']}/done", headers=csrf(parent))
     assert blocked.status_code == 403, blocked.text
     assert total(flo) == 15
+
+
+def test_uncredited_chore_can_be_undone_without_parent_unlock(client, parent, now):
+    room = add_room(client, parent)
+    item = add_chore(client, parent, room["id"], adult_xp=15)
+    assert done(client, parent, item["id"]).status_code == 200
+
+    from app.models import AuthSession
+    from sqlalchemy import update
+    with SessionLocal() as db:
+        db.execute(update(AuthSession).values(parent_unlocked_until=None))
+        db.commit()
+
+    response = client.delete(f"/api/chores/{item['id']}/done", headers=csrf(parent))
+    assert response.status_code == 200, response.text
+    assert response.json()["done_today"] is False
