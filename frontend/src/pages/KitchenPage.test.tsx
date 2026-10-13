@@ -55,8 +55,6 @@ function mockKitchen(
   })
 }
 
-const page = async (name: string) => within(await screen.findByRole('region', { name }))
-
 describe('Küchenansicht', () => {
   it('zeigt Aufgaben und Haushalt ohne Hauptnavigation', async () => {
     mockKitchen()
@@ -65,8 +63,8 @@ describe('Küchenansicht', () => {
     const tabs = within(await screen.findByRole('navigation', { name: 'Seiten der Küchenansicht' }))
     expect(tabs.getByRole('button', { name: 'Aufgaben' })).toHaveAttribute('aria-current', 'page')
     expect(tabs.getByRole('button', { name: 'Haushalt' })).toBeInTheDocument()
-    expect(await page('Aufgaben')).toBeVisible()
-    expect(await page('Haushalt')).toBeVisible()
+    expect(await screen.findByRole('region', { name: 'Aufgaben' })).toBeVisible()
+    expect(await screen.findByRole('region', { name: 'Haushalt' })).toBeVisible()
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).toBeNull()
     expect(tabs.queryByRole('button', { name: 'Termine und Essen' })).toBeNull()
     expect(tabs.queryByRole('button', { name: 'Einkauf' })).toBeNull()
