@@ -97,7 +97,7 @@ export function HomeEditor({
     })
   // In der Reihenfolge, in der die Bereiche auf der Seite stehen.
   const ordered = tiles
-    .filter((tile) => tile.id !== 'shopping' && tile.id !== 'events')
+    .filter((tile) => tile.id !== 'shopping' && tile.id !== 'events' && tile.id !== 'meals')
     .sort((a, b) => TILE_IDS.indexOf(a.id) - TILE_IDS.indexOf(b.id))
 
   return (
