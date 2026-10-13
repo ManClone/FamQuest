@@ -539,7 +539,15 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
     """
     chore = _get_chore(db, chore_id)
     _get_room(db, body.room_id)
-    _validate_assignment(db, body)
+    # Validate the effective values, including metadata omitted by legacy clients.
+    fields = body.model_fields_set
+    effective_mode = body.assignment_mode if "assignment_mode" in fields else chore.assignment_mode
+    effective_fixed = (
+        body.fixed_member_id if "fixed_member_id" in fields else chore.fixed_member_id
+    ) if effective_mode == "fixed" else None
+    _validate_assignment(db, body.model_copy(update={
+        "assignment_mode": effective_mode, "fixed_member_id": effective_fixed,
+    }))
     last = _last_completions(db, [chore.id]).get(chore.id)
     # Nur ein geänderter Tag greift ein, damit ein unverändert mitgeschickter nichts löscht.
     if body.counted_from is not None and body.counted_from != _counted_from(chore, last):
@@ -555,19 +563,12 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
     chore.room_id, chore.title, chore.icon = body.room_id, body.title, body.icon
     chore.interval_days, chore.active = body.interval_days, body.active
     # Older clients do not send adult fields. Preserve existing settings in that case.
-    fields = body.model_fields_set
     if "estimated_minutes" in fields:
         chore.estimated_minutes = body.estimated_minutes
     if "adult_xp" in fields:
         chore.adult_xp = body.adult_xp
-    if "assignment_mode" in fields:
-        chore.assignment_mode = body.assignment_mode
-    if "fixed_member_id" in fields or "assignment_mode" in fields:
-        chore.fixed_member_id = (
-            body.fixed_member_id if chore.assignment_mode == "fixed" else None
-        )
-    if chore.assignment_mode == "fixed" and chore.fixed_member_id is None:
-        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.fixed_member_required")
+    chore.assignment_mode = effective_mode
+    chore.fixed_member_id = effective_fixed
     db.commit()
     return _one_out(db, chore)
 
