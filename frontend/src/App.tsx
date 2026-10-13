@@ -8,14 +8,12 @@ import { AppShell } from './components/AppShell'
 import { Button, FullScreenMessage } from './components/ui'
 import { errorMessage } from './errors'
 import { applyFamilyLanguage } from './i18n'
-import { CalendarPage } from './pages/CalendarPage'
 import { ChoresPage } from './pages/ChoresPage'
 import { FamilyPage } from './pages/FamilyPage'
 import { FramePage } from './pages/FramePage'
 import { KITCHEN_PATH, KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
 import { MealsPage } from './pages/MealsPage'
-import { ShoppingPage } from './pages/ShoppingPage'
 import { ParentsPage } from './pages/ParentsPage'
 import { PersonPage } from './pages/PersonPage'
 import { RewardsPage } from './pages/RewardsPage'
@@ -108,9 +106,9 @@ export default function App() {
             <Route path="/member/:memberId" element={<PersonPage />} />
             <Route path="/rewards" element={<RewardsPage />} />
             <Route path="/rewards/:memberId" element={<RewardsPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/calendar" element={<Navigate to="/" replace />} />
             <Route path="/meals" element={<MealsPage />} />
-            <Route path="/shopping" element={<ShoppingPage />} />
+            <Route path="/shopping" element={<Navigate to="/" replace />} />
             <Route path="/household" element={<ChoresPage />} />
           </Route>
           <Route path="/frame" element={<FramePage />} />
