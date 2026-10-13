@@ -51,7 +51,7 @@ def test_repeated_approval_and_undo(client, parent, now):
 
 def test_transfer_requires_approval(client, parent, now):
     flo = parent_member(client, parent, "Flo")
-    viola = parent_member(client, parent, "Viola", color="rose")
+    viola = parent_member(client, parent, "Viola", color="green")
     room = add_room(client, parent)
     item = add_chore(client, parent, room["id"], adult_xp=15)
     done(client, parent, item["id"], flo)
