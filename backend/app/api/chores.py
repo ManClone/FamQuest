@@ -334,6 +334,11 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
         if chore_state(_counted_from(chore, last.get(chore.id)),
                        chore.interval_days, today).due_date <= week_end
     ]
+    # A deleted adult can leave a fixed assignment without an owner (SET NULL).
+    # Return a clear validation error rather than raising an unhandled ValueError.
+    if any(chore.assignment_mode == "fixed" and chore.fixed_member_id not in adult_ids
+           for chore in due):
+        raise ApiError(status.HTTP_409_CONFLICT, "chore.fixed_member_required")
     since = today - dt.timedelta(days=29)
     history = db.execute(
         select(ChoreCompletion.member_id, Chore.estimated_minutes)
