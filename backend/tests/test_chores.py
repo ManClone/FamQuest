@@ -114,6 +114,7 @@ def test_create_room_and_chore(client, parent, now):
         "adult_xp": 0,
         "assignment_mode": "flexible",
         "fixed_member_id": None,
+        "weekly_member_id": None,
         "last_done": None,
         "done_today": False,
         "done_by": None,
