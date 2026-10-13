@@ -1,6 +1,20 @@
 # FamQuest: Elternquests und Belohnungen (Entwurf)
 
-Status: abgestimmtes Konzept, noch nicht implementiert. Branch: develop.
+Status: Teilimplementierung auf `develop`; noch nicht produktionsreif. Keine bestätigten CI-Testergebnisse oder QNAP-Bereitstellung.
+
+## Bereits auf `develop` umgesetzt
+- Putzplan-Aufgaben haben geschätzte Minuten, Erwachsenen-XP und Zuordnungsmodus (fest, rotierend, flexibel).
+- Eltern können diese Angaben bearbeiten; bestehende ältere Clients behalten beim Bearbeiten die Erwachsenen-Einstellungen.
+- Wochenvorschlag berücksichtigt feste Aufgaben und Arbeitsbelastung. Eltern können den Vorschlag ändern und verbindlich für die laufende Woche speichern.
+- Bestätigte Zuständigkeiten werden im gemeinsamen Putzplan angezeigt; nach Bestätigung wird die Ansicht aktualisiert.
+- Eltern können XP für tatsächlich erledigte Hausarbeiten freigeben. Mehrfachfreigaben sind idempotent; Rücknahmen buchen Gegenbuchungen. Für das Rückgängigmachen bereits vergüteter Aufgaben ist eine Elternfreigabe nötig.
+- Datenbankmigrationen und Backend-Regressionstests sind angelegt; vollständige CI-Verifikation steht noch aus.
+
+## Noch offen
+- Separater Erwachsenen-Belohnungskatalog mit geschützter Einlösung, ggf. Zustimmung der anderen Person und Buchungshistorie.
+- Sichere Home-Assistant-/Lumo-Anbindung mit ausdrücklicher Elternbestätigung für generierte Aufgaben.
+- Nachweislich grüner CI-Lauf, Testinstallation und erst danach Freigabe zur produktiven Bereitstellung.
+
 
 ## Rollen und Punktesysteme
 - Tim sammelt Kinder-XP. Erwachsene sammeln Erwachsenen-XP mit geringerer Vergabe je Routineaufgabe.
