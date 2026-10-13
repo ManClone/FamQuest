@@ -6,6 +6,8 @@
 
 ```bash
 cd mcp
+cp .env.example .env
+# In .env einen eigenen langen Zufallstoken setzen, z. B. mit: openssl rand -hex 32
 docker compose up -d --build
 ```
 
@@ -19,6 +21,8 @@ Auf dem Docker-Host ausschließlich `127.0.0.1:8091` gebunden. Für QNAP Contain
 Entwürfe werden in einem persistenten SQLite-Docker-Volume gespeichert. **Es gibt noch keine Elternfreigabe oder Veröffentlichung in FamQuest.**
 
 ## Sicherheit
-Der Prototyp enthält bewusst noch **keine eigene Authentifizierung**. Nicht öffentlich bereitstellen, keinen Cloudflare-Tunnel verbinden und nicht direkt als öffentlich erreichbaren ChatGPT-Connector konfigurieren. Nächster Schritt: OAuth-/Gateway-Authentifizierung, Autorisierung, Freigabeworkflow, Tests und erst dann sichere Verbindung zur FamQuest-API.
+Der Prototyp verlangt jetzt einen **Bearer-Token** (mindestens 32 Zeichen), der in der lokalen, nicht einzucheckenden `mcp/.env` steht. Alle HTTP-/WebSocket-Anfragen ohne gültigen Token werden abgewiesen. Das ist eine einfache erste Zugangssperre, **noch keine OAuth- oder rollenbasierte ChatGPT-Authentifizierung**. Nicht öffentlich bereitstellen und keinen Cloudflare-Tunnel verbinden, bevor ein geeigneter Auth-Gateway samt Tests eingerichtet ist. Nächster Schritt: Freigabeworkflow, Rollen, Integration in FamQuest und Ende-zu-Ende-Tests.
+
+Lokal: `cd mcp && python -m unittest discover -s tests` (nach Installation der Python-Abhängigkeiten). Die Tests wurden im GitHub-Schreibvorgang nicht ausgeführt.
 
 Der bestehende FamQuest-Quellcode und seine AGPL-Lizenz bleiben unverändert.
