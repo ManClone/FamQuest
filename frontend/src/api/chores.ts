@@ -26,6 +26,8 @@ export interface Chore {
   adult_xp: number
   assignment_mode: 'fixed' | 'rotate' | 'flexible'
   fixed_member_id: number | null
+  /** Confirmed assignee for the current calendar week, if published. */
+  weekly_member_id: number | null
   /** Letzte Erledigung (ISO-Datum); null = seit dem Anlegen noch nie. */
   last_done: string | null
   done_today: boolean
