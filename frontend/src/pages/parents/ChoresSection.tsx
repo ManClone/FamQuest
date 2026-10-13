@@ -82,8 +82,9 @@ export function ChoresSection({
 
       <Section title="Wochenverteilung für Erwachsene">
         <p className="text-base text-slate-600">
-          Unverbindlicher Vorschlag für die laufende Woche. Feste Aufgaben bleiben zugeordnet;
-          andere werden nach geschätzter Arbeitszeit verteilt. Es wird nichts automatisch geändert.
+          Vorschlag für die laufende Woche. Feste Aufgaben bleiben zugeordnet; andere werden
+          nach geschätzter Arbeitszeit verteilt. Erst mit „Wochenplan verbindlich übernehmen“
+          wird die Verteilung für alle im Putzplan sichtbar.
         </p>
         <div className="mt-3">
           <Button
