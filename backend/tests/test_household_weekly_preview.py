@@ -68,6 +68,11 @@ def test_confirmed_week_is_persisted_and_fixed_work_cannot_move(client, parent, 
     assert approved.status_code == 200, approved.text
     saved = client.get("/api/chores/weekly-confirmed").json()
     assert saved["assignments"] == assignments
+    visible = {item["id"]: item for item in client.get("/api/chores").json()["chores"]}
+    assert visible[shopping["id"]]["weekly_member_id"] == flo
+    assert visible[cleaning["id"]]["weekly_member_id"] == next(
+        entry["member_id"] for entry in assignments if entry["chore_id"] == cleaning["id"]
+    )
     assert {entry["chore_id"] for entry in saved["assignments"]} == {
         shopping["id"], cleaning["id"],
     }
