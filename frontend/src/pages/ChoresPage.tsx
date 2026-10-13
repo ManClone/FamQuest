@@ -44,6 +44,7 @@ export function ChoresPage() {
       chore={chore}
       room={showRoom ? roomOf(chore) : undefined}
       doneBy={members.data?.find((member) => member.id === chore.done_by)}
+      assignedTo={members.data?.find((member) => member.id === chore.fixed_member_id)}
       onToggle={() => done.toggle(chore)}
     />
   )
@@ -201,12 +202,14 @@ function ChoreRow({
   chore,
   room,
   doneBy,
+  assignedTo,
   onToggle,
 }: {
   chore: Chore
   /** Raum zur Anzeige unter dem Titel; fehlt, wenn die Zeile schon unter ihrem Raum steht. */
   room?: ChoreRoom
   doneBy?: Member
+  assignedTo?: Member
   onToggle: () => void
 }) {
   const { t } = useTranslation()
@@ -241,6 +244,14 @@ function ChoreRow({
             </span>
             <span className="text-base leading-tight break-words text-slate-500">
               {room ? `${room.name} · ${interval}` : interval}
+            </span>
+            <span className="text-sm leading-tight text-slate-600">
+              {chore.estimated_minutes} Min. · {chore.adult_xp} Erwachsenen-XP
+              {chore.assignment_mode === 'fixed' && assignedTo
+                ? ` · Fest: ${assignedTo.name}`
+                : chore.assignment_mode === 'rotate'
+                  ? ' · Wechselnd'
+                  : ' · Flexibel'}
             </span>
             <span
               className={`text-lg leading-tight font-bold ${chore.done_today ? 'text-slate-500' : colors.text}`}
