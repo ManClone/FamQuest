@@ -13,6 +13,9 @@ import {
   useChoresMutation,
   useApproveChoreCredit,
   useWeeklyChorePreview,
+  useConfirmedWeeklyChores,
+  usePublishWeeklyChores,
+  type WeeklyChorePreview,
 } from '../../api/chores'
 import { useMembers } from '../../api/members'
 import { LEVEL_COLORS, byUrgency, intervalText, statusText } from '../../chores'
@@ -46,6 +49,10 @@ export function ChoresSection({
   const approve = useApproveChoreCredit()
   const [showWeeklyPreview, setShowWeeklyPreview] = useState(false)
   const weeklyPreview = useWeeklyChorePreview(showWeeklyPreview)
+  const confirmedWeek = useConfirmedWeeklyChores(showWeeklyPreview)
+  const publishWeek = usePublishWeeklyChores()
+  const [weeklyEdits, setWeeklyEdits] = useState<Record<number, number>>({})
+  const [weekPublished, setWeekPublished] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState<Record<number, number>>({})
   const toggleActive = useChoresMutation((chore: Chore) =>
     updateChore(chore.id, { ...choreData(chore), active: !chore.active }),
@@ -91,6 +98,13 @@ export function ChoresSection({
           <div className="mt-4">
             {weeklyPreview.isPending && <p>Wochenvorschlag wird geladen …</p>}
             {weeklyPreview.isError && <Alert>{errorMessage(t, weeklyPreview.error)}</Alert>}
+            {publishWeek.isError && <Alert>{errorMessage(t, publishWeek.error)}</Alert>}
+            {confirmedWeek.data && confirmedWeek.data.assignments.length > 0 && (
+              <p className="font-semibold text-green-700">
+                Für diese Woche ist bereits ein Plan bestätigt.
+              </p>
+            )}
+            {weekPublished && <p className="font-semibold text-green-700">Wochenplan gespeichert.</p>}
             {weeklyPreview.data && (
               <>
                 <p className="font-semibold text-slate-700">
@@ -99,29 +113,82 @@ export function ChoresSection({
                 {weeklyPreview.data.assignments.length === 0 ? (
                   <p className="mt-2 text-slate-600">Keine Aufgaben für diese Woche vorgeschlagen.</p>
                 ) : (
-                  <ul className="mt-3 flex flex-col gap-3">
-                    {weeklyPreview.data.assignments.map((assignment) => {
-                      const chore = plan?.chores.find((item) => item.id === assignment.chore_id)
-                      const member = adults.find((item) => item.id === assignment.member_id)
-                      return (
-                        <li
-                          key={assignment.chore_id}
-                          className="rounded-xl border border-slate-200 p-3"
-                        >
-                          <span className="font-bold text-slate-800">
-                            {chore?.title ?? `Aufgabe #${assignment.chore_id}`}
-                          </span>
-                          <span className="ml-2 text-slate-600">
-                            → {member?.name ?? `Person #${assignment.member_id}`}
-                          </span>
-                          <p className="text-sm text-slate-600">
-                            {assignment.estimated_minutes} Minuten · {assignment.adult_xp} XP
-                            {chore?.assignment_mode === 'fixed' ? ' · Fest zugeordnet' : ''}
-                          </p>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  <>
+                    <ul className="mt-3 flex flex-col gap-3">
+                      {weeklyPreview.data.assignments.map((assignment) => {
+                        const chore = plan?.chores.find((item) => item.id === assignment.chore_id)
+                        const isFixed = chore?.assignment_mode === 'fixed'
+                        const assigned = weeklyEdits[assignment.chore_id]
+                          ?? confirmedWeek.data?.assignments.find(
+                            (item) => item.chore_id === assignment.chore_id,
+                          )?.member_id
+                          ?? assignment.member_id
+                        return (
+                          <li key={assignment.chore_id} className="rounded-xl border border-slate-200 p-3">
+                            <label className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-bold text-slate-800">
+                                {chore?.title ?? `Aufgabe #${assignment.chore_id}`}
+                              </span>
+                              <select
+                                aria-label={`Zuständig für ${chore?.title ?? assignment.chore_id}`}
+                                value={assigned}
+                                disabled={isFixed || publishWeek.isPending}
+                                onChange={(event) => {
+                                  setWeeklyEdits((old) => ({
+                                    ...old,
+                                    [assignment.chore_id]: Number(event.target.value),
+                                  }))
+                                  setWeekPublished(false)
+                                }}
+                                className="rounded-lg border border-slate-300 p-2"
+                              >
+                                {adults.map((member) => (
+                                  <option key={member.id} value={member.id}>{member.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <p className="text-sm text-slate-600">
+                              {assignment.estimated_minutes} Minuten · {assignment.adult_xp} XP
+                              {isFixed ? ' · Fest zugeordnet' : ''}
+                            </p>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        disabled={publishWeek.isPending || confirmedWeek.isPending}
+                        onClick={() => {
+                          const assignments: WeeklyChorePreview['assignments'] =
+                            weeklyPreview.data.assignments.map((entry) => ({
+                              ...entry,
+                              member_id: weeklyEdits[entry.chore_id]
+                                ?? confirmedWeek.data?.assignments.find(
+                                  (saved) => saved.chore_id === entry.chore_id,
+                                )?.member_id
+                                ?? entry.member_id,
+                            }))
+                          publishWeek.mutate(assignments, {
+                            onSuccess: () => {
+                              setWeekPublished(true)
+                              setWeeklyEdits({})
+                            },
+                          })
+                        }}
+                      >
+                        {publishWeek.isPending ? 'Speichert …' : 'Wochenplan verbindlich übernehmen'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setWeeklyEdits({})
+                          setWeekPublished(false)
+                        }}
+                      >
+                        Änderungen verwerfen
+                      </Button>
+                    </div>
+                  </>
                 )}
               </>
             )}
