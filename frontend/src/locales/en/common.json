@@ -484,7 +484,10 @@
       "counted_from_future": "This day is in the future.",
       "credits_invalid": "The XP credit for this chore is invalid.",
       "fixed_member_required": "A fixed assignment requires an existing adult.",
-      "weekly_invalid": "The weekly assignment is invalid. Please reload the suggestion."
+      "weekly_invalid": "The weekly assignment is invalid. Please reload the suggestion.",
+      "credit_requires_parent": "Only adults can receive chore XP.",
+      "not_completed": "This chore has not been completed yet.",
+      "parent_required": "An adult account is required for this action."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
