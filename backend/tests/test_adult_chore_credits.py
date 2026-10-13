@@ -96,3 +96,22 @@ def test_legacy_update_preserves_adult_settings(client, parent, now):
     assert changed["estimated_minutes"] == 60
     assert changed["assignment_mode"] == "fixed"
     assert changed["fixed_member_id"] == flo
+
+
+def test_credited_chore_undo_requires_parent_unlock(client, parent, now):
+    flo = parent_member(client, parent, "Flo")
+    room = add_room(client, parent)
+    item = add_chore(client, parent, room["id"], adult_xp=15)
+    done(client, parent, item["id"], flo)
+    assert approve(client, parent, item["id"], flo).status_code == 200
+
+    from app.db import SessionLocal
+    from app.models import AuthSession
+    from sqlalchemy import update
+    with SessionLocal() as db:
+        db.execute(update(AuthSession).values(parent_unlocked_until=None))
+        db.commit()
+
+    blocked = client.delete(f"/api/chores/{item['id']}/done", headers=csrf(parent))
+    assert blocked.status_code == 403, blocked.text
+    assert total(flo) == 15
