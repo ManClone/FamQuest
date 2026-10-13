@@ -54,3 +54,50 @@ def bonus_balance(db: Session, member_id: int) -> int:
 
 def allowance_balance(db: Session, member_id: int) -> int:
     return money_balance(db, member_id, ALLOWANCE_KINDS)
+
+
+def post_weekly_allowance(
+    db: Session,
+    member_id: int,
+    cents: int,
+    week_start,
+) -> bool:
+    """Book an unconditional weekly allowance once per child and ISO week.
+
+    Caller owns the transaction and must commit it. A row lock on the member
+    serializes concurrent requests. The allowance does not inspect quest status.
+    No scheduling or automatic payments are enabled by this helper.
+    """
+    import datetime as dt
+
+    from app.models import FamilyMember
+
+    if type(cents) is not int or not 1 <= cents <= 100_000:
+        raise ValueError("Allowance must be 1 to 100000 cents")
+    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime):
+        raise ValueError("week_start must be a date")
+    if week_start.weekday() != 0:
+        raise ValueError("week_start must be Monday")
+
+    member = db.scalar(
+        select(FamilyMember)
+        .where(FamilyMember.id == member_id)
+        .with_for_update()
+    )
+    if member is None or member.role != "child":
+        raise ValueError("Allowance recipient must be a child")
+
+    key = f"weekly:{week_start.isoformat()}"
+    existing = db.scalar(
+        select(MoneyTransaction.id).where(
+            MoneyTransaction.member_id == member_id,
+            MoneyTransaction.kind == "allowance",
+            MoneyTransaction.reason == key,
+        )
+    )
+    if existing is not None:
+        return False
+
+    book_money(db, member_id, cents, "allowance", key)
+    db.flush()
+    return True
