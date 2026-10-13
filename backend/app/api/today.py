@@ -8,6 +8,7 @@ from app.api.tasks import get_task
 from app.auth import CurrentSession, DbSession, get_family
 from app.errors import ApiError
 from app.models import FamilyMember, Task, TaskCompletion
+from app.money import book_money
 from app.points import book, earned_on, totals
 from app.recurrence import flexible_due
 from app.routines import RoutinePlan, Slot
@@ -174,6 +175,7 @@ def complete_task(
             member_id=member_id,
             date=today,
             points=task.points,
+            money_cents=task.money_cents,
             approved_at=None if task.needs_approval else func.now(),
         )
         .on_conflict_do_nothing(index_elements=["task_id", "member_id", "date"])
@@ -189,6 +191,8 @@ def complete_task(
             task_id=task_id,
             task_date=today,
         )
+    if created is not None and not task.needs_approval:
+        book_money(db, member_id, task.money_cents, "task_completed", task.title, created)
     db.commit()
 
 
@@ -209,12 +213,13 @@ def undo_task(
     removed = db.execute(
         delete(TaskCompletion)
         .where(*condition)
-        .returning(TaskCompletion.member_id, TaskCompletion.points, TaskCompletion.approved_at)
+        .returning(TaskCompletion.member_id, TaskCompletion.points, TaskCompletion.approved_at, TaskCompletion.money_cents, TaskCompletion.id)
     ).all()
     # Mehrere Zeilen nur, wenn eine Aufgabe erst nachträglich auf „Einer für alle“ gestellt wurde.
     for completion in removed:
         if completion.approved_at is None:
             continue
+        book_money(db, completion.member_id, -completion.money_cents, "task_undone", task.title, completion.id)
         book(
             db,
             completion.member_id,
