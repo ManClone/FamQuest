@@ -20,7 +20,6 @@ import { PARENT_IDLE_TIMEOUT_MS } from './ParentsPage'
 import { ChoresWidget } from './home/ChoresWidget'
 import { HomeEditor, PinDialog } from './home/HomeEditor'
 import { RoutineWidget } from './home/RoutineWidget'
-import { ShoppingWidget } from './home/ShoppingWidget'
 import { WeatherBadge } from './home/WeatherBadge'
 import { WeekBoard } from './home/WeekBoard'
 
@@ -123,7 +122,7 @@ function EditMode({
 }
 
 /** Kacheln der oberen Reihe, in ihrer Reihenfolge von links nach rechts. */
-const TOP_TILES = ['tasks', 'chores', 'shopping'] as const
+const TOP_TILES = ['tasks', 'chores'] as const
 
 /** Spalten der oberen Reihe: Die Routine der Kinder ist doppelt so breit wie die anderen Kacheln. */
 const TOP_COLUMNS: Record<string, string> = {
@@ -150,14 +149,13 @@ function Sections({
         <div className={`grid grid-cols-1 items-start gap-4 ${columns}`}>
           {shown.has('tasks') && <RoutineWidget />}
           {shown.has('chores') && <ChoresWidget />}
-          {shown.has('shopping') && <ShoppingWidget />}
         </div>
       )}
-      {today && (shown.has('events') || shown.has('meals')) && (
+      {today && shown.has('meals') && (
         <WeekBoard
           today={today}
           mode={week}
-          showEvents={shown.has('events')}
+          showEvents={false}
           showMeals={shown.has('meals')}
         />
       )}
