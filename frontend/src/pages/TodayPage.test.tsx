@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { DEFAULT_LAYOUT } from '../api/home'
@@ -35,6 +35,8 @@ describe('Startseite Heute', () => {
   it('respektiert ausgeblendete Aufgaben und Haushalt', async () => {
     setup(DEFAULT_LAYOUT.tiles.map((tile) => ({ ...tile, visible: false })))
     expect(await screen.findByRole('heading', { level: 1 })).toBeVisible()
-    expect(screen.queryAllByRole('link', { name: /Aufgaben öffnen|Haushalt öffnen/ })).toHaveLength(0)
+    await waitFor(() => {
+      expect(screen.queryAllByRole('link', { name: /Aufgaben öffnen|Haushalt öffnen/ })).toHaveLength(0)
+    })
   })
 })
