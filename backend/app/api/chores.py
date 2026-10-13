@@ -19,8 +19,9 @@ from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
 from app.auth import CurrentSession, DbSession, ParentSession, get_family, is_parent_unlocked
 from app.chores import chore_state
 from app.errors import ApiError
-from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, Todo
+from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, FamilyMember, Todo
 from app.points import book, lock_member
+from app.household_assignment import HouseholdChore, suggest_week
 from app.schemas import IconName, TaskTitle
 from app.today import family_now
 
@@ -296,6 +297,70 @@ def list_chores(_: CurrentSession, db: DbSession) -> ChoresOut:
         todos=[todo_out(todo) for todo in visible_todos(db, today)],
         share_days=SHARE_DAYS,
         shares=_shares(db, today),
+    )
+
+
+class WeeklyAssignmentOut(BaseModel):
+    chore_id: int
+    member_id: int
+    estimated_minutes: int
+    adult_xp: int
+
+
+class WeeklyPreviewOut(BaseModel):
+    week_start: dt.date
+    assignments: list[WeeklyAssignmentOut]
+
+
+@router.get("/weekly-preview")
+def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
+    """Read-only suggestion for chores due in the current calendar week.
+
+    Fixed work counts toward each adult's load; recent completed minutes
+    influence flexible assignments. Nothing is published or reassigned.
+    """
+    today = _today(db)
+    week_start = today - dt.timedelta(days=today.weekday())
+    week_end = week_start + dt.timedelta(days=6)
+    adult_ids = list(db.scalars(
+        select(FamilyMember.id).where(FamilyMember.role == "parent").order_by(FamilyMember.id)
+    ))
+    if not adult_ids:
+        return WeeklyPreviewOut(week_start=week_start, assignments=[])
+    chores = list(db.scalars(select(Chore).where(Chore.active.is_(True)).order_by(Chore.id)))
+    last = _last_completions(db, [chore.id for chore in chores])
+    due = [
+        chore for chore in chores
+        if chore_state(_counted_from(chore, last.get(chore.id)),
+                       chore.interval_days, today).due_date <= week_end
+    ]
+    since = today - dt.timedelta(days=29)
+    history = db.execute(
+        select(ChoreCompletion.member_id, Chore.estimated_minutes)
+        .join(Chore, Chore.id == ChoreCompletion.chore_id)
+        .where(ChoreCompletion.date >= since, ChoreCompletion.date <= today,
+               ChoreCompletion.member_id.in_(adult_ids))
+    )
+    previous_minutes = {member_id: 0 for member_id in adult_ids}
+    for member_id, minutes in history:
+        previous_minutes[member_id] += minutes
+    previous_assignees = {
+        chore.id: last[chore.id].member_id
+        for chore in due if chore.id in last and last[chore.id].member_id is not None
+    }
+    assignments = suggest_week(
+        [HouseholdChore(chore.id, chore.estimated_minutes,
+                        chore.assignment_mode, chore.fixed_member_id) for chore in due],
+        adult_ids, previous_minutes, previous_assignees,
+    )
+    return WeeklyPreviewOut(
+        week_start=week_start,
+        assignments=[
+            WeeklyAssignmentOut(chore_id=chore.id, member_id=assignments[chore.id],
+                                estimated_minutes=chore.estimated_minutes,
+                                adult_xp=chore.adult_xp)
+            for chore in due
+        ],
     )
 
 
