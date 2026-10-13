@@ -44,7 +44,6 @@ import { RewardsSection } from './parents/RewardsSection'
 import { RoutinesSection } from './parents/RoutinesSection'
 import { TaskEditor } from './parents/TaskEditor'
 import { TasksSection } from './parents/TasksSection'
-import { WeatherSection } from './parents/WeatherSection'
 import { ParentsNav } from './parents/ParentsNav'
 import { PhotosSection } from './parents/PhotosSection'
 import { FrameSettingsSection } from './parents/FrameSettingsSection'
@@ -264,11 +263,7 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
   const [confirmDisable, setConfirmDisable] = useState(false)
   // Rückkehr von der Google-Anmeldung: Ergebnis anzeigen und danach die Adresse aufräumen.
   // Hinweise („… ist gespeichert“) gehören zu dem Bereich, in dem sie entstanden sind.
-  const [noticeState, setNoticeState] = useState<{ area: ParentArea; text: string } | null>(() =>
-    searchParams.get('calendar') === 'connected'
-      ? { area: 'settings', text: t('calendar.connected') }
-      : null,
-  )
+  const [noticeState, setNoticeState] = useState<{ area: ParentArea; text: string } | null>(null)
   const notice = noticeState?.area === area ? noticeState.text : undefined
   const setNotice = (text: string | undefined) =>
     setNoticeState(text === undefined ? null : { area, text })
