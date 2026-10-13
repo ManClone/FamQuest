@@ -19,7 +19,8 @@ from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
 from app.auth import CurrentSession, DbSession, ParentSession, get_family
 from app.chores import chore_state
 from app.errors import ApiError
-from app.models import Chore, ChoreCompletion, ChoreRoom, Todo
+from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, Todo
+from app.points import book, lock_member
 from app.schemas import IconName, TaskTitle
 from app.today import family_now
 
@@ -443,6 +444,44 @@ def mark_done(chore_id: int, body: DoneIn, _: CurrentSession, db: DbSession) -> 
     return _one_out(db, chore)
 
 
+@router.post("/{chore_id}/credit")
+def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> ChoreOut:
+    """Parent-approved XP for today's completed chore; repeated approval is idempotent."""
+    chore = _get_chore(db, chore_id)
+    if body.member_id is None:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.parent_required")
+    member = get_member(db, body.member_id)
+    if member.role != "parent":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.parent_required")
+    today = _today(db)
+    completion = db.scalar(
+        select(ChoreCompletion)
+        .where(ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today)
+        .with_for_update()
+    )
+    if completion is None:
+        raise ApiError(status.HTTP_409_CONFLICT, "chore.not_completed")
+    old = db.get(ChoreCredit, completion.id)
+    amount = chore.adult_xp
+    if old is not None and old.member_id == member.id and old.amount == amount:
+        return _one_out(db, chore)
+    # Serialize balance-affecting changes; lock in stable order.
+    for member_id in sorted({member.id, old.member_id} if old else {member.id}):
+        lock_member(db, member_id)
+    if old is not None:
+        book(db, old.member_id, -old.amount, "chore_undone",
+             reason=chore.title, task_date=today)
+        db.delete(old)
+        db.flush()
+    if amount > 0:
+        book(db, member.id, amount, "chore_completed",
+             reason=chore.title, task_date=today)
+        db.add(ChoreCredit(completion_id=completion.id, member_id=member.id, amount=amount))
+    completion.member_id = member.id
+    db.commit()
+    return _one_out(db, chore)
+
+
 @router.delete("/{chore_id}/done")
 def undo_done(chore_id: int, _: CurrentSession, db: DbSession) -> ChoreOut:
     """Nimmt die heutige Erledigung zurück; frühere bleiben stehen."""
@@ -453,6 +492,12 @@ def undo_done(chore_id: int, _: CurrentSession, db: DbSession) -> ChoreOut:
         )
     )
     if completion is not None:
+        credit = db.get(ChoreCredit, completion.id)
+        if credit is not None:
+            lock_member(db, credit.member_id)
+            book(db, credit.member_id, -credit.amount, "chore_undone",
+                 reason=chore.title, task_date=completion.date)
+            db.delete(credit)
         db.delete(completion)
         db.commit()
     return _one_out(db, chore)
