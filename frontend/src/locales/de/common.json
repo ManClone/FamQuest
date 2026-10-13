@@ -484,7 +484,10 @@
       "counted_from_future": "Dieser Tag liegt in der Zukunft.",
       "credits_invalid": "Die XP-Gutschrift für diese Hausarbeit ist ungültig.",
       "fixed_member_required": "Für eine feste Zuteilung muss ein vorhandener Erwachsener ausgewählt sein.",
-      "weekly_invalid": "Die Wochenverteilung ist ungültig. Bitte Vorschlag neu laden."
+      "weekly_invalid": "Die Wochenverteilung ist ungültig. Bitte Vorschlag neu laden.",
+      "credit_requires_parent": "XP für Hausarbeiten können nur Erwachsene erhalten.",
+      "not_completed": "Diese Hausarbeit ist noch nicht erledigt.",
+      "parent_required": "Für diese Aktion ist ein Erwachsenenkonto erforderlich."
     },
     "todo": {
       "not_found": "Diesen Eintrag gibt es nicht mehr.",
