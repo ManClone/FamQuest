@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import WandIcon from '~icons/fluent-emoji-flat/sparkles'
 import PencilIcon from '~icons/lucide/pencil'
 import PlusIcon from '~icons/lucide/plus'
 
 import {
+  CHORES_KEY,
   type Chore,
   type ChorePlan,
   type ChoreRoom,
@@ -44,6 +46,7 @@ export function ChoresSection({
   onEditChore,
 }: ChoresSectionProps) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const members = useMembers()
   const adults = (members.data ?? []).filter((member) => member.role === 'parent')
   const approve = useApproveChoreCredit()
@@ -173,6 +176,7 @@ export function ChoresSection({
                             onSuccess: () => {
                               setWeekPublished(true)
                               setWeeklyEdits({})
+                              void queryClient.invalidateQueries({ queryKey: CHORES_KEY })
                             },
                           })
                         }}
