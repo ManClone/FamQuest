@@ -1,0 +1,18 @@
+services:
+  famquest-mcp:
+    build: .
+    restart: unless-stopped
+    environment:
+      QUEST_DB_PATH: /data/quests.sqlite3
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8000
+    # Only local host access. Do not expose via Cloudflare without OAuth/auth gateway.
+    ports:
+      - "127.0.0.1:8091:8000"
+    volumes:
+      - quest-proposals:/data
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  quest-proposals:
