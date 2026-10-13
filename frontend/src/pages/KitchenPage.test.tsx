@@ -28,23 +28,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// Heute ist Samstag, 3. Oktober.
-const MEALS: MealWeek = {
-  start: '2026-09-28',
-  today: '2026-10-03',
-  meals: ['dinner'],
-  entries: [
-    {
-      date: '2026-10-03',
-      meal: 'dinner',
-      dish_id: 1,
-      name: 'Fischstäbchen',
-      icon: 'fluent-emoji-flat:fish',
-      image_url: null,
-    },
-  ],
-}
-
 function mockKitchen(
   settings: Partial<FrameSettings> = {},
   extra: Parameters<typeof mockApi>[0] = {},
@@ -79,50 +62,29 @@ function mockKitchen(
 const page = async (name: string) => within(await screen.findByRole('region', { name }))
 
 describe('Küchenansicht', () => {
-  it('zeigt ohne Navigationsleiste die nächsten Tage mit Terminen und Essen', async () => {
+  it('zeigt Aufgaben und Haushalt ohne Hauptnavigation', async () => {
     mockKitchen()
     renderApp('/kitchen')
 
-    const week = await page('Termine und Essen')
-    expect(
-      await week.findByRole('button', { name: 'Abendessen: Fischstäbchen, ändern' }),
-    ).toBeVisible()
-    // Heute und die nächsten Tage, nicht die ganze Woche.
-    expect(week.getByRole('region', { name: 'Samstag, 3. Oktober' })).toHaveAttribute(
-      'aria-current',
-      'date',
-    )
-    expect(week.getAllByRole('button', { name: 'Abendessen eintragen' })).toHaveLength(
-      KITCHEN_DAYS - 1,
-    )
+    const tabs = within(await screen.findByRole('navigation', { name: 'Seiten der Küchenansicht' }))
+    expect(tabs.getByRole('button', { name: 'Aufgaben' })).toHaveAttribute('aria-current', 'page')
+    expect(tabs.getByRole('button', { name: 'Haushalt' })).toBeInTheDocument()
+    expect(await page('Aufgaben')).toBeVisible()
+    expect(await page('Haushalt')).toBeVisible()
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).toBeNull()
+    expect(tabs.queryByRole('button', { name: 'Termine und Essen' })).toBeNull()
+    expect(tabs.queryByRole('button', { name: 'Einkauf' })).toBeNull()
   })
 
-  it('hat daneben Aufgaben, Haushalt und Einkauf; die Symbole oben springen hin', async () => {
+  it('wechselt zwischen Aufgaben und Haushalt', async () => {
     const user = userEvent.setup()
     mockKitchen()
     renderApp('/kitchen')
 
     const tabs = within(await screen.findByRole('navigation', { name: 'Seiten der Küchenansicht' }))
-    expect(tabs.getByRole('button', { name: 'Termine und Essen' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-    expect(
-      await (await page('Aufgaben')).findByRole('button', { name: /Zähne putzen/ }),
-    ).toBeVisible()
-    expect(
-      await (await page('Haushalt')).findByRole('button', { name: 'Hühnerfutter holen' }),
-    ).toBeVisible()
-    expect(await (await page('Einkauf')).findByText('Milch')).toBeVisible()
-    // Aus der Küche führt kein Pfeil in die große Aufgabenansicht.
-    expect(screen.queryByRole('link', { name: 'Alle Aufgaben öffnen' })).toBeNull()
-
-    await user.click(tabs.getByRole('button', { name: 'Einkauf' }))
-    expect(tabs.getByRole('button', { name: 'Einkauf' })).toHaveAttribute('aria-current', 'page')
-    expect(tabs.getByRole('button', { name: 'Termine und Essen' })).not.toHaveAttribute(
-      'aria-current',
-    )
+    await user.click(tabs.getByRole('button', { name: 'Haushalt' }))
+    expect(tabs.getByRole('button', { name: 'Haushalt' })).toHaveAttribute('aria-current', 'page')
+    expect(tabs.getByRole('button', { name: 'Aufgaben' })).not.toHaveAttribute('aria-current')
   })
 
   it('zeigt im Nachtfenster des Bilderrahmens den Nachtbildschirm; ein Tipp weckt', async () => {
