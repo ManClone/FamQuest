@@ -472,6 +472,9 @@ def mark_done(chore_id: int, body: DoneIn, _: CurrentSession, db: DbSession) -> 
             db.rollback()
             completion = db.scalar(query)
     if completion is not None:
+        credit = db.get(ChoreCredit, completion.id)
+        if credit is not None and body.member_id != credit.member_id:
+            raise ApiError(status.HTTP_409_CONFLICT, "chore.credit_requires_parent")
         completion.member_id = body.member_id
         db.commit()
     return _one_out(db, chore)
