@@ -25,6 +25,7 @@ export interface TaskData {
   icon: string
   description: string
   points: number
+  money_cents?: number
   time_of_day: TimeOfDay | null
   /** null = Farbe der jeweiligen Person */
   color: MemberColor | null
