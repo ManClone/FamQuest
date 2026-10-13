@@ -38,6 +38,7 @@ import { MemberEditor } from './parents/MemberEditor'
 import { MembersSection } from './parents/MembersSection'
 import { PointsEditor } from './parents/PointsEditor'
 import { PointsSection } from './parents/PointsSection'
+import { PocketMoneySection } from './parents/PocketMoneySection'
 import { RewardEditor } from './parents/RewardEditor'
 import { RewardPoolPicker } from './parents/RewardPoolPicker'
 import { RewardsSection } from './parents/RewardsSection'
@@ -490,6 +491,7 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
         )}
         {area === 'family' && (
           <>
+            <PocketMoneySection children={childMembers} />
             <MembersSection
               members={members.data}
               error={members.error}
