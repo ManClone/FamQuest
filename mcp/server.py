@@ -3,6 +3,7 @@
 No bank access, no FamQuest parent-session impersonation, no quest publication.
 """
 import hmac
+import base64
 import html
 import os
 import sqlite3
@@ -42,13 +43,14 @@ class BearerAuth:
             return await self.app(scope, receive, send)
         headers = dict(scope.get("headers", []))
         path = scope.get("path", "")
-        expected = ("Bearer " + (PARENT_TOKEN if path.startswith("/parent") else TOKEN)).encode("utf-8")
+        parent = path.startswith("/parent")
+        expected = ("Basic " + base64.b64encode(("parent:" + PARENT_TOKEN).encode()).decode()).encode() if parent else ("Bearer " + TOKEN).encode()
         actual = headers.get(b"authorization", b"")
         if not hmac.compare_digest(actual, expected):
             if scope["type"] == "http":
                 await send({"type": "http.response.start", "status": 401,
                             "headers": [(b"content-type", b"text/plain"),
-                                        (b"www-authenticate", b"Bearer")]})
+                                        (b"www-authenticate", b'Basic realm="FamQuest Eltern"' if parent else b"Bearer")]})
                 await send({"type": "http.response.body", "body": b"Unauthorized"})
             else:
                 await send({"type": "websocket.close", "code": 1008})
