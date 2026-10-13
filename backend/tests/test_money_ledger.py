@@ -120,3 +120,8 @@ def test_money_overview_is_parent_only_and_separates_balances(client, admin, par
         "bonus_cents": 125,
         "total_cents": 625,
     }
+
+    from tests.conftest import csrf
+
+    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
+    assert client.get(f"/api/members/{lena}/money").status_code == 403
