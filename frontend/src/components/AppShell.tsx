@@ -3,15 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import BroomIcon from '~icons/fluent-emoji-flat/broom'
 import GearIcon from '~icons/fluent-emoji-flat/gear'
-import CalendarIcon from '~icons/fluent-emoji-flat/spiral-calendar'
 import PhotoIcon from '~icons/fluent-emoji-flat/framed-picture'
 import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 import HouseIcon from '~icons/fluent-emoji-flat/house-with-garden'
 import MealIcon from '~icons/fluent-emoji-flat/fork-and-knife-with-plate'
-import CartIcon from '~icons/fluent-emoji-flat/shopping-cart'
 
-import { useCalendarStatus } from '../api/calendar'
 import { usePhotos } from '../api/photos'
 import { useToday } from '../api/today'
 import { getFrameIdleMinutes } from '../frameIdle'
@@ -70,8 +67,6 @@ export function AppShell() {
   // Die Personenansicht gehört zum Aufgabenbereich.
   const onTasks = pathname.startsWith('/tasks') || pathname.startsWith('/member/')
   const pending = useToday().data?.pending_approvals ?? 0
-  // Den Kalender gibt es erst, wenn im Elternbereich einer ausgewählt ist.
-  const calendarEnabled = useCalendarStatus().data?.enabled ?? false
   // Den Bilderrahmen gibt es erst, wenn mindestens ein Foto sichtbar ist.
   const hasPhotos = usePhotos().data?.some((photo) => photo.visible) ?? false
   // Nach Leerlauf nur, wenn es auf diesem Gerät eingeschaltet ist (gelesen beim Betreten).
@@ -96,25 +91,11 @@ export function AppShell() {
           icon={GiftIcon}
           active={pathname.startsWith('/rewards')}
         />
-        {calendarEnabled && (
-          <NavItem
-            to="/calendar"
-            label={t('nav.calendar')}
-            icon={CalendarIcon}
-            active={pathname.startsWith('/calendar')}
-          />
-        )}
         <NavItem
           to="/meals"
           label={t('nav.meals')}
           icon={MealIcon}
           active={pathname.startsWith('/meals')}
-        />
-        <NavItem
-          to="/shopping"
-          label={t('nav.shopping')}
-          icon={CartIcon}
-          active={pathname.startsWith('/shopping')}
         />
         <NavItem
           to="/household"
