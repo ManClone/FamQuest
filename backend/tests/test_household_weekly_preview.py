@@ -86,3 +86,20 @@ def test_confirmed_week_rejects_incomplete_plan(client, parent, now):
         "/api/chores/weekly-confirmed", json={"assignments": []}, headers=csrf(parent),
     )
     assert response.status_code == 422, response.text
+
+
+def test_weekly_preview_reports_deleted_fixed_adult_as_conflict(client, parent, now):
+    flo = parent_member(client, parent, "Flo", color="blue")
+    room = add_room(client, parent)
+    add_chore(
+        client, parent, room["id"], title="Wocheneinkauf",
+        assignment_mode="fixed", fixed_member_id=flo, state="due",
+    )
+    from app.db import SessionLocal
+    from app.models import FamilyMember
+    with SessionLocal() as db:
+        member = db.get(FamilyMember, flo)
+        db.delete(member)
+        db.commit()
+    response = client.get("/api/chores/weekly-preview")
+    assert response.status_code == 409, response.text
