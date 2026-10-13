@@ -178,6 +178,7 @@ class TaskIn(BaseModel):
     icon: IconName
     description: TaskDescription = ""
     points: Annotated[int, Field(ge=0, le=TASK_MAX_POINTS)]
+    money_cents: Annotated[int, Field(ge=0, le=100000)] = 0
     time_of_day: TimeOfDay | None = None
     color: MemberColor | None = None
     active: bool = True
@@ -201,6 +202,7 @@ class TaskOut(BaseModel):
     icon: str
     description: str
     points: int
+    money_cents: int
     time_of_day: str | None
     color: str | None
     active: bool
