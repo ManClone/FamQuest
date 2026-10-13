@@ -1,4 +1,4 @@
-"""Read-only money overview for parents.
+"""Parent-only money overview and explicit weekly allowance credits.
 
 Balances are shown separately so quest bonus reversals never masquerade as
 changes to unconditional pocket money. No payment is initiated here.
@@ -10,6 +10,7 @@ from pydantic import Field
 from pydantic import BaseModel
 
 from app.api.members import get_member
+from app.demo_mode import NotInDemo
 from app.auth import DbSession, ParentSession
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance
 
@@ -47,7 +48,11 @@ class WeeklyAllowanceOut(BaseModel):
     allowance_cents: int
 
 
-@router.post("/members/{member_id}/money/weekly-allowance", response_model=WeeklyAllowanceOut)
+@router.post(
+    "/members/{member_id}/money/weekly-allowance",
+    response_model=WeeklyAllowanceOut,
+    dependencies=[NotInDemo],
+)
 def credit_weekly_allowance(
     member_id: int,
     body: WeeklyAllowanceIn,
