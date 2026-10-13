@@ -298,7 +298,7 @@ def list_chores(_: CurrentSession, db: DbSession) -> ChoresOut:
     last = _last_completions(db, [chore.id for chore in chores])
     week_start = today - dt.timedelta(days=today.weekday())
     weekly = dict(db.execute(select(WeeklyChoreAssignment.chore_id, WeeklyChoreAssignment.member_id)
-                             .where(WeeklyChoreAssignment.week_start == week_start)))
+                             .where(WeeklyChoreAssignment.week_start == week_start)).all())
     return ChoresOut(
         date=today,
         rooms=[_room_out(room) for room in rooms],
