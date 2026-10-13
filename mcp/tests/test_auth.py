@@ -4,6 +4,7 @@ import os
 import unittest
 
 os.environ.setdefault("FAMQUEST_MCP_TOKEN", "test-only-token-0123456789-abcdef")
+os.environ.setdefault('FAMQUEST_PARENT_TOKEN', 'test-parent-credential-long-enough-12345')
 from server import BearerAuth
 
 
