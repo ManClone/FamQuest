@@ -3,6 +3,7 @@
 No bank access, no FamQuest parent-session impersonation, no quest publication.
 """
 import hmac
+import html
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -11,6 +12,11 @@ from pathlib import Path
 from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
+from starlette.responses import HTMLResponse, RedirectResponse, PlainTextResponse
+from starlette.routing import Route
+from starlette.middleware import Middleware
+from starlette.middleware.sessions import SessionMiddleware
 import uvicorn
 from pydantic import Field
 
@@ -18,8 +24,9 @@ DB_PATH = Path(os.getenv("QUEST_DB_PATH", "/data/quests.sqlite3"))
 HOST = os.getenv("MCP_HOST", "0.0.0.0")
 PORT = int(os.getenv("MCP_PORT", "8000"))
 TOKEN = os.getenv("FAMQUEST_MCP_TOKEN", "")
-if len(TOKEN) < 32:
-    raise RuntimeError("FAMQUEST_MCP_TOKEN muss mindestens 32 Zeichen lang sein")
+PARENT_TOKEN = os.getenv("FAMQUEST_PARENT_TOKEN", "")
+if len(TOKEN) < 32 or len(PARENT_TOKEN) < 32 or hmac.compare_digest(TOKEN, PARENT_TOKEN):
+    raise RuntimeError("Zwei unterschiedliche Tokens mit mindestens 32 Zeichen erforderlich")
 
 mcp = FastMCP("FamQuest Quest Entwürfe", host=HOST, port=PORT, stateless_http=True, json_response=True)
 
@@ -34,7 +41,8 @@ class BearerAuth:
         if scope["type"] == "lifespan":
             return await self.app(scope, receive, send)
         headers = dict(scope.get("headers", []))
-        expected = ("Bearer " + TOKEN).encode("utf-8")
+        path = scope.get("path", "")
+        expected = ("Bearer " + (PARENT_TOKEN if path.startswith("/parent") else TOKEN)).encode("utf-8")
         actual = headers.get(b"authorization", b"")
         if not hmac.compare_digest(actual, expected):
             if scope["type"] == "http":
@@ -102,5 +110,51 @@ def list_quest_proposals() -> list[dict]:
         )]
 
 
+async def parent_review(request):
+    """Minimal parent-only review view; no publishing to FamQuest yet."""
+    with database() as db:
+        db.row_factory = sqlite3.Row
+        rows = [dict(x) for x in db.execute(
+            "SELECT id,title,description,points,bonus_cents,recurrence,status FROM quest_proposals ORDER BY id DESC LIMIT 100"
+        )]
+    parts = ["<h1>Quest-Entwürfe zur Prüfung</h1>",
+             "<p>Freigabe bestätigt nur den Entwurf; Veröffentlichung in FamQuest ist noch nicht implementiert.</p>"]
+    for q in rows:
+        title = html.escape(q["title"])
+        desc = html.escape(q["description"])
+        parts.append(f"<section><h2>{title}</h2><p>{desc}</p><p>{q['points']} XP · {q['bonus_cents']} Cent vorgeschlagen · Status: {html.escape(q['status'])}</p>")
+        if q["status"] == "draft":
+            for decision, label in (("approved", "Entwurf freigeben"), ("rejected", "Ablehnen")):
+                parts.append(f'<form action="/parent/decide/{q["id"]}/{decision}" method="post"><button>{label}</button></form>')
+        parts.append("</section><hr>")
+    return HTMLResponse("<!doctype html><html lang='de'><meta charset='utf-8'><title>FamQuest Freigabe</title><body>" + "".join(parts) + "</body></html>")
+
+
+async def parent_decide(request):
+    proposal_id = int(request.path_params["proposal_id"])
+    decision = request.path_params["decision"]
+    if decision not in ("approved", "rejected"):
+        return PlainTextResponse("Invalid decision", status_code=400)
+    with database() as db:
+        result = db.execute(
+            "UPDATE quest_proposals SET status=? WHERE id=? AND status='draft'",
+            (decision, proposal_id),
+        )
+        if result.rowcount != 1:
+            return PlainTextResponse("Not found or already reviewed", status_code=409)
+    return RedirectResponse("/parent", status_code=303)
+
+
+def build_app():
+    # Keep the MCP ASGI app mounted separately. All requests are protected by BearerAuth.
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+    return Starlette(routes=[
+        Route("/parent", parent_review, methods=["GET"]),
+        Route("/parent/decide/{proposal_id:int}/{decision:str}", parent_decide, methods=["POST"]),
+        Mount("/", app=mcp.streamable_http_app()),
+    ])
+
+
 if __name__ == "__main__":
-    uvicorn.run(BearerAuth(mcp.streamable_http_app()), host=HOST, port=PORT)
+    uvicorn.run(BearerAuth(build_app()), host=HOST, port=PORT)
