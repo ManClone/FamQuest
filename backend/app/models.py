@@ -621,6 +621,21 @@ class ChoreCompletion(Base):
     )
 
 
+class ChoreCredit(Base):
+    """Current XP credit snapshot for a chore completion; historical adjustments stay in ledger."""
+
+    __tablename__ = "chore_credits"
+    __table_args__ = (CheckConstraint("amount > 0", name="chore_credit_positive"),)
+
+    completion_id: Mapped[int] = mapped_column(
+        ForeignKey("chore_completions.id", ondelete="CASCADE"), primary_key=True
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE")
+    )
+    amount: Mapped[int]
+
+
 class Todo(Base):
     """Einmaliges für den Haushalt ohne Person und Termin („Hühnerfutter holen“). Wer es macht,
     hakt ab; Abgehaktes bleibt bis zum Ende des Tages sichtbar und zählt danach nur noch für die
