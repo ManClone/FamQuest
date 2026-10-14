@@ -1,7 +1,7 @@
 """Regressionstests für getrennte Benutzerkonten und Demo-Schutz."""
 
 from app.config import get_settings
-from tests.conftest import SETUP_DATA, csrf
+from tests.conftest import csrf
 
 
 def test_account_management_requires_parent_role(client, admin):
