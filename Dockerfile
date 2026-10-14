@@ -32,9 +32,13 @@ COPY backend/ ./
 COPY --from=frontend /frontend/dist ./static
 # QNAP ZIP extraction may preserve restrictive permissions on copied files.
 # Ensure the unprivileged runtime account can traverse and read all app files.
-RUN chown -R app:app /app \
-    && chmod -R u+rwX /app \
-    && chmod 750 /app/docker-entrypoint.sh
+# QNAP ZIP extraction can leave restrictive source permissions.
+# Do not recursively chmod the uv virtual environment.
+RUN chmod 755 /app \
+    && chmod 644 /app/pyproject.toml /app/uv.lock /app/.python-version \
+    && find /app/app /app/alembic -type d -exec chmod 755 {} + \
+    && find /app/app /app/alembic -type f -exec chmod 644 {} + \
+    && chmod 755 /app/docker-entrypoint.sh
 
 USER app
 EXPOSE 8080
