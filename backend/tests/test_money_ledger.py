@@ -437,3 +437,42 @@ def test_bank_transaction_external_id_is_unique_per_account(client, parent, lena
         else:
             db.rollback()
             raise AssertionError("Duplicate bank movement was accepted")
+
+
+def test_payment_matches_allow_multiple_receipts_but_not_reuse(client, parent, lena, now):
+    import datetime as dt
+    from sqlalchemy.exc import IntegrityError
+    from app.models import MemberBankAccount, BankTransaction, MoneyPaymentMatch
+
+    week = dt.date(2026, 10, 12)
+    with Session(engine) as db:
+        account = MemberBankAccount(member_id=lena, provider="test", display_name="Konto")
+        db.add(account)
+        db.flush()
+        receipts = []
+        for external_id, cents in (("partial-1", 200), ("partial-2", 300)):
+            receipt = BankTransaction(
+                account_id=account.id, external_id=external_id, booked_on=week,
+                amount_cents=cents, currency="EUR", description="Taschengeld",
+            )
+            db.add(receipt)
+            db.flush()
+            receipts.append(receipt)
+            db.add(MoneyPaymentMatch(
+                member_id=lena, bank_transaction_id=receipt.id,
+                category="allowance", week_start=week,
+                amount_cents=cents, reference="Taschengeld",
+            ))
+            db.flush()
+        db.add(MoneyPaymentMatch(
+            member_id=lena, bank_transaction_id=receipts[0].id,
+            category="bonus", week_start=week,
+            amount_cents=200, reference="Bonus-2026-W42",
+        ))
+        try:
+            db.flush()
+        except IntegrityError:
+            db.rollback()
+        else:
+            db.rollback()
+            raise AssertionError("A bank receipt was matched twice")
