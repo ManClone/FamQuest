@@ -1,62 +1,11 @@
-import { type CSSProperties, useEffect } from 'react'
+import { type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import EyeIcon from '~icons/fluent-emoji-flat/eye'
-import LockedIcon from '~icons/fluent-emoji-flat/locked'
 
-import { useUnlockParent } from '../../api/auth'
 import { type HomeLayout, TILE_IDS, type Tile } from '../../api/home'
-import { DemoPinHint } from '../../components/DemoPinHint'
-import { PinPad } from '../../components/PinPad'
 import { Alert, Button } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { TILES } from './tileMeta'
-
-/** PIN-Abfrage über der Startseite, bevor die Eltern den Aufbau ändern. */
-export function PinDialog({
-  onUnlocked,
-  onCancel,
-}: {
-  onUnlocked: () => void
-  onCancel: () => void
-}) {
-  const { t } = useTranslation()
-  const unlock = useUnlockParent()
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('home.customize')}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4"
-      onClick={onCancel}
-    >
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="flex max-h-full w-full max-w-md flex-col gap-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-xl"
-      >
-        <LockedIcon className="mx-auto size-12" aria-hidden="true" />
-        <PinPad
-          title={t('parents.pin_prompt')}
-          onSubmit={(pin) => unlock.mutate(pin, { onSuccess: onUnlocked })}
-          error={unlock.isError ? errorMessage(t, unlock.error) : undefined}
-          busy={unlock.isPending}
-        />
-        <DemoPinHint />
-        <Button variant="secondary" onClick={onCancel}>
-          {t('actions.cancel')}
-        </Button>
-      </div>
-    </div>
-  )
-}
 
 /**
  * Aufbau der Startseite bearbeiten: Bereiche ein- und ausblenden (die Anordnung ist fest) und
