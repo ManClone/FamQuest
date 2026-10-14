@@ -38,7 +38,7 @@ class PinResetRequest(BaseModel):
 
 
 @router.post("/unlock")
-def unlock(body: UnlockRequest, auth_session: CurrentSession, db: DbSession) -> MeResponse:
+def unlock(body: UnlockRequest, auth_session: ParentSession, db: DbSession) -> MeResponse:
     family = get_family(db)
     if family.pin_enabled:
         limit_key = f"session:{auth_session.id}"
