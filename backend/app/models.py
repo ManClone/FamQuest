@@ -334,7 +334,7 @@ class BankBalanceSnapshot(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"), index=True)
-    balance_cents: Mapped[int]
+    balance_cents: Mapped[int] = mapped_column(BigInteger)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
