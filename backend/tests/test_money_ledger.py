@@ -279,3 +279,35 @@ def test_weekly_allowance_rejects_zero_and_negative_amounts(client, parent, lena
         assert response.status_code == 422, response.text
     with Session(engine) as db:
         assert list(db.scalars(select(MoneyTransaction.id).where(MoneyTransaction.member_id == lena))) == []
+
+
+def test_allowance_settings_are_opt_in_and_parent_only(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/settings"
+    assert client.get(url).json()["weekly_amount_cents"] is None
+    saved = client.put(url, json={"weekly_amount_cents": 450}, headers=csrf(parent))
+    assert saved.status_code == 200, saved.text
+    assert client.get(url).json()["weekly_amount_cents"] == 450
+    assert client.put(url, json={"weekly_amount_cents": 0}, headers=csrf(parent)).status_code == 422
+    assert client.put(url, json={"weekly_amount_cents": None}, headers=csrf(parent)).status_code == 200
+    assert client.get(url).json()["weekly_amount_cents"] is None
+    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
+    assert client.get(url).status_code == 403
+
+
+def test_configured_allowance_books_current_week_once(client, parent, lena, now):
+    import datetime as dt
+    from app.money import allowance_balance, credit_configured_allowances
+    from tests.conftest import csrf
+
+    assert client.put(
+        f"/api/members/{lena}/money/settings",
+        json={"weekly_amount_cents": 425},
+        headers=csrf(parent),
+    ).status_code == 200
+    with Session(engine) as db:
+        assert credit_configured_allowances(db, dt.date(2026, 10, 14)) == [lena]
+        assert credit_configured_allowances(db, dt.date(2026, 10, 14)) == []
+        db.commit()
+        assert allowance_balance(db, lena) == 425
