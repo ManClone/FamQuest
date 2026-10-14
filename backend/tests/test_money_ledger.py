@@ -339,3 +339,65 @@ def test_bank_balance_is_separate_from_allowance_and_bonus(client, parent, lena,
     assert len(response.json()) == 1
     assert response.json()[0]["balance_cents"] == 15000
     assert client.get(f"/api/members/{lena}/money").json()["total_cents"] == 500
+
+
+def test_bank_movements_are_read_only_and_ordered(client, parent, lena, now):
+    import datetime as dt
+    from app.models import MemberBankAccount, BankTransaction
+
+    with Session(engine) as db:
+        account = MemberBankAccount(member_id=lena, provider="test", display_name="Konto")
+        db.add(account)
+        db.flush()
+        for key, day, cents in (
+            ("first", dt.date(2026, 10, 12), 500),
+            ("second", dt.date(2026, 10, 13), -200),
+        ):
+            db.add(BankTransaction(
+                account_id=account.id, external_id=key, booked_on=day,
+                amount_cents=cents, currency="EUR", description="Testumsatz",
+            ))
+        db.commit()
+    response = client.get(f"/api/members/{lena}/money/bank-transactions")
+    assert response.status_code == 200, response.text
+    assert [item["amount_cents"] for item in response.json()] == [-200, 500]
+    assert client.get(f"/api/members/{lena}/money").json()["total_cents"] == 0
+
+
+def test_standing_order_candidates_use_fixed_reference_date_and_remaining_amount(client, parent, lena, now):
+    import datetime as dt
+    from app.money import allowance_payment_candidates, book_money
+    from app.models import MoneyPaymentMatch, MemberBankAccount, BankTransaction
+
+    monday = dt.date(2026, 10, 12)
+    with Session(engine) as db:
+        book_money(db, lena, 500, "allowance", "weekly:2026-10-12")
+        db.flush()
+        assert allowance_payment_candidates(db, lena, monday, 500, "Taschengeld") == [monday]
+        assert allowance_payment_candidates(db, lena, monday, 500, "Bonus-2026-W42") == []
+        account = MemberBankAccount(member_id=lena, provider="test", display_name="Konto")
+        db.add(account)
+        db.flush()
+        transfer = BankTransaction(
+            account_id=account.id, external_id="partial", booked_on=monday,
+            amount_cents=200, currency="EUR", description="Taschengeld",
+        )
+        db.add(transfer)
+        db.flush()
+        db.add(MoneyPaymentMatch(
+            member_id=lena, bank_transaction_id=transfer.id,
+            category="allowance", week_start=monday,
+            amount_cents=200, reference="Taschengeld",
+        ))
+        db.flush()
+        assert allowance_payment_candidates(db, lena, monday, 300, "Taschengeld") == [monday]
+        assert allowance_payment_candidates(db, lena, monday, 500, "Taschengeld") == []
+        db.rollback()
+
+
+def test_bonus_payment_reference_uses_iso_week_year():
+    import datetime as dt
+    from app.money import bonus_payment_reference
+
+    assert bonus_payment_reference(dt.date(2026, 10, 12)) == "Bonus-2026-W42"
+    assert bonus_payment_reference(dt.date(2028, 1, 3)) == "Bonus-2028-W01"
