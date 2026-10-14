@@ -157,3 +157,23 @@ def test_weekly_allowance_requires_parent_and_valid_monday(client, parent, lena,
     assert client.post(
         url, json={"amount_cents": 400, "week_start": "2026-10-05"}, headers=csrf(parent)
     ).status_code == 403
+
+
+def test_weekly_batch_only_credits_configured_children_once(client, parent, lena, now):
+    import datetime as dt
+    from app.money import allowance_balance, due_weekly_allowances
+
+    monday = dt.date(2026, 10, 5)
+    with Session(engine) as db:
+        assert due_weekly_allowances(db, {}, monday) == []
+        assert allowance_balance(db, lena) == 0
+        assert due_weekly_allowances(db, {lena: 450}, monday) == [lena]
+        assert due_weekly_allowances(db, {lena: 450}, monday) == []
+        db.commit()
+        assert allowance_balance(db, lena) == 450
+
+    with Session(engine) as db:
+        assert due_weekly_allowances(db, {lena: 450}, monday) == []
+        assert due_weekly_allowances(db, {lena: 450}, monday + dt.timedelta(days=7)) == [lena]
+        db.commit()
+        assert allowance_balance(db, lena) == 900
