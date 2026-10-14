@@ -120,3 +120,12 @@ def due_weekly_allowances(
         if post_weekly_allowance(db, member_id, cents, week_start):
             credited.append(member_id)
     return credited
+
+
+def configured_weekly_allowances(db: Session) -> dict[int, int]:
+    """Read only explicitly enabled child allowances from family-member settings.
+
+    Until a schema migration is available, do not assume any settings exist.
+    This intentionally returns no credits instead of inventing an amount.
+    """
+    return {}
