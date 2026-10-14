@@ -1,5 +1,6 @@
 import sqlalchemy as sa
 from alembic import command
+from alembic.script import ScriptDirectory
 
 from app.db import SessionLocal
 from tests.conftest import alembic_config
@@ -55,3 +56,9 @@ def test_adult_tasks_are_removed():
     assert rows("SELECT task_id, member_id FROM task_completions") == [(1, 1)]
     # Die Punktebuchung bleibt, nur ihr Verweis auf die Aufgabe ist leer.
     assert rows("SELECT member_id, amount, task_id FROM point_transactions") == [(2, 1, None)]
+
+
+def test_migrations_have_single_head():
+    """Verhindert versehentlich parallele Alembic-Migrationszweige."""
+    heads = ScriptDirectory.from_config(alembic_config()).get_heads()
+    assert len(heads) == 1, f"Expected one migration head, got: {heads}"
