@@ -27,6 +27,9 @@ WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./
 RUN uv sync --locked --no-dev
 COPY backend/ ./
+# ZIP downloads on QNAP may lose Unix file permissions; ensure the
+# non-root runtime user can read and execute the entrypoint.
+RUN chmod 755 /app/docker-entrypoint.sh
 COPY --from=frontend /frontend/dist ./static
 
 USER app
