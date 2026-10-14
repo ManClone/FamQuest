@@ -30,7 +30,7 @@ COPY backend/ ./
 COPY --from=frontend /frontend/dist ./static
 
 USER app
-EXPOSE 8000
+EXPOSE 8080
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # --- 3. Tests (nur für docker compose --profile test) ------------------------------
