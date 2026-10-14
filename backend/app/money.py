@@ -233,13 +233,12 @@ def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_
             MoneyTransaction.member_id == member_id,
             MoneyTransaction.kind == "allowance",
             MoneyTransaction.reason == f"weekly:{week.isoformat()}",
-            MoneyTransaction.amount_cents == amount_cents,
         ))
-        already_paid = db.scalar(select(MoneyPaymentMatch.id).where(
+        paid_cents = int(db.scalar(select(func.coalesce(func.sum(MoneyPaymentMatch.amount_cents), 0)).where(
             MoneyPaymentMatch.member_id == member_id,
             MoneyPaymentMatch.category == "allowance",
             MoneyPaymentMatch.week_start == week,
-        ))
-        if ledger is not None and already_paid is None:
+        )) or 0)
+        if ledger is not None and 0 < amount_cents <= ledger.amount_cents - paid_cents:
             candidates.append(week)
     return candidates
