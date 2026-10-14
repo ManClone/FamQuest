@@ -6,12 +6,14 @@ changes to unconditional pocket money. No payment is initiated here.
 import datetime as dt
 
 from fastapi import APIRouter, status
+from sqlalchemy import select
 from pydantic import BaseModel, Field
 
 from app.api.members import get_member
 from app.auth import DbSession, ParentSession
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
+from app.models import BankBalanceSnapshot, MemberBankAccount
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance, weekly_allowance_booked
 
 router = APIRouter(tags=["money"])
@@ -134,3 +136,45 @@ def set_weekly_allowance_settings(
     member.weekly_allowance_cents = body.weekly_amount_cents
     db.commit()
     return WeeklyAllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
+
+
+class BankBalanceOut(BaseModel):
+    account_id: int
+    display_name: str
+    provider: str
+    currency: str
+    balance_cents: int | None
+    observed_at: dt.datetime | None
+
+
+@router.get("/members/{member_id}/money/bank-balances", response_model=list[BankBalanceOut])
+def get_member_bank_balances(
+    member_id: int, _: ParentSession, db: DbSession
+) -> list[BankBalanceOut]:
+    """Read-only latest known bank balances, never calculated from quest credits."""
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    accounts = db.scalars(
+        select(MemberBankAccount).where(
+            MemberBankAccount.member_id == member_id,
+            MemberBankAccount.active.is_(True),
+        ).order_by(MemberBankAccount.id)
+    ).all()
+    result = []
+    for account in accounts:
+        snapshot = db.scalar(
+            select(BankBalanceSnapshot)
+            .where(BankBalanceSnapshot.account_id == account.id)
+            .order_by(BankBalanceSnapshot.observed_at.desc(), BankBalanceSnapshot.id.desc())
+            .limit(1)
+        )
+        result.append(BankBalanceOut(
+            account_id=account.id,
+            display_name=account.display_name,
+            provider=account.provider,
+            currency=account.currency,
+            balance_cents=snapshot.balance_cents if snapshot else None,
+            observed_at=snapshot.observed_at if snapshot else None,
+        ))
+    return result
