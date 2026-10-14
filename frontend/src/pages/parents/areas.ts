@@ -5,7 +5,6 @@ import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
 import GearIcon from '~icons/fluent-emoji-flat/gear'
 import FamilyIcon from '~icons/fluent-emoji-flat/people-hugging'
 import PhotoIcon from '~icons/fluent-emoji-flat/framed-picture'
-import CalendarIcon from '~icons/fluent-emoji-flat/spiral-calendar'
 import SunriseIcon from '~icons/fluent-emoji-flat/sunrise'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 
@@ -20,7 +19,6 @@ export const PARENT_AREAS = [
   'household',
   'rewards',
   'photos',
-  'connections',
   'settings',
 ] as const
 export type ParentArea = (typeof PARENT_AREAS)[number]
@@ -39,7 +37,6 @@ export const AREA_ICONS: Record<ParentArea, Icon> = {
   household: BroomIcon,
   rewards: GiftIcon,
   photos: PhotoIcon,
-  connections: CalendarIcon,
   settings: GearIcon,
 }
 

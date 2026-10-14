@@ -22,6 +22,12 @@ export interface Chore {
   /** So viele Tage nach der letzten Erledigung ist sie wieder fällig. */
   interval_days: number
   active: boolean
+  estimated_minutes: number
+  adult_xp: number
+  assignment_mode: 'fixed' | 'rotate' | 'flexible'
+  fixed_member_id: number | null
+  /** Confirmed assignee for the current calendar week, if published. */
+  weekly_member_id: number | null
   /** Letzte Erledigung (ISO-Datum); null = seit dem Anlegen noch nie. */
   last_done: string | null
   done_today: boolean
@@ -72,6 +78,10 @@ export interface ChoreData {
   icon: string
   interval_days: number
   active: boolean
+  estimated_minutes?: number
+  adult_xp?: number
+  assignment_mode?: 'fixed' | 'rotate' | 'flexible'
+  fixed_member_id?: number | null
   /** „Zuletzt erledigt“ von Hand (ISO-Datum); ohne Angabe bleibt der Stand, wie er ist. */
   counted_from?: string
 }
@@ -132,6 +142,14 @@ export const useMarkDone = () =>
     api<Chore>('PUT', `/chores/${id}/done`, { member_id: memberId }),
   )
 
+/** Parent-only: approve adult XP for a completed chore. */
+export const useApproveChoreCredit = () =>
+  useParentMutation(
+    ({ id, memberId }: { id: number; memberId: number }) =>
+      api<Chore>('POST', `/chores/${id}/credit`, { member_id: memberId }),
+    [CHORES_KEY],
+  )
+
 export const useUndoDone = () =>
   useDoneMutation('chores', (id: number) => api<Chore>('DELETE', `/chores/${id}/done`))
 
@@ -183,6 +201,10 @@ export const choreData = (chore: Chore): ChoreData => ({
   icon: chore.icon,
   interval_days: chore.interval_days,
   active: chore.active,
+  estimated_minutes: chore.estimated_minutes,
+  adult_xp: chore.adult_xp,
+  assignment_mode: chore.assignment_mode,
+  fixed_member_id: chore.fixed_member_id,
 })
 
 /** Übernimmt die Vorschläge des Einrichtungs-Assistenten; Vorhandenes wird übersprungen. */
@@ -194,4 +216,44 @@ export function useChoresMutation<TVariables, TResult>(
   request: (variables: TVariables) => Promise<TResult>,
 ) {
   return useParentMutation(request, [CHORES_KEY])
+}
+
+/** Read-only weekly household assignment suggestions; never persists assignments. */
+export interface WeeklyChorePreview {
+  week_start: string
+  assignments: {
+    chore_id: number
+    member_id: number
+    estimated_minutes: number
+    adult_xp: number
+  }[]
+}
+
+export const WEEKLY_CHORE_PREVIEW_KEY = ['chores', 'weekly-preview'] as const
+
+export function useWeeklyChorePreview(enabled: boolean) {
+  return useQuery({
+    queryKey: WEEKLY_CHORE_PREVIEW_KEY,
+    queryFn: () => apiGet<WeeklyChorePreview>('/chores/weekly-preview'),
+    enabled,
+    staleTime: 60 * 1000,
+  })
+}
+
+export const WEEKLY_CONFIRMED_KEY = ['chores', 'weekly-confirmed'] as const
+
+export function useConfirmedWeeklyChores(enabled: boolean) {
+  return useQuery({
+    queryKey: WEEKLY_CONFIRMED_KEY,
+    queryFn: () => apiGet<WeeklyChorePreview>('/chores/weekly-confirmed'),
+    enabled,
+  })
+}
+
+export function usePublishWeeklyChores() {
+  return useParentMutation(
+    (assignments: WeeklyChorePreview['assignments']) =>
+      api<WeeklyChorePreview>('POST', '/chores/weekly-confirmed', { assignments }),
+    [WEEKLY_CONFIRMED_KEY, WEEKLY_CHORE_PREVIEW_KEY],
+  )
 }

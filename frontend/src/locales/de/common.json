@@ -481,11 +481,22 @@
       "not_found": "Diese Hausarbeit gibt es nicht mehr.",
       "room_not_found": "Diesen Raum gibt es nicht mehr.",
       "room_duplicate": "Einen Raum mit diesem Namen gibt es schon.",
-      "counted_from_future": "Dieser Tag liegt in der Zukunft."
+      "counted_from_future": "Dieser Tag liegt in der Zukunft.",
+      "credits_invalid": "Die XP-Gutschrift für diese Hausarbeit ist ungültig.",
+      "fixed_member_required": "Für eine feste Zuteilung muss ein vorhandener Erwachsener ausgewählt sein.",
+      "weekly_invalid": "Die Wochenverteilung ist ungültig. Bitte Vorschlag neu laden.",
+      "credit_requires_parent": "XP für Hausarbeiten können nur Erwachsene erhalten.",
+      "not_completed": "Diese Hausarbeit ist noch nicht erledigt.",
+      "parent_required": "Für diese Aktion ist ein Erwachsenenkonto erforderlich."
     },
     "todo": {
       "not_found": "Diesen Eintrag gibt es nicht mehr.",
       "duplicate": "Das steht schon auf der Liste."
+    },
+    "money": {
+      "child_required": "Diese Funktion ist nur für Kinder verfügbar",
+      "invalid_allowance": "Ungültiger Taschengeldbetrag",
+      "invalid_pagination": "Ungültige Seitennummerierung"
     }
   },
   "rewards": {

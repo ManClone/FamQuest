@@ -18,6 +18,7 @@ def task_out(task: Task, routine_members: set[int] | None = None) -> TaskOut:
         icon=task.icon,
         description=task.description or "",
         points=task.points,
+        money_cents=task.money_cents,
         time_of_day=task.time_of_day,
         color=task.color,
         active=task.active,
@@ -89,6 +90,8 @@ def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
             db.delete(step)
 
     task.title, task.icon, task.points = body.title, body.icon, body.points
+    if 'money_cents' in body.model_fields_set or task.id is None:
+        task.money_cents = body.money_cents
     task.description = body.description or None
     task.time_of_day, task.color, task.active = body.time_of_day, body.color, body.active
     task.needs_approval, task.shared, task.extra = body.needs_approval, body.shared, body.extra

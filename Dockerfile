@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- 1. Frontend bauen -----------------------------------------------------------
-FROM node:26-alpine AS frontend
+FROM node:24-alpine AS frontend
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -30,7 +30,7 @@ COPY backend/ ./
 COPY --from=frontend /frontend/dist ./static
 
 USER app
-EXPOSE 8000
+EXPOSE 8080
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # --- 3. Tests (nur für docker compose --profile test) ------------------------------

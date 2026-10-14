@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    BigInteger,
     CheckConstraint,
     Date,
     DateTime,
@@ -108,6 +109,7 @@ class FamilyMember(Base):
     # Reihenfolge in Familienansicht und Listen (aufsteigend), festgelegt im Elternbereich.
     position: Mapped[int] = mapped_column(server_default="0")
     # Termine der Person bekommen Symbole (siehe app/event_symbols.py); Standard nur für Kinder.
+    weekly_allowance_cents: Mapped[int | None] = mapped_column()
     event_symbols: Mapped[bool] = mapped_column(default=False, server_default="false")
     # Optionale Verknüpfung mit einem Login-Konto (z. B. später für Kinder-Konten).
     user_id: Mapped[int | None] = mapped_column(
@@ -128,6 +130,7 @@ class Task(Base):
     icon: Mapped[str] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(String(500))
     points: Mapped[int]
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     # Erweiterbare Werte (siehe schemas.TIMES_OF_DAY); None = jederzeit.
     time_of_day: Mapped[str | None] = mapped_column(String(20))
     # None = Farbe der jeweiligen Person.
@@ -254,6 +257,7 @@ class TaskCompletion(Base):
     # Gutgeschriebene Punkte; Rückgängig bucht genau diesen Betrag zurück, auch wenn sich
     # der Punktwert der Aufgabe inzwischen geändert hat.
     points: Mapped[int] = mapped_column(server_default="0")
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     # None = wartet auf Kontrolle durch die Eltern.
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approved_by_user_id: Mapped[int | None] = mapped_column(
@@ -261,6 +265,93 @@ class TaskCompletion(Base):
     )
 
     task: Mapped[Task] = relationship(lazy="joined")
+
+
+
+class MemberBankAccount(Base):
+    """Read-only external account metadata; never store banking credentials."""
+
+    __tablename__ = "member_bank_accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(60))
+    display_name: Mapped[str] = mapped_column(String(100))
+    external_reference: Mapped[str | None] = mapped_column(String(200))
+    currency: Mapped[str] = mapped_column(String(3), default="EUR", server_default="EUR")
+    active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BankTransaction(Base):
+    """Imported read-only bank movement; never automatically posts to quest ledger."""
+
+    __tablename__ = "bank_transactions"
+    __table_args__ = (
+        UniqueConstraint("account_id", "external_id", name="uq_bank_transaction_external"),
+        Index("ix_bank_transactions_account_date", "account_id", "booked_on"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"))
+    external_id: Mapped[str] = mapped_column(String(200))
+    booked_on: Mapped[dt.date] = mapped_column(Date)
+    value_on: Mapped[dt.date | None] = mapped_column(Date)
+    amount_cents: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), default="EUR", server_default="EUR")
+    description: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    counterparty: Mapped[str | None] = mapped_column(String(200))
+    balance_after_cents: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MoneyPaymentMatch(Base):
+    """Confirmed bank receipt for a weekly allowance or bonus payout."""
+
+    __tablename__ = "money_payment_matches"
+    __table_args__ = (
+        CheckConstraint("category IN ('allowance', 'bonus')", name="payment_match_category"),
+        CheckConstraint("amount_cents > 0", name="payment_match_positive"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"))
+    bank_transaction_id: Mapped[int] = mapped_column(ForeignKey("bank_transactions.id", ondelete="CASCADE"), unique=True)
+    category: Mapped[str] = mapped_column(String(20))
+    week_start: Mapped[dt.date] = mapped_column(Date)
+    amount_cents: Mapped[int] = mapped_column(BigInteger)
+    reference: Mapped[str] = mapped_column(String(80))
+    matched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BankBalanceSnapshot(Base):
+    """Immutable observed external balance; not a FamQuest earnings transaction."""
+
+    __tablename__ = "bank_balance_snapshots"
+    __table_args__ = (
+        UniqueConstraint("account_id", "observed_at", name="uq_bank_balance_account_observed"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"), index=True)
+    balance_cents: Mapped[int] = mapped_column(BigInteger)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MoneyTransaction(Base):
+    """Immutable euro-cent ledger, separate from store XP."""
+
+    __tablename__ = "money_transactions"
+    __table_args__ = (CheckConstraint("amount_cents <> 0", name="money_amount_nonzero"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    amount_cents: Mapped[int]
+    kind: Mapped[str] = mapped_column(String(30))
+    reason: Mapped[str] = mapped_column(String(200))
+    completion_id: Mapped[int | None]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class PointTransaction(Base):
@@ -584,6 +675,13 @@ class Chore(Base):
     icon: Mapped[str] = mapped_column(String(100))
     # So viele Tage nach der letzten Erledigung ist sie wieder fällig.
     interval_days: Mapped[int] = mapped_column(SmallInteger)
+    # Metadaten für Erwachsenen-Aufgaben; XP werden noch nicht automatisch gebucht.
+    estimated_minutes: Mapped[int] = mapped_column(SmallInteger, default=15, server_default="15")
+    adult_xp: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    assignment_mode: Mapped[str] = mapped_column(String(12), default="flexible", server_default="flexible")
+    fixed_member_id: Mapped[int | None] = mapped_column(
+        ForeignKey("family_members.id", ondelete="SET NULL"), nullable=True
+    )
     # Gilt als letzte Erledigung, solange es keine echte gibt (Stand beim Anlegen).
     anchor_date: Mapped[dt.date] = mapped_column(Date)
     # Pausierte Aufgaben bleiben gespeichert, erscheinen aber nicht im Putzplan.
@@ -614,6 +712,35 @@ class ChoreCompletion(Base):
     )
 
 
+class WeeklyChoreAssignment(Base):
+    """Parent-confirmed adult chore owner for one calendar week."""
+
+    __tablename__ = "weekly_chore_assignments"
+
+    week_start: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    chore_id: Mapped[int] = mapped_column(
+        ForeignKey("chores.id", ondelete="CASCADE"), primary_key=True
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE")
+    )
+
+
+class ChoreCredit(Base):
+    """Current XP credit snapshot for a chore completion; historical adjustments stay in ledger."""
+
+    __tablename__ = "chore_credits"
+    __table_args__ = (CheckConstraint("amount > 0", name="chore_credit_positive"),)
+
+    completion_id: Mapped[int] = mapped_column(
+        ForeignKey("chore_completions.id", ondelete="CASCADE"), primary_key=True
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE")
+    )
+    amount: Mapped[int]
+
+
 class Todo(Base):
     """Einmaliges für den Haushalt ohne Person und Termin („Hühnerfutter holen“). Wer es macht,
     hakt ab; Abgehaktes bleibt bis zum Ende des Tages sichtbar und zählt danach nur noch für die
@@ -632,3 +759,11 @@ class Todo(Base):
         ForeignKey("family_members.id", ondelete="SET NULL"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class QuestImport(Base):
+    """Idempotent record of an imported parent-approved quest."""
+    __tablename__ = "quest_imports"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    external_id: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), unique=True, nullable=False)
