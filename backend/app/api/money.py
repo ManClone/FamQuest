@@ -10,6 +10,7 @@ from pydantic import Field
 from pydantic import BaseModel
 
 from app.api.members import get_member
+from app.errors import ApiError
 from app.demo_mode import NotInDemo
 from app.auth import DbSession, ParentSession
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance
@@ -77,3 +78,37 @@ def credit_weekly_allowance(
         booked=booked,
         allowance_cents=allowance_balance(db, member_id),
     )
+
+
+class AllowanceSettings(BaseModel):
+    member_id: int
+    weekly_amount_cents: int | None
+
+
+class AllowanceSettingsInput(BaseModel):
+    weekly_amount_cents: int | None = Field(default=None, ge=1, le=100_000)
+
+
+@router.get("/members/{member_id}/money/settings", response_model=AllowanceSettings)
+def get_allowance_settings(member_id: int, _: ParentSession, db: DbSession) -> AllowanceSettings:
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    return AllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
+
+
+@router.put(
+    "/members/{member_id}/money/settings",
+    response_model=AllowanceSettings,
+    dependencies=[NotInDemo],
+)
+def update_allowance_settings(
+    member_id: int, body: AllowanceSettingsInput, _: ParentSession, db: DbSession
+) -> AllowanceSettings:
+    """Set or disable an explicit amount; does not credit money or start a scheduler."""
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    member.weekly_allowance_cents = body.weekly_amount_cents
+    db.commit()
+    return AllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
