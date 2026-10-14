@@ -70,6 +70,7 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
               value={selected.id}
               onChange={(event) => {
                 setMemberId(Number(event.target.value))
+                setWeeklyAmount('')
                 setMessage('')
               }}
               className="min-h-12 rounded-xl border-2 border-slate-200 bg-white p-2"
@@ -96,7 +97,7 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
                 setMessage('Bitte einen gültigen Wochenbetrag eingeben.')
                 return
               }
-              saveSettings.mutate(cents, { onSuccess: () => setMessage('Wochenbetrag gespeichert. Die Buchung erfolgt automatisch.') })
+              saveSettings.mutate(cents, { onSuccess: () => { setWeeklyAmount(''); setMessage('Wochenbetrag gespeichert. Die Buchung erfolgt automatisch.') } })
             }}
             className="flex flex-col gap-3"
           >
