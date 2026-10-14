@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 
-import { useCreditWeeklyAllowance, useMoneyOverview, useWeeklyAllowanceStatus, useWeeklyAllowanceSettings, useSaveWeeklyAllowanceSettings } from '../../api/money'
+import { useBankBalances, useCreditWeeklyAllowance, useMoneyOverview, useWeeklyAllowanceStatus, useWeeklyAllowanceSettings, useSaveWeeklyAllowanceSettings } from '../../api/money'
 import type { Member } from '../../api/members'
 import { Alert, Button, Section } from '../../components/ui'
 
@@ -12,6 +12,7 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
   const [memberId, setMemberId] = useState<number | null>(null)
   const selected = children.find((child) => child.id === memberId) ?? children[0]
   const overview = useMoneyOverview(selected?.id ?? 0)
+  const bankBalances = useBankBalances(selected?.id ?? 0)
   const credit = useCreditWeeklyAllowance(selected?.id ?? 0)
   const [amount, setAmount] = useState('')
   const [monday, setMonday] = useState('')
@@ -89,6 +90,18 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
               <div><dt>Gesamt</dt><dd className="font-bold">{euros(overview.data.total_cents)}</dd></div>
             </dl>
           )}
+          <div className="flex flex-col gap-2">
+            <p className="font-bold">Bankguthaben (nur Anzeige)</p>
+            {bankBalances.isError && <Alert>Bankguthaben konnte nicht geladen werden.</Alert>}
+            {bankBalances.data?.length === 0 && <p className="text-sm text-slate-500">Noch kein Bankkonto angebunden.</p>}
+            {bankBalances.data?.map((account) => (
+              <div key={account.account_id}>
+                <span>{account.display_name} ({account.provider}): </span>
+                <strong>{account.balance_cents === null ? 'Noch kein Kontostand verfügbar' : euros(account.balance_cents)}</strong>
+                {account.observed_at && <span className="text-sm text-slate-500"> · Stand: {new Date(account.observed_at).toLocaleString('de-DE')}</span>}
+              </div>
+            ))}
+          </div>
           <form
             onSubmit={(event) => {
               event.preventDefault()
