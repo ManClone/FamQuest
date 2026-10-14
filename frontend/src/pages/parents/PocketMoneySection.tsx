@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 
-import { useCreditWeeklyAllowance, useMoneyOverview } from '../../api/money'
+import { useCreditWeeklyAllowance, useMoneyOverview, useWeeklyAllowanceStatus } from '../../api/money'
 import type { Member } from '../../api/members'
 import { Alert, Button, Section } from '../../components/ui'
 
@@ -16,6 +16,7 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
   const [amount, setAmount] = useState('')
   const [monday, setMonday] = useState('')
   const [message, setMessage] = useState('')
+  const weeklyStatus = useWeeklyAllowanceStatus(selected?.id ?? 0, monday)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -96,9 +97,10 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
                 className="min-h-12 rounded-xl border-2 border-slate-200 p-2"
               />
             </label>
+            {weeklyStatus.data?.booked && <p role="status">Für diese Woche wurde bereits Grundtaschengeld gebucht.</p>}
             {message && <p role="status">{message}</p>}
             {credit.isError && <Alert>Gutschrift fehlgeschlagen. Bitte Angaben prüfen.</Alert>}
-            <Button type="submit" disabled={credit.isPending}>
+            <Button type="submit" disabled={credit.isPending || weeklyStatus.data?.booked === true}>
               {credit.isPending ? 'Buche …' : 'Grundtaschengeld gutschreiben'}
             </Button>
           </form>
