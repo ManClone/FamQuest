@@ -85,3 +85,20 @@ export function useSaveWeeklyAllowanceSettings(memberId: number) {
     [allowanceSettingsKey(memberId)],
   )
 }
+
+export interface BankBalance {
+  account_id: number
+  display_name: string
+  provider: string
+  currency: string
+  balance_cents: number | null
+  observed_at: string | null
+}
+
+export function useBankBalances(memberId: number) {
+  return useQuery({
+    queryKey: ['money', memberId, 'bank-balances'],
+    queryFn: () => apiGet<BankBalance[]>(`/members/${memberId}/money/bank-balances`),
+    enabled: memberId > 0,
+  })
+}
