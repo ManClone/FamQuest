@@ -101,3 +101,22 @@ def post_weekly_allowance(
     book_money(db, member_id, cents, "allowance", key)
     db.flush()
     return True
+
+
+def due_weekly_allowances(
+    db: Session,
+    configured_amounts: dict[int, int],
+    week_start,
+) -> list[int]:
+    """Credit configured children for a Monday, safely on repeated runs.
+
+    The caller must supply explicitly configured amounts and commit the
+    transaction. This is not a scheduler; it never invents an amount or
+    changes the unconditional nature of the allowance.
+    Returns IDs of children newly credited in this transaction.
+    """
+    credited: list[int] = []
+    for member_id, cents in sorted(configured_amounts.items()):
+        if post_weekly_allowance(db, member_id, cents, week_start):
+            credited.append(member_id)
+    return credited
