@@ -20,13 +20,18 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setMessage('')
-    const cents = Math.round(Number(amount.replace(',', '.')) * 100)
+    const normalized = amount.trim().replace(',', '.')
+    if (!/^(?:\\d{1,4})(?:\\.\\d{1,2})?$/.test(normalized)) {
+      setMessage('Bitte einen gültigen Eurobetrag mit höchstens zwei Nachkommastellen eingeben.')
+      return
+    }
+    const cents = Math.round(Number(normalized) * 100)
     if (!Number.isSafeInteger(cents) || cents < 1 || cents > 100000) {
       setMessage('Bitte einen Betrag zwischen 0,01 € und 1.000 € eingeben.')
       return
     }
     const date = new Date(`${monday}T12:00:00Z`)
-    if (!monday || Number.isNaN(date.getTime()) || date.getUTCDay() !== 1) {
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(monday) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== monday || date.getUTCDay() !== 1) {
       setMessage('Bitte einen Montag auswählen.')
       return
     }
