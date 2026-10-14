@@ -7,6 +7,7 @@ import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 import HouseIcon from '~icons/fluent-emoji-flat/house-with-garden'
 
+import { useMe } from '../api/auth'
 import { usePhotos } from '../api/photos'
 import { useToday } from '../api/today'
 import { getFrameIdleMinutes } from '../frameIdle'
@@ -64,7 +65,9 @@ export function AppShell() {
   const { pathname } = useLocation()
   // Die Personenansicht gehört zum Aufgabenbereich.
   const onTasks = pathname.startsWith('/tasks') || pathname.startsWith('/member/')
-  const pending = useToday().data?.pending_approvals ?? 0
+  const role = useMe().data?.user.role
+  const isParent = role === 'admin' || role === 'parent'
+  const pending = isParent ? (useToday().data?.pending_approvals ?? 0) : 0
   // Den Bilderrahmen gibt es erst, wenn mindestens ein Foto sichtbar ist.
   const hasPhotos = usePhotos().data?.some((photo) => photo.visible) ?? false
   // Nach Leerlauf nur, wenn es auf diesem Gerät eingeschaltet ist (gelesen beim Betreten).
@@ -96,7 +99,7 @@ export function AppShell() {
           active={pathname.startsWith('/household')}
         />
         {/* Einstellungen abgesetzt am Ende der Leiste. */}
-        <NavItem
+        {isParent && <NavItem
           to="/parents"
           label={t('nav.settings')}
           icon={GearIcon}
@@ -104,7 +107,7 @@ export function AppShell() {
           badge={pending}
           badgeLabel={t('nav.pending', { count: pending })}
           className="ml-auto sm:mt-auto sm:ml-0"
-        />
+        />}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col pb-28 sm:pb-0">
         <Outlet />
