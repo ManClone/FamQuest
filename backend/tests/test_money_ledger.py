@@ -256,3 +256,26 @@ def test_weekly_allowance_status_is_read_only_and_idempotent(client, parent, len
     assert after.status_code == 200
     assert after.json()["booked"] is True
     assert client.get(url, params={"week_start": "2026-10-06"}).status_code == 422
+
+
+def test_weekly_allowance_status_requires_parent_unlock(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/weekly-allowance"
+    assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 200
+    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
+    assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 403
+
+
+def test_weekly_allowance_rejects_zero_and_negative_amounts(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/weekly-allowance"
+    for amount in (0, -1, 100001):
+        response = client.post(
+            url, json={"amount_cents": amount, "week_start": "2026-10-05"},
+            headers=csrf(parent),
+        )
+        assert response.status_code == 422, response.text
+    with Session(engine) as db:
+        assert list(db.scalars(select(MoneyTransaction.id).where(MoneyTransaction.member_id == lena))) == []
