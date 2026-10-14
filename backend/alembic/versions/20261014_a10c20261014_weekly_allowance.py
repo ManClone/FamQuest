@@ -44,8 +44,26 @@ def upgrade() -> None:
     )
     op.create_index("ix_bank_balance_snapshots_account_id", "bank_balance_snapshots", ["account_id"])
 
+    op.create_table(
+        "bank_transactions",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("account_id", sa.Integer(), sa.ForeignKey("member_bank_accounts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("external_id", sa.String(200), nullable=False),
+        sa.Column("booked_on", sa.Date(), nullable=False),
+        sa.Column("value_on", sa.Date(), nullable=True),
+        sa.Column("amount_cents", sa.BigInteger(), nullable=False),
+        sa.Column("currency", sa.String(3), nullable=False, server_default="EUR"),
+        sa.Column("description", sa.String(500), nullable=False, server_default=""),
+        sa.Column("counterparty", sa.String(200), nullable=True),
+        sa.Column("balance_after_cents", sa.BigInteger(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.UniqueConstraint("account_id", "external_id", name="uq_bank_transaction_external"),
+    )
+    op.create_index("ix_bank_transactions_account_date", "bank_transactions", ["account_id", "booked_on"])
+
 
 def downgrade() -> None:
+    op.drop_table("bank_transactions")
     op.drop_table("bank_balance_snapshots")
     op.drop_table("member_bank_accounts")
     op.drop_constraint("member_weekly_allowance_positive", "family_members", type_="check")
