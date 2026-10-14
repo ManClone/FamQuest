@@ -6,13 +6,12 @@ changes to unconditional pocket money. No payment is initiated here.
 import datetime as dt
 
 from fastapi import APIRouter, status
-from pydantic import Field
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.members import get_member
-from app.errors import ApiError
-from app.demo_mode import NotInDemo
 from app.auth import DbSession, ParentSession
+from app.demo_mode import NotInDemo
+from app.errors import ApiError
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance
 
 router = APIRouter(tags=["money"])
