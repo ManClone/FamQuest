@@ -1,19 +1,22 @@
-"""Pure weekly bonus accounting; never changes lifetime XP or allowance."""
+"""Pure weekly euro-bonus accounting, independent of XP and base allowance."""
 
 import datetime as dt
 from dataclasses import dataclass
 
 
-DEFAULT_CONSEQUENCES = {"Nicht auf Anweisungen gehört": 5}
+# Initial suggestion; parents will be able to customize both deductions.
+DEFAULT_CONSEQUENCES = {
+    "Nicht auf Anweisungen gehört": {"money_penalty_cents": 50, "xp_penalty": 5}
+}
 
 
 @dataclass(frozen=True)
 class WeeklyBonusStatement:
     week_start: dt.date
     week_end: dt.date
-    earned_bonus_points: int
-    penalty_points: int
-    payable_bonus_points: int
+    earned_bonus_cents: int
+    money_penalty_cents: int
+    payable_bonus_cents: int
 
 
 def monday_of(day: dt.date) -> dt.date:
@@ -22,20 +25,20 @@ def monday_of(day: dt.date) -> dt.date:
 
 
 def weekly_statement(
-    day: dt.date, earned_bonus_points: int, penalty_points: int
+    day: dt.date, earned_bonus_cents: int, money_penalty_cents: int
 ) -> WeeklyBonusStatement:
-    """Calculate a nonnegative weekly bonus without touching lifetime XP.
+    """Compute the payable weekly *money* bonus in integer cents.
 
-    Callers must provide *weekly bonus* points, not the lifetime XP balance.
-    This calculation neither modifies nor schedules unconditional allowance.
+    Excess penalties expire at week end. This pure function does not
+    book money, change spendable XP, level XP, or base allowance.
     """
-    if earned_bonus_points < 0 or penalty_points < 0:
-        raise ValueError("Weekly earned and penalty points must be nonnegative")
+    if earned_bonus_cents < 0 or money_penalty_cents < 0:
+        raise ValueError("Weekly money amounts must be nonnegative")
     start = monday_of(day)
     return WeeklyBonusStatement(
         week_start=start,
         week_end=start + dt.timedelta(days=6),
-        earned_bonus_points=earned_bonus_points,
-        penalty_points=penalty_points,
-        payable_bonus_points=max(0, earned_bonus_points - penalty_points),
+        earned_bonus_cents=earned_bonus_cents,
+        money_penalty_cents=money_penalty_cents,
+        payable_bonus_cents=max(0, earned_bonus_cents - money_penalty_cents),
     )
