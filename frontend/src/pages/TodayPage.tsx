@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GearIcon from '~icons/fluent-emoji-flat/gear'
 
-import { useLockParent, useMe } from '../api/auth'
+import { useMe } from '../api/auth'
 import {
   DEFAULT_LAYOUT,
   type HomeLayout,
@@ -17,7 +17,7 @@ import { useNow } from '../useNow'
 import { formatLongDate } from '../weekdays'
 import { PARENT_IDLE_TIMEOUT_MS } from './ParentsPage'
 import { ChoresWidget } from './home/ChoresWidget'
-import { HomeEditor, PinDialog } from './home/HomeEditor'
+import { HomeEditor } from './home/HomeEditor'
 import { RoutineWidget } from './home/RoutineWidget'
 import { WeatherBadge } from './home/WeatherBadge'
 
@@ -37,9 +37,8 @@ export function TodayPage() {
     minute: '2-digit',
     timeZone: me?.family.timezone,
   }).format(now)
-  // null: normale Ansicht; 'pin': PIN-Abfrage; sonst der Entwurf im Bearbeitungsmodus.
-  const [editing, setEditing] = useState<HomeLayout | 'pin' | null>(null)
-  const draft = typeof editing === 'object' && editing !== null ? editing : null
+  const [editing, setEditing] = useState<HomeLayout | null>(null)
+  const draft = editing
   const current = draft ?? layout.data ?? DEFAULT_LAYOUT
   const shown = visibleTiles(current.tiles)
 
@@ -67,16 +66,13 @@ export function TodayPage() {
             type="button"
             aria-label={t('home.customize')}
             title={t('home.customize')}
-            onClick={() => (me?.parent_unlocked ? startEditing() : setEditing('pin'))}
+            onClick={startEditing}
             className="flex size-14 shrink-0 items-center justify-center rounded-2xl opacity-60 hover:bg-white/80 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-4 focus-visible:outline-orange-400"
           >
             <GearIcon className="size-8" aria-hidden="true" />
           </button>
         )}
       </header>
-      {editing === 'pin' && (
-        <PinDialog onUnlocked={startEditing} onCancel={() => setEditing(null)} />
-      )}
       {draft && <EditMode draft={draft} onChange={setEditing} onClose={() => setEditing(null)} />}
       <Sections shown={shown} />
     </main>
@@ -94,12 +90,7 @@ function EditMode({
   onClose: () => void
 }) {
   const save = useSaveHomeLayout()
-  const lock = useLockParent()
-
-  const close = () => {
-    lock.mutate()
-    onClose()
-  }
+  const close = onClose
   useIdleTimeout(PARENT_IDLE_TIMEOUT_MS, close)
 
   return (
