@@ -80,14 +80,14 @@ class AccountOut(BaseModel):
     role: str
 
 
-@router.get("/accounts")
-def list_accounts(_: ParentSession, db: DbSession, __: NotInDemo) -> list[AccountOut]:
+@router.get("/accounts", dependencies=[NotInDemo])
+def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
     return [AccountOut(id=user.id, email=user.email, role=user.role)
             for user in db.scalars(select(User).order_by(User.id))]
 
 
-@router.post("/accounts", status_code=status.HTTP_201_CREATED)
-def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession, __: NotInDemo) -> AccountOut:
+@router.post("/accounts", status_code=status.HTTP_201_CREATED, dependencies=[NotInDemo])
+def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession) -> AccountOut:
     if body.role not in ("parent", "child"):
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "auth.invalid_role")
     user = User(email=body.email, password_hash=hash_secret(body.password), role=body.role)
