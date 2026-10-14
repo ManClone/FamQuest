@@ -29,8 +29,12 @@ RUN uv sync --locked --no-dev
 COPY backend/ ./
 # ZIP downloads on QNAP may lose Unix file permissions; ensure the
 # non-root runtime user can read and execute the entrypoint.
-RUN chmod 755 /app/docker-entrypoint.sh
 COPY --from=frontend /frontend/dist ./static
+# QNAP ZIP extraction may preserve restrictive permissions on copied files.
+# Ensure the unprivileged runtime account can traverse and read all app files.
+RUN chown -R app:app /app \
+    && chmod -R u+rwX /app \
+    && chmod 750 /app/docker-entrypoint.sh
 
 USER app
 EXPOSE 8080
