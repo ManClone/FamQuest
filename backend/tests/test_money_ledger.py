@@ -184,7 +184,7 @@ def test_money_overview_rejects_non_child(client, parent, now):
 
     response = client.post(
         "/api/members",
-        json={"name": "Elternteil", "role": "adult", "color": "blue"},
+        json={"name": "Elternteil", "role": "parent", "color": "blue"},
         headers=csrf(parent),
     )
     assert response.status_code == 201, response.text
@@ -230,7 +230,7 @@ def test_weekly_allowance_does_not_credit_a_parent(client, parent, now):
 
     response = client.post(
         "/api/members",
-        json={"name": "Erwachsener", "role": "adult", "color": "blue"},
+        json={"name": "Erwachsener", "role": "parent", "color": "blue"},
         headers=csrf(parent),
     )
     assert response.status_code == 201, response.text
