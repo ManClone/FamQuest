@@ -224,7 +224,7 @@ def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_
     # Bank descriptions can include prefixes or surrounding whitespace.
     # Only accept the complete reference as a separate phrase.
     import re
-    if not re.search(r"(?<![\\w-])" + re.escape(expected_reference.strip()) + r"(?![\\w-])", reference, re.IGNORECASE):
+    if not re.search(r"(?<![\w-])" + re.escape(expected_reference.strip()) + r"(?![\w-])", reference, re.IGNORECASE):
         return []
     if not 0 <= tolerance_days <= 7:
         raise ValueError("Invalid tolerance")
