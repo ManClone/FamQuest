@@ -61,8 +61,24 @@ def upgrade() -> None:
     )
     op.create_index("ix_bank_transactions_account_date", "bank_transactions", ["account_id", "booked_on"])
 
+    op.create_table(
+        "money_payment_matches",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("member_id", sa.Integer(), sa.ForeignKey("family_members.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("bank_transaction_id", sa.Integer(), sa.ForeignKey("bank_transactions.id", ondelete="CASCADE"), nullable=False, unique=True),
+        sa.Column("category", sa.String(20), nullable=False),
+        sa.Column("week_start", sa.Date(), nullable=False),
+        sa.Column("amount_cents", sa.BigInteger(), nullable=False),
+        sa.Column("reference", sa.String(80), nullable=False),
+        sa.Column("matched_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.CheckConstraint("category IN ('allowance', 'bonus')", name="payment_match_category"),
+        sa.CheckConstraint("amount_cents > 0", name="payment_match_positive"),
+        sa.UniqueConstraint("member_id", "category", "week_start", name="uq_payment_match_week_category"),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("money_payment_matches")
     op.drop_table("bank_transactions")
     op.drop_table("bank_balance_snapshots")
     op.drop_table("member_bank_accounts")
