@@ -67,3 +67,22 @@ def earned_on(db: Session, day: dt.date) -> dict[int, int]:
         .group_by(PointTransaction.member_id)
     )
     return {member_id: int(total) for member_id, total in db.execute(query)}
+
+
+# Level XP tracks earned task XP independently of spendable points.
+# Existing task reversals are included so undone tasks do not grant levels.
+LEVEL_EARNING_KINDS = ("task_completed", "task_undone", "chore_completed", "chore_undone")
+
+
+def level_xp(db: Session, member_id: int) -> int:
+    """Historical earned XP; purchases, manual deductions and penalties never reduce it."""
+    query = select(func.coalesce(func.sum(PointTransaction.amount), 0)).where(
+        PointTransaction.member_id == member_id,
+        PointTransaction.kind.in_(LEVEL_EARNING_KINDS),
+    )
+    return max(0, int(db.scalar(query) or 0))
+
+
+def spendable_xp(db: Session, member_id: int) -> int:
+    """XP available for reward redemption, including any penalty deductions."""
+    return balance(db, member_id)
