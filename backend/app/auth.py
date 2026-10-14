@@ -128,7 +128,7 @@ def unlock_parent_area(auth_session: AuthSession) -> None:
 
 def parent_session(auth_session: CurrentSession, db: DbSession) -> AuthSession:
     """Session mit entsperrtem Elternbereich; jede Nutzung verlängert die Entsperrung."""
-    if auth_session.user.role != "parent":
+    if auth_session.user.role not in ("admin", "parent"):
         raise ApiError(status.HTTP_403_FORBIDDEN, "parent.locked")
     return auth_session
 
@@ -148,5 +148,5 @@ def me_response(db: Session, auth_session: AuthSession) -> MeResponse:
             pin_enabled=family.pin_enabled,
         ),
         csrf_token=auth_session.csrf_token,
-        parent_unlocked=user.role == "parent",
+        parent_unlocked=user.role in ("admin", "parent"),
     )
