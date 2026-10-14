@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- 1. Frontend bauen -----------------------------------------------------------
-FROM node:26-alpine AS frontend
+FROM node:24-alpine AS frontend
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
