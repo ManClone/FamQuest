@@ -56,6 +56,21 @@ def allowance_balance(db: Session, member_id: int) -> int:
     return money_balance(db, member_id, ALLOWANCE_KINDS)
 
 
+def weekly_allowance_booked(db: Session, member_id: int, week_start) -> bool:
+    """Read-only check for an existing weekly allowance credit."""
+    import datetime as dt
+
+    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime) or week_start.weekday() != 0:
+        raise ValueError("week_start must be a Monday date")
+    return db.scalar(
+        select(MoneyTransaction.id).where(
+            MoneyTransaction.member_id == member_id,
+            MoneyTransaction.kind == "allowance",
+            MoneyTransaction.reason == f"weekly:{week_start.isoformat()}",
+        )
+    ) is not None
+
+
 def post_weekly_allowance(
     db: Session,
     member_id: int,
