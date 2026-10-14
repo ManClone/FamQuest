@@ -239,3 +239,20 @@ def test_weekly_allowance_does_not_credit_a_parent(client, parent, now):
         with pytest.raises(ValueError, match="child"):
             post_weekly_allowance(db, adult_id, 500, dt.date(2026, 10, 5))
         assert list(db.scalars(select(MoneyTransaction.id).where(MoneyTransaction.member_id == adult_id))) == []
+
+
+def test_weekly_allowance_status_is_read_only_and_idempotent(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/weekly-allowance"
+    params = {"week_start": "2026-10-05"}
+    initial = client.get(url, params=params)
+    assert initial.status_code == 200, initial.text
+    assert initial.json()["booked"] is False
+    credited = client.post(url, json={"amount_cents": 350, **params}, headers=csrf(parent))
+    assert credited.status_code == 200, credited.text
+    assert credited.json()["booked"] is True
+    after = client.get(url, params=params)
+    assert after.status_code == 200
+    assert after.json()["booked"] is True
+    assert client.get(url, params={"week_start": "2026-10-06"}).status_code == 422
