@@ -56,12 +56,7 @@ export const PARENT_IDLE_TIMEOUT_MS = 2 * 60 * 1000
 export function ParentsPage() {
   const { data: me } = useMe()
   const navigate = useNavigate()
-  const lock = useLockParent()
-
-  const leave = () => {
-    lock.mutate()
-    navigate('/')
-  }
+  const leave = () => navigate('/')
   useIdleTimeout(PARENT_IDLE_TIMEOUT_MS, leave)
 
   const { area } = useParams()
