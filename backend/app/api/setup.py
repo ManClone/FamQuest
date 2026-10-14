@@ -35,7 +35,7 @@ class SetupRequest(BaseModel):
     family_name: FamilyName
     email: Email
     password: Password
-    pin: Pin
+    pin: Pin | None = None
     timezone: Timezone = "Europe/Berlin"
 
 
@@ -72,8 +72,8 @@ def run_setup(
             name=body.family_name,
             default_language=body.language,
             timezone=body.timezone,
-            parent_pin_hash=hash_secret(body.pin),
-            pin_enabled=True,
+            parent_pin_hash=hash_secret(body.pin) if body.pin else None,
+            pin_enabled=False,
         )
     )
     user = User(email=body.email, password_hash=hash_secret(body.password), role="admin")
