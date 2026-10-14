@@ -115,6 +115,14 @@ def due_weekly_allowances(
     changes the unconditional nature of the allowance.
     Returns IDs of children newly credited in this transaction.
     """
+    # Validate the whole batch before writing any ledger entry.
+    import datetime as dt
+
+    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime) or week_start.weekday() != 0:
+        raise ValueError("week_start must be a Monday date")
+    if any(type(member_id) is not int or type(cents) is not int or not 1 <= cents <= 100_000 for member_id, cents in configured_amounts.items()):
+        raise ValueError("Invalid allowance configuration")
+
     credited: list[int] = []
     for member_id, cents in sorted(configured_amounts.items()):
         if post_weekly_allowance(db, member_id, cents, week_start):
