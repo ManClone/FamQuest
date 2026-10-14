@@ -1,8 +1,9 @@
 import { type FormEvent, useId, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { type Me, useUpdateFamily } from '../../api/auth'
-import { ApiError } from '../../api/client'
+import { ApiError, api, apiGet } from '../../api/client'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { SUPPORTED_LANGUAGES } from '../../i18n'
@@ -102,6 +103,54 @@ export function FamilySection({ me, onSaved }: { me: Me; onSaved: (message: stri
         </div>
         <Button type="submit" className="self-start" disabled={!changed || update.isPending}>
           {t('family_settings.save')}
+        </Button>
+      </form>
+    </Section>
+  )
+}
+
+type Account = { id: number; email: string; role: string }
+
+export function AccountsSection() {
+  const queryClient = useQueryClient()
+  const accounts = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => apiGet<Account[]>('/auth/accounts'),
+  })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('child')
+  const create = useMutation({
+    mutationFn: () => api<Account>('POST', '/auth/accounts', { email, password, role }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      setEmail('')
+      setPassword('')
+    },
+  })
+  return (
+    <Section title="Benutzerkonten">
+      {accounts.data?.map((account) => (
+        <p key={account.id}>{account.email} ({account.role})</p>
+      ))}
+      {accounts.isError && <Alert>Konten konnten nicht geladen werden.</Alert>}
+      <form className="flex flex-col gap-3" onSubmit={(event) => {
+        event.preventDefault()
+        create.mutate()
+      }}>
+        <TextField label="E-Mail" type="email" value={email}
+          onChange={(event) => setEmail(event.target.value)} />
+        <TextField label="Passwort" type="password" value={password}
+          onChange={(event) => setPassword(event.target.value)} />
+        <label>Rolle
+          <select value={role} onChange={(event) => setRole(event.target.value)}>
+            <option value="child">Kind</option>
+            <option value="parent">Elternteil</option>
+          </select>
+        </label>
+        {create.isError && <Alert>Konto konnte nicht erstellt werden.</Alert>}
+        <Button type="submit" disabled={create.isPending || password.length < 10}>
+          Konto anlegen
         </Button>
       </form>
     </Section>
