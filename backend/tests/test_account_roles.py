@@ -10,7 +10,10 @@ def test_account_management_requires_parent_role(client, admin):
     assert client.get("/api/auth/accounts").status_code == 200
 
     assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
-    child = client.post("/api/auth/login", json={"email": payload["email"], "password": payload["password"]}).json()
+    child = client.post(
+        "/api/auth/login",
+        json={"email": payload["email"], "password": payload["password"]},
+    ).json()
     assert client.get("/api/auth/accounts").status_code == 403
     assert client.post(
         "/api/auth/accounts",
