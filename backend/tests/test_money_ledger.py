@@ -374,6 +374,8 @@ def test_standing_order_candidates_use_fixed_reference_date_and_remaining_amount
         book_money(db, lena, 500, "allowance", "weekly:2026-10-12")
         db.flush()
         assert allowance_payment_candidates(db, lena, monday, 500, "Taschengeld") == [monday]
+        assert allowance_payment_candidates(db, lena, monday, 500, "SEPA GUTSCHRIFT Taschengeld") == [monday]
+        assert allowance_payment_candidates(db, lena, monday, 500, "Taschengelder") == []
         assert allowance_payment_candidates(db, lena, monday, 500, "Bonus-2026-W42") == []
         account = MemberBankAccount(member_id=lena, provider="test", display_name="Konto")
         db.add(account)
