@@ -42,3 +42,28 @@ def weekly_statement(
         money_penalty_cents=money_penalty_cents,
         payable_bonus_cents=max(0, earned_bonus_cents - money_penalty_cents),
     )
+
+
+@dataclass(frozen=True)
+class XpPenaltyResult:
+    requested_xp: int
+    deducted_xp: int
+    remaining_xp: int
+    unapplied_xp: int
+
+
+def xp_penalty(spendable_xp: int, requested_xp: int) -> XpPenaltyResult:
+    """Clamp XP penalties to the spendable balance; never touch level XP.
+
+    The effective deduction is persisted by the future consequence ledger.
+    A reversal must restore *deducted_xp*, not the originally requested amount.
+    """
+    if spendable_xp < 0 or requested_xp < 0:
+        raise ValueError("XP amounts must be nonnegative")
+    deducted = min(spendable_xp, requested_xp)
+    return XpPenaltyResult(
+        requested_xp=requested_xp,
+        deducted_xp=deducted,
+        remaining_xp=spendable_xp - deducted,
+        unapplied_xp=requested_xp - deducted,
+    )
