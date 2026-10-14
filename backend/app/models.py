@@ -108,6 +108,7 @@ class FamilyMember(Base):
     # Reihenfolge in Familienansicht und Listen (aufsteigend), festgelegt im Elternbereich.
     position: Mapped[int] = mapped_column(server_default="0")
     # Termine der Person bekommen Symbole (siehe app/event_symbols.py); Standard nur für Kinder.
+    weekly_allowance_cents: Mapped[int | None] = mapped_column()
     event_symbols: Mapped[bool] = mapped_column(default=False, server_default="false")
     # Optionale Verknüpfung mit einem Login-Konto (z. B. später für Kinder-Konten).
     user_id: Mapped[int | None] = mapped_column(
