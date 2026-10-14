@@ -143,3 +143,23 @@ def due_weekly_allowances(
         if post_weekly_allowance(db, member_id, cents, week_start):
             credited.append(member_id)
     return credited
+
+
+def credit_configured_allowances(db: Session, today) -> list[int]:
+    """Book this week's configured unconditional allowances, once per child.
+
+    No catch-up for earlier weeks and no payment transfer. Caller commits.
+    The member row lock in post_weekly_allowance serializes concurrent runs.
+    """
+    import datetime as dt
+
+    from app.models import FamilyMember
+
+    if not isinstance(today, dt.date) or isinstance(today, dt.datetime):
+        raise ValueError("today must be a date")
+    monday = today - dt.timedelta(days=today.weekday())
+    configured = dict(db.execute(
+        select(FamilyMember.id, FamilyMember.weekly_allowance_cents)
+        .where(FamilyMember.role == "child", FamilyMember.weekly_allowance_cents.is_not(None))
+    ).all())
+    return due_weekly_allowances(db, configured, monday)
