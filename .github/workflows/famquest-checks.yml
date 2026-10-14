@@ -52,3 +52,8 @@ jobs:
         working-directory: backend
       - run: uv run pytest
         working-directory: backend
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target runtime -t famquest:ci .
