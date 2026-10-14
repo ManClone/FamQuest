@@ -98,3 +98,39 @@ def get_weekly_allowance_status(
     except ValueError as exc:
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.invalid_allowance") from exc
     return WeeklyAllowanceStatus(member_id=member_id, week_start=week_start, booked=booked)
+
+
+class WeeklyAllowanceSettings(BaseModel):
+    member_id: int
+    weekly_amount_cents: int | None
+
+
+class WeeklyAllowanceSettingsIn(BaseModel):
+    weekly_amount_cents: int | None = Field(default=None, ge=1, le=100_000)
+
+
+@router.get("/members/{member_id}/money/settings", response_model=WeeklyAllowanceSettings)
+def get_weekly_allowance_settings(
+    member_id: int, _: ParentSession, db: DbSession
+) -> WeeklyAllowanceSettings:
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    return WeeklyAllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
+
+
+@router.put(
+    "/members/{member_id}/money/settings",
+    response_model=WeeklyAllowanceSettings,
+    dependencies=[NotInDemo],
+)
+def set_weekly_allowance_settings(
+    member_id: int, body: WeeklyAllowanceSettingsIn, _: ParentSession, db: DbSession
+) -> WeeklyAllowanceSettings:
+    """Opt-in weekly amount; null disables future automatic credits."""
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    member.weekly_allowance_cents = body.weekly_amount_cents
+    db.commit()
+    return WeeklyAllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
