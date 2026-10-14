@@ -42,6 +42,7 @@ from app.config import Settings, get_settings
 from app.demo_mode import block_while_resetting, run_resets
 from app.errors import register_error_handlers
 from app.logs import configure_logging
+from app.money import run_weekly_allowance_scheduler
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -59,6 +60,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if settings.demo_mode:
             interval = timedelta(minutes=settings.demo_reset_minutes)
             tasks.append(asyncio.create_task(run_resets(settings.demo_mode, interval)))
+        if not settings.demo_mode:
+            tasks.append(asyncio.create_task(run_weekly_allowance_scheduler()))
         yield
         for task in tasks:
             task.cancel()
