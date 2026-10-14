@@ -1,4 +1,4 @@
-"""Parent-only preview of weekly bonus arithmetic (no database writes)."""
+"""Parent-only consequence ledger and weekly bonus preview."""
 
 import datetime as dt
 
