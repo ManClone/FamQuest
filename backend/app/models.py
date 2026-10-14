@@ -767,3 +767,48 @@ class QuestImport(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     external_id: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), unique=True, nullable=False)
+
+
+
+class ConsequencePreset(Base):
+    """Parent-configurable default amounts; no automatic XP-to-euro conversion."""
+
+    __tablename__ = "consequence_presets"
+    __table_args__ = (
+        CheckConstraint("money_penalty_cents >= 0", name="consequence_preset_money_nonnegative"),
+        CheckConstraint("xp_penalty >= 0", name="consequence_preset_xp_nonnegative"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(100), unique=True)
+    money_penalty_cents: Mapped[int] = mapped_column(default=0, server_default="0")
+    xp_penalty: Mapped[int] = mapped_column(default=0, server_default="0")
+    active: Mapped[bool] = mapped_column(default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConsequenceEntry(Base):
+    """Auditable penalty event. Reversal references the original, never deletes it."""
+
+    __tablename__ = "consequence_entries"
+    __table_args__ = (
+        CheckConstraint("money_penalty_cents >= 0", name="consequence_entry_money_nonnegative"),
+        CheckConstraint("xp_penalty_requested >= 0", name="consequence_entry_xp_nonnegative"),
+        CheckConstraint("xp_penalty_applied >= 0", name="consequence_entry_applied_nonnegative"),
+        CheckConstraint("xp_penalty_applied <= xp_penalty_requested", name="consequence_entry_applied_lte_requested"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    preset_id: Mapped[int | None] = mapped_column(ForeignKey("consequence_presets.id", ondelete="SET NULL"))
+    title: Mapped[str] = mapped_column(String(100))
+    note: Mapped[str | None] = mapped_column(String(500))
+    effective_date: Mapped[dt.date] = mapped_column(Date, index=True)
+    money_penalty_cents: Mapped[int]
+    xp_penalty_requested: Mapped[int]
+    xp_penalty_applied: Mapped[int]
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    reversed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reversed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    reversal_note: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
