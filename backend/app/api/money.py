@@ -12,7 +12,7 @@ from app.api.members import get_member
 from app.auth import DbSession, ParentSession
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
-from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance
+from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance, weekly_allowance_booked
 
 router = APIRouter(tags=["money"])
 
@@ -77,3 +77,24 @@ def credit_weekly_allowance(
         booked=booked,
         allowance_cents=allowance_balance(db, member_id),
     )
+
+
+class WeeklyAllowanceStatus(BaseModel):
+    member_id: int
+    week_start: dt.date
+    booked: bool
+
+
+@router.get("/members/{member_id}/money/weekly-allowance", response_model=WeeklyAllowanceStatus)
+def get_weekly_allowance_status(
+    member_id: int, week_start: dt.date, _: ParentSession, db: DbSession
+) -> WeeklyAllowanceStatus:
+    """Check a specific Monday before manually booking pocket money."""
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    try:
+        booked = weekly_allowance_booked(db, member_id, week_start)
+    except ValueError as exc:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.invalid_allowance") from exc
+    return WeeklyAllowanceStatus(member_id=member_id, week_start=week_start, booked=booked)
