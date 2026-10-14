@@ -180,9 +180,15 @@ def test_weekly_batch_only_credits_configured_children_once(client, parent, lena
 
 
 def test_money_overview_rejects_non_child(client, parent, now):
-    from tests.test_tasks import add_member
+    from tests.conftest import csrf
 
-    adult = add_member(client, parent, name="Elternteil", role="adult")
+    response = client.post(
+        "/api/members",
+        json={"name": "Elternteil", "role": "adult", "color": "blue"},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 201, response.text
+    adult = response.json()["id"]
     response = client.get(f"/api/members/{adult}/money")
     assert response.status_code == 422
     assert response.json()["code"] == "money.child_required"
