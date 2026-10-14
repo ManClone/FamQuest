@@ -13,7 +13,7 @@ from app.api.members import get_member
 from app.auth import DbSession, ParentSession
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
-from app.models import BankBalanceSnapshot, MemberBankAccount
+from app.models import BankBalanceSnapshot, BankTransaction, MemberBankAccount
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance, weekly_allowance_booked
 
 router = APIRouter(tags=["money"])
@@ -178,3 +178,35 @@ def get_member_bank_balances(
             observed_at=snapshot.observed_at if snapshot else None,
         ))
     return result
+
+
+class BankTransactionOut(BaseModel):
+    id: int
+    account_id: int
+    booked_on: dt.date
+    value_on: dt.date | None
+    amount_cents: int
+    currency: str
+    description: str
+    counterparty: str | None
+    balance_after_cents: int | None
+
+
+@router.get("/members/{member_id}/money/bank-transactions", response_model=list[BankTransactionOut])
+def get_member_bank_transactions(
+    member_id: int, _: ParentSession, db: DbSession, limit: int = 50, offset: int = 0
+) -> list[BankTransactionOut]:
+    """Read-only newest bank movements, scoped to this child and active accounts."""
+    if not 1 <= limit <= 100 or not 0 <= offset <= 10000:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.invalid_pagination")
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    rows = db.scalars(
+        select(BankTransaction)
+        .join(MemberBankAccount, BankTransaction.account_id == MemberBankAccount.id)
+        .where(MemberBankAccount.member_id == member_id, MemberBankAccount.active.is_(True))
+        .order_by(BankTransaction.booked_on.desc(), BankTransaction.id.desc())
+        .offset(offset).limit(limit)
+    ).all()
+    return [BankTransactionOut.model_validate(row, from_attributes=True) for row in rows]
