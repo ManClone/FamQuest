@@ -3,9 +3,9 @@
 import datetime as dt
 
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.demo_mode import NotInDemo
-from app.models import ConsequenceEntry
+from app.models import ConsequenceEntry, MoneyTransaction, TaskCompletion
 from app.points import balance, book, lock_member
 from app.auth import utcnow
 from pydantic import BaseModel, Field
@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from app.api.members import get_member
 from app.auth import DbSession, ParentSession
 from app.errors import ApiError
-from app.weekly_consequences import weekly_statement, xp_penalty
+from app.weekly_consequences import monday_of, weekly_statement, xp_penalty
 
 router = APIRouter(tags=["weekly-consequences"])
 
