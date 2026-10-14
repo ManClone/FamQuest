@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.api.members import get_member
 from app.errors import ApiError
+from app.errors import ApiError
 from app.demo_mode import NotInDemo
 from app.auth import DbSession, ParentSession
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance
@@ -28,7 +29,9 @@ class MoneyOverview(BaseModel):
 @router.get("/members/{member_id}/money", response_model=MoneyOverview)
 def get_money_overview(member_id: int, _: ParentSession, db: DbSession) -> MoneyOverview:
     """Parent-only overview; no allowance schedule or bank integration."""
-    get_member(db, member_id)
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
     return MoneyOverview(
         member_id=member_id,
         allowance_cents=allowance_balance(db, member_id),
@@ -65,8 +68,6 @@ def credit_weekly_allowance(
     Idempotent for the child and week. The amount is provided by the parent;
     there is no default amount and no dependency on quest completion.
     """
-    from app.errors import ApiError
-
     try:
         booked = post_weekly_allowance(db, member_id, body.amount_cents, body.week_start)
     except ValueError as exc:
