@@ -123,8 +123,8 @@ def test_money_overview_is_parent_only_and_separates_balances(client, parent, le
 
     from tests.conftest import csrf
 
-    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
-    assert client.get(f"/api/members/{lena}/money").status_code == 403
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.get(f"/api/members/{lena}/money").status_code == 401
 
 
 def test_parent_can_credit_weekly_allowance_only_once(client, parent, lena, now):
@@ -153,10 +153,10 @@ def test_weekly_allowance_requires_parent_and_valid_monday(client, parent, lena,
     assert client.post(
         url, json={"amount_cents": 400, "week_start": "2026-10-06"}, headers=csrf(parent)
     ).status_code == 422
-    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
     assert client.post(
         url, json={"amount_cents": 400, "week_start": "2026-10-05"}, headers=csrf(parent)
-    ).status_code == 403
+    ).status_code == 401
 
 
 def test_weekly_batch_only_credits_configured_children_once(client, parent, lena, now):
@@ -258,13 +258,13 @@ def test_weekly_allowance_status_is_read_only_and_idempotent(client, parent, len
     assert client.get(url, params={"week_start": "2026-10-06"}).status_code == 422
 
 
-def test_weekly_allowance_status_requires_parent_unlock(client, parent, lena, now):
+def test_weekly_allowance_status_requires_login(client, parent, lena, now):
     from tests.conftest import csrf
 
     url = f"/api/members/{lena}/money/weekly-allowance"
     assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 200
-    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
-    assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 403
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 401
 
 
 def test_weekly_allowance_rejects_zero_and_negative_amounts(client, parent, lena, now):
@@ -292,8 +292,8 @@ def test_allowance_settings_are_opt_in_and_parent_only(client, parent, lena, now
     assert client.put(url, json={"weekly_amount_cents": 0}, headers=csrf(parent)).status_code == 422
     assert client.put(url, json={"weekly_amount_cents": None}, headers=csrf(parent)).status_code == 200
     assert client.get(url).json()["weekly_amount_cents"] is None
-    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
-    assert client.get(url).status_code == 403
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.get(url).status_code == 401
 
 
 def test_configured_allowance_books_current_week_once(client, parent, lena, now):
@@ -405,14 +405,14 @@ def test_bonus_payment_reference_uses_iso_week_year():
     assert bonus_payment_reference(dt.date(2028, 1, 3)) == "Bonus-2028-W01"
 
 
-def test_bank_transactions_require_parent_unlock_and_valid_pagination(client, parent, lena, now):
+def test_bank_transactions_require_login_and_valid_pagination(client, parent, lena, now):
     from tests.conftest import csrf
 
     url = f"/api/members/{lena}/money/bank-transactions"
     assert client.get(url, params={"limit": 0}).status_code == 422
     assert client.get(url, params={"offset": -1}).status_code == 422
-    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
-    assert client.get(url).status_code == 403
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.get(url).status_code == 401
 
 
 def test_bank_transaction_external_id_is_unique_per_account(client, parent, lena, now):
