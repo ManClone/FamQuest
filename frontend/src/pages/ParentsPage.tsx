@@ -449,6 +449,7 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
         {area === 'settings' && (
           <>
             <FamilySection me={me} onSaved={setNotice} />
+            <AccountsSection />
             <DeviceSection />
             <Section title={t('parents.account_section')}>
               <p className="text-lg text-slate-600">
