@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 from app.api.members import get_member
 from app.errors import ApiError
-from app.errors import ApiError
 from app.demo_mode import NotInDemo
 from app.auth import DbSession, ParentSession
 from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance
