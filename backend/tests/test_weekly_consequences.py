@@ -8,15 +8,15 @@ from app.weekly_consequences import DEFAULT_CONSEQUENCES, monday_of, weekly_stat
 
 
 def test_monday_to_sunday_and_penalty():
-    result = weekly_statement(dt.date(2026, 10, 14), 40, 5)
+    result = weekly_statement(dt.date(2026, 10, 14), 300, 50)
     assert result.week_start == dt.date(2026, 10, 12)
     assert result.week_end == dt.date(2026, 10, 18)
-    assert result.payable_bonus_points == 35
+    assert result.payable_bonus_cents == 250
 
 
 def test_penalty_cannot_create_debt():
-    result = weekly_statement(dt.date(2026, 10, 18), 3, 10)
-    assert result.payable_bonus_points == 0
+    result = weekly_statement(dt.date(2026, 10, 18), 300, 400)
+    assert result.payable_bonus_cents == 0
 
 
 def test_next_week_has_independent_period():
@@ -30,4 +30,4 @@ def test_negative_inputs_rejected(earned, penalty):
 
 
 def test_default_consequence():
-    assert DEFAULT_CONSEQUENCES["Nicht auf Anweisungen gehört"] == 5
+    assert DEFAULT_CONSEQUENCES["Nicht auf Anweisungen gehört"] == {"money_penalty_cents": 50, "xp_penalty": 5}
