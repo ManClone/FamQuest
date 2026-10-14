@@ -199,7 +199,16 @@ async def run_weekly_allowance_scheduler() -> None:
         await asyncio.sleep(3600)
 
 
-def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_cents: int, reference: str, expected_reference: str, tolerance_days: int = 5):
+def bonus_payment_reference(week_start) -> str:
+    """Stable transfer reference for one ISO calendar week."""
+    import datetime as dt
+    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime) or week_start.weekday() != 0:
+        raise ValueError("week_start must be a Monday date")
+    year, week, _ = week_start.isocalendar()
+    return f"Bonus-{year}-W{week:02d}"
+
+
+def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_cents: int, reference: str, expected_reference: str = "Taschengeld", tolerance_days: int = 5):
     """Candidate weeks for a standing-order receipt; never guess across ambiguous weeks.
 
     This read-only helper does not create matches. The caller must verify the
