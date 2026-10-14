@@ -100,14 +100,14 @@ def test_task_recurrence_still_applies_to_others(client, parent, lena, now):
     assert task["positions"] == [{"member_id": tom, "position": 1000, "optional": False}]
 
 
-def test_days_are_exclusive_per_time_of_day(client, parent, lena):
+def test_days_are_independent_per_routine(client, parent, lena):
     everyday = new_routine(client, parent, lena, [1, 2, 3, 4, 5, 6, 7])
     evening = new_routine(client, parent, lena, [1, 2, 3, 4, 5, 6, 7], time_of_day="evening")
     weekend = new_routine(client, parent, lena, WEEKEND)
 
     days = {r["id"]: r["weekdays"] for r in routines(client)}
     assert days == {
-        everyday["id"]: WEEKDAYS,
+        everyday["id"]: [1, 2, 3, 4, 5, 6, 7],
         evening["id"]: [1, 2, 3, 4, 5, 6, 7],
         weekend["id"]: WEEKEND,
     }
@@ -119,7 +119,7 @@ def test_days_are_exclusive_per_time_of_day(client, parent, lena):
     )
     assert response.status_code == 200, response.text
     days = {r["id"]: r["weekdays"] for r in response.json()}
-    assert (days[everyday["id"]], days[weekend["id"]]) == ([1, 2, 3, 4, 5, 6], [7])
+    assert (days[everyday["id"]], days[weekend["id"]]) == ([1, 2, 3, 4, 5, 6], WEEKEND)
 
 
 def test_copy_to_another_child(client, parent, lena):
