@@ -102,3 +102,23 @@ export function useBankBalances(memberId: number) {
     enabled: memberId > 0,
   })
 }
+
+export interface BankTransaction {
+  id: number
+  account_id: number
+  booked_on: string
+  value_on: string | null
+  amount_cents: number
+  currency: string
+  description: string
+  counterparty: string | null
+  balance_after_cents: number | null
+}
+
+export function useBankTransactions(memberId: number) {
+  return useQuery({
+    queryKey: ['money', memberId, 'bank-transactions'],
+    queryFn: () => apiGet<BankTransaction[]>(`/members/${memberId}/money/bank-transactions?limit=50`),
+    enabled: memberId > 0,
+  })
+}
