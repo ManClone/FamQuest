@@ -13,6 +13,7 @@ from app.auth import (
     me_response,
     start_session,
 )
+from app.demo_mode import NotInDemo
 from app.errors import ApiError
 from app.logs import logger
 from app.models import User
@@ -80,13 +81,13 @@ class AccountOut(BaseModel):
 
 
 @router.get("/accounts")
-def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
+def list_accounts(_: ParentSession, db: DbSession, __: NotInDemo) -> list[AccountOut]:
     return [AccountOut(id=user.id, email=user.email, role=user.role)
             for user in db.scalars(select(User).order_by(User.id))]
 
 
 @router.post("/accounts", status_code=status.HTTP_201_CREATED)
-def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession) -> AccountOut:
+def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession, __: NotInDemo) -> AccountOut:
     if body.role not in ("parent", "child"):
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "auth.invalid_role")
     user = User(email=body.email, password_hash=hash_secret(body.password), role=body.role)
