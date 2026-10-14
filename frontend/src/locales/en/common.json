@@ -492,6 +492,11 @@
     "todo": {
       "not_found": "This entry no longer exists.",
       "duplicate": "That is already on the list."
+    },
+    "money": {
+      "child_required": "This feature is only available for children",
+      "invalid_allowance": "Invalid pocket money amount",
+      "invalid_pagination": "Invalid pagination parameters"
     }
   },
   "rewards": {
