@@ -403,3 +403,37 @@ def test_bonus_payment_reference_uses_iso_week_year():
 
     assert bonus_payment_reference(dt.date(2026, 10, 12)) == "Bonus-2026-W42"
     assert bonus_payment_reference(dt.date(2028, 1, 3)) == "Bonus-2028-W01"
+
+
+def test_bank_transactions_require_parent_unlock_and_valid_pagination(client, parent, lena, now):
+    from tests.conftest import csrf
+
+    url = f"/api/members/{lena}/money/bank-transactions"
+    assert client.get(url, params={"limit": 0}).status_code == 422
+    assert client.get(url, params={"offset": -1}).status_code == 422
+    assert client.post("/api/parent/lock", headers=csrf(parent)).status_code == 200
+    assert client.get(url).status_code == 403
+
+
+def test_bank_transaction_external_id_is_unique_per_account(client, parent, lena, now):
+    import datetime as dt
+    from sqlalchemy.exc import IntegrityError
+    from app.models import MemberBankAccount, BankTransaction
+
+    with Session(engine) as db:
+        account = MemberBankAccount(member_id=lena, provider="test", display_name="Konto")
+        db.add(account)
+        db.flush()
+        for _ in range(2):
+            db.add(BankTransaction(
+                account_id=account.id, external_id="same-bank-id",
+                booked_on=dt.date(2026, 10, 12),
+                amount_cents=500, currency="EUR", description="Taschengeld",
+            ))
+        try:
+            db.flush()
+        except IntegrityError:
+            db.rollback()
+        else:
+            db.rollback()
+            raise AssertionError("Duplicate bank movement was accepted")
