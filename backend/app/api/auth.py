@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.auth import (
     CurrentSession,
+    ParentSession,
     DbSession,
     check_origin,
     client_ip,
@@ -14,7 +16,7 @@ from app.auth import (
 from app.errors import ApiError
 from app.logs import logger
 from app.models import User
-from app.schemas import Email, MeResponse
+from app.schemas import Email, MeResponse, Password
 from app.security import hash_secret, login_limiter, needs_rehash, verify_secret
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -63,3 +65,36 @@ def logout(auth_session: CurrentSession, response: Response, db: DbSession) -> N
 @router.get("/me")
 def me(auth_session: CurrentSession, db: DbSession) -> MeResponse:
     return me_response(db, auth_session)
+
+
+class AccountCreateRequest(BaseModel):
+    email: Email
+    password: Password
+    role: str
+
+
+class AccountOut(BaseModel):
+    id: int
+    email: str
+    role: str
+
+
+@router.get("/accounts")
+def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
+    return [AccountOut(id=user.id, email=user.email, role=user.role)
+            for user in db.scalars(select(User).order_by(User.id))]
+
+
+@router.post("/accounts", status_code=status.HTTP_201_CREATED)
+def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession) -> AccountOut:
+    if body.role not in ("parent", "child"):
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "auth.invalid_role")
+    user = User(email=body.email, password_hash=hash_secret(body.password), role=body.role)
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ApiError(status.HTTP_409_CONFLICT, "auth.email_taken") from exc
+    logger.info("Konto %s mit Rolle %s erstellt", user.id, user.role)
+    return AccountOut(id=user.id, email=user.email, role=user.role)
