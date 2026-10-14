@@ -133,3 +133,34 @@ def reverse_consequence(entry_id: int, auth_session: ParentSession, db: DbSessio
     db.commit()
     db.refresh(entry)
     return consequence_out(entry)
+
+
+@router.get("/members/{member_id}/weekly-bonus", response_model=WeeklyPreviewOut)
+def actual_weekly_bonus(member_id: int, date: dt.date, _: ParentSession, db: DbSession) -> WeeklyPreviewOut:
+    """Read actual task bonus and active penalties for one family-local ISO week."""
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(422, "money.child_required")
+    start = monday_of(date)
+    end = start + dt.timedelta(days=6)
+    earned = db.scalar(
+        select(func.coalesce(func.sum(MoneyTransaction.amount_cents), 0))
+        .join(TaskCompletion, MoneyTransaction.completion_id == TaskCompletion.id)
+        .where(
+            MoneyTransaction.member_id == member_id,
+            MoneyTransaction.kind.in_(("task_completed", "task_undone")),
+            TaskCompletion.date >= start,
+            TaskCompletion.date <= end,
+        )
+    ) or 0
+    penalties = db.scalar(
+        select(func.coalesce(func.sum(ConsequenceEntry.money_penalty_cents), 0))
+        .where(
+            ConsequenceEntry.member_id == member_id,
+            ConsequenceEntry.effective_date >= start,
+            ConsequenceEntry.effective_date <= end,
+            ConsequenceEntry.reversed_at.is_(None),
+        )
+    ) or 0
+    result = weekly_statement(date, max(0, int(earned)), int(penalties))
+    return WeeklyPreviewOut(member_id=member_id, **result.__dict__)
