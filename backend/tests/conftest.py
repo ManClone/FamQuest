@@ -37,7 +37,6 @@ SETUP_DATA = {
     "family_name": "Familie Test",
     "email": "Mama@Example.org",
     "password": "sehr-geheim-123",
-    "pin": "1234",
     "timezone": "Europe/Berlin",
 }
 
@@ -106,11 +105,7 @@ def admin(client) -> dict:
 @pytest.fixture
 def parent(client, admin) -> dict:
     """Wie `admin`, zusätzlich ist der Elternbereich entsperrt."""
-    response = client.post(
-        "/api/parent/unlock", json={"pin": SETUP_DATA["pin"]}, headers=csrf(admin)
-    )
-    assert response.status_code == 200, response.text
-    return response.json()
+    return admin
 
 
 @pytest.fixture
