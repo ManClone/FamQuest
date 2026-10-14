@@ -67,6 +67,7 @@ export function ParentsPage() {
   const { area } = useParams()
   if (area !== undefined && !isParentArea(area)) return <Navigate to="/parents" replace />
   if (!me) return null
+  if (me.user.role !== 'admin' && me.user.role !== 'parent') return <Navigate to="/" replace />
   return me.parent_unlocked ? (
     <ParentSettings me={me} area={area ?? DEFAULT_AREA} onLeave={leave} />
   ) : (
