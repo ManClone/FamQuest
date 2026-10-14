@@ -207,3 +207,16 @@ def test_weekly_batch_validates_all_amounts_before_booking(client, parent, lena,
         with pytest.raises(ValueError):
             due_weekly_allowances(db, {lena: 500}, monday + dt.timedelta(days=1))
         assert allowance_balance(db, lena) == 0
+
+
+def test_weekly_allowance_is_not_affected_by_quest_bonus_reversal(client, parent, lena, now):
+    import datetime as dt
+    from app.money import allowance_balance, bonus_balance, post_weekly_allowance, book_money
+
+    with Session(engine) as db:
+        assert post_weekly_allowance(db, lena, 600, dt.date(2026, 10, 5))
+        book_money(db, lena, 200, "task_completed", "Bonusquest")
+        book_money(db, lena, -200, "task_undone", "Bonusquest undone")
+        db.commit()
+        assert allowance_balance(db, lena) == 600
+        assert bonus_balance(db, lena) == 0
