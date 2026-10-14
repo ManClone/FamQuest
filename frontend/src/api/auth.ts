@@ -104,14 +104,6 @@ export function useLogout() {
   })
 }
 
-export const useUnlockParent = () =>
-  useMeMutation((pin: string) => api<Me>('POST', '/parent/unlock', { pin }))
-
-export const useLockParent = () => useMeMutation(() => api<Me>('POST', '/parent/lock'))
-
-export const useSetPin = () =>
-  useMeMutation((pin: string) => api<Me>('PUT', '/parent/pin', { pin }))
-
 export interface FamilySettings {
   name: string
   default_language: string
@@ -125,9 +117,3 @@ export const useUpdateFamily = () =>
     (queryClient) => void queryClient.invalidateQueries({ queryKey: ['today'] }),
   )
 
-export const useDisablePin = () => useMeMutation(() => api<Me>('DELETE', '/parent/pin'))
-
-export const useResetPin = () =>
-  useMeMutation((data: { password: string; pin: string }) =>
-    api<Me>('POST', '/parent/pin/reset', data),
-  )
