@@ -30,4 +30,7 @@ def test_negative_inputs_rejected(earned, penalty):
 
 
 def test_default_consequence():
-    assert DEFAULT_CONSEQUENCES["Nicht auf Anweisungen gehört"] == {"money_penalty_cents": 50, "xp_penalty": 5}
+    assert DEFAULT_CONSEQUENCES["Nicht auf Anweisungen gehört"] == {
+        "money_penalty_cents": 50,
+        "xp_penalty": 5,
+    }
