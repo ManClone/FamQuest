@@ -36,6 +36,7 @@ from app.api import (
     today,
     todos,
     weather,
+    weekly_consequences,
 )
 from app.calendar_sync import run_periodically
 from app.config import Settings, get_settings
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         today,
         points,
         money,
+        weekly_consequences,
         quest_import,
         rewards,
         approvals,
