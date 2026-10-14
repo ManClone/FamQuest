@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 
-import { useBankBalances, useCreditWeeklyAllowance, useMoneyOverview, useWeeklyAllowanceStatus, useWeeklyAllowanceSettings, useSaveWeeklyAllowanceSettings } from '../../api/money'
+import { useBankBalances, useBankTransactions, useCreditWeeklyAllowance, useMoneyOverview, useWeeklyAllowanceStatus, useWeeklyAllowanceSettings, useSaveWeeklyAllowanceSettings } from '../../api/money'
 import type { Member } from '../../api/members'
 import { Alert, Button, Section } from '../../components/ui'
 
@@ -13,6 +13,7 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
   const selected = children.find((child) => child.id === memberId) ?? children[0]
   const overview = useMoneyOverview(selected?.id ?? 0)
   const bankBalances = useBankBalances(selected?.id ?? 0)
+  const bankTransactions = useBankTransactions(selected?.id ?? 0)
   const credit = useCreditWeeklyAllowance(selected?.id ?? 0)
   const [amount, setAmount] = useState('')
   const [monday, setMonday] = useState('')
@@ -99,6 +100,21 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
                 <span>{account.display_name} ({account.provider}): </span>
                 <strong>{account.balance_cents === null ? 'Noch kein Kontostand verfügbar' : euros(account.balance_cents)}</strong>
                 {account.observed_at && <span className="text-sm text-slate-500"> · Stand: {new Date(account.observed_at).toLocaleString('de-DE')}</span>}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="font-bold">Kontobewegungen</p>
+            {bankTransactions.isError && <Alert>Kontobewegungen konnten nicht geladen werden.</Alert>}
+            {bankTransactions.data?.length === 0 && <p className="text-sm text-slate-500">Noch keine Kontobewegungen importiert.</p>}
+            {bankTransactions.data?.map((entry) => (
+              <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 py-2">
+                <div>
+                  <div className="font-medium">{entry.description || entry.counterparty || 'Kontobewegung'}</div>
+                  <div className="text-sm text-slate-500">{entry.booked_on}{entry.counterparty && entry.description ? ` · ${entry.counterparty}` : ''}</div>
+                  {entry.balance_after_cents !== null && <div className="text-sm text-slate-500">Kontostand danach: {euros(entry.balance_after_cents)}</div>}
+                </div>
+                <strong>{entry.amount_cents > 0 ? '+' : ''}{euros(entry.amount_cents)}</strong>
               </div>
             ))}
           </div>
