@@ -282,6 +282,28 @@ class MemberBankAccount(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class BankTransaction(Base):
+    """Imported read-only bank movement; never automatically posts to quest ledger."""
+
+    __tablename__ = "bank_transactions"
+    __table_args__ = (
+        UniqueConstraint("account_id", "external_id", name="uq_bank_transaction_external"),
+        Index("ix_bank_transactions_account_date", "account_id", "booked_on"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"))
+    external_id: Mapped[str] = mapped_column(String(200))
+    booked_on: Mapped[dt.date] = mapped_column(Date)
+    value_on: Mapped[dt.date | None] = mapped_column(Date)
+    amount_cents: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), default="EUR", server_default="EUR")
+    description: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    counterparty: Mapped[str | None] = mapped_column(String(200))
+    balance_after_cents: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class BankBalanceSnapshot(Base):
     """Immutable observed external balance; not a FamQuest earnings transaction."""
 
