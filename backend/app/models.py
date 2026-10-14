@@ -107,8 +107,6 @@ class FamilyMember(Base):
     avatar: Mapped[str | None] = mapped_column(String(64))
     # Reihenfolge in Familienansicht und Listen (aufsteigend), festgelegt im Elternbereich.
     position: Mapped[int] = mapped_column(server_default="0")
-    # None = kein wöchentliches Grundtaschengeld konfiguriert.
-    weekly_allowance_cents: Mapped[int | None] = mapped_column()
     # Termine der Person bekommen Symbole (siehe app/event_symbols.py); Standard nur für Kinder.
     event_symbols: Mapped[bool] = mapped_column(default=False, server_default="false")
     # Optionale Verknüpfung mit einem Login-Konto (z. B. später für Kinder-Konten).
