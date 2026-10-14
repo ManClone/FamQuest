@@ -1,20 +1,12 @@
-import { type FormEvent, useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
-import LockedIcon from '~icons/fluent-emoji-flat/locked'
-import UnlockedIcon from '~icons/fluent-emoji-flat/unlocked'
 
 import {
   type Me,
-  useDisablePin,
-  useLockParent,
   useLogout,
   useMe,
-  useResetPin,
-  useSetPin,
-  useDemo,
-  useUnlockParent,
 } from '../api/auth'
 import { type Chore, type ChoreRoom, useChores } from '../api/chores'
 import { type Member, childrenOf, useMembers } from '../api/members'
@@ -22,8 +14,6 @@ import { type Reward, useRewards } from '../api/rewards'
 import { type Routine, useRoutines } from '../api/routines'
 import { type Task, useTasks } from '../api/tasks'
 import { useToday } from '../api/today'
-import { DemoPinHint } from '../components/DemoPinHint'
-import { PinPad } from '../components/PinPad'
 import { Alert, Button, CenteredCard, Section, TextField } from '../components/ui'
 import { errorMessage } from '../errors'
 import { useIdleTimeout } from '../useIdleTimeout'
@@ -63,11 +53,7 @@ export function ParentsPage() {
   if (area !== undefined && !isParentArea(area)) return <Navigate to="/parents" replace />
   if (!me) return null
   if (me.user.role !== 'admin' && me.user.role !== 'parent') return <Navigate to="/" replace />
-  return me.parent_unlocked ? (
-    <ParentSettings me={me} area={area ?? DEFAULT_AREA} onLeave={leave} />
-  ) : (
-    <ParentGate onLeave={leave} />
-  )
+  return <ParentSettings me={me} area={area ?? DEFAULT_AREA} onLeave={leave} />
 }
 
 function BackButton({ onClick }: { onClick: () => void }) {
@@ -80,130 +66,9 @@ function BackButton({ onClick }: { onClick: () => void }) {
   )
 }
 
-/** PIN-Abfrage vor dem Elternbereich, inkl. „PIN vergessen“. */
-function ParentGate({ onLeave }: { onLeave: () => void }) {
-  const { t } = useTranslation()
-  const unlock = useUnlockParent()
-  const demo = useDemo()
-  const [forgotten, setForgotten] = useState(false)
-
-  if (forgotten) return <PinReset onCancel={() => setForgotten(false)} />
-
-  return (
-    <CenteredCard>
-      <BackButton onClick={onLeave} />
-      <LockedIcon className="mx-auto size-12" aria-hidden="true" />
-      <PinPad
-        title={t('parents.pin_prompt')}
-        onSubmit={(pin) => unlock.mutate(pin)}
-        error={unlock.isError ? errorMessage(t, unlock.error) : undefined}
-        busy={unlock.isPending}
-      />
-      <DemoPinHint />
-      {!demo && (
-        <Button variant="secondary" onClick={() => setForgotten(true)}>
-          {t('parents.forgot_pin')}
-        </Button>
-      )}
-    </CenteredCard>
-  )
-}
-
-function PinReset({ onCancel }: { onCancel: () => void }) {
-  const { t } = useTranslation()
-  const reset = useResetPin()
-  const [password, setPassword] = useState('')
-  const [passwordConfirmed, setPasswordConfirmed] = useState(false)
-
-  if (passwordConfirmed) {
-    return (
-      <CenteredCard>
-        <NewPinFlow
-          busy={reset.isPending}
-          onDone={(pin) =>
-            reset.mutate({ password, pin }, { onError: () => setPasswordConfirmed(false) })
-          }
-          onCancel={() => setPasswordConfirmed(false)}
-        />
-      </CenteredCard>
-    )
-  }
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    if (password) setPasswordConfirmed(true)
-  }
-
-  return (
-    <CenteredCard>
-      <h1 className="text-2xl font-extrabold text-slate-800">{t('parents.reset_title')}</h1>
-      <p className="text-lg text-slate-600">{t('parents.reset_intro')}</p>
-      <form className="flex flex-col gap-4" onSubmit={submit}>
-        {reset.isError && <Alert>{errorMessage(t, reset.error)}</Alert>}
-        <TextField
-          label={t('parents.password')}
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-          required
-        />
-        <Button type="submit">{t('actions.next')}</Button>
-        <Button variant="secondary" onClick={onCancel}>
-          {t('actions.cancel')}
-        </Button>
-      </form>
-    </CenteredCard>
-  )
-}
-
-/** Neue PIN zweimal eingeben lassen. */
-function NewPinFlow({
-  onDone,
-  onCancel,
-  busy,
-}: {
-  onDone: (pin: string) => void
-  onCancel: () => void
-  busy: boolean
-}) {
-  const { t } = useTranslation()
-  const [firstPin, setFirstPin] = useState<string | null>(null)
-  const [mismatch, setMismatch] = useState(false)
-
-  const submit = (pin: string) => {
-    if (firstPin === null) {
-      setFirstPin(pin)
-      setMismatch(false)
-    } else if (pin === firstPin) {
-      onDone(pin)
-    } else {
-      setFirstPin(null)
-      setMismatch(true)
-    }
-  }
-
-  return (
-    <>
-      <PinPad
-        key={firstPin === null ? 'new' : 'repeat'}
-        title={t(firstPin === null ? 'parents.new_pin' : 'parents.repeat_pin')}
-        onSubmit={submit}
-        error={mismatch ? errorMessage(t, 'pin.mismatch') : undefined}
-        busy={busy}
-      />
-      <Button variant="secondary" onClick={onCancel} disabled={busy}>
-        {t('actions.cancel')}
-      </Button>
-    </>
-  )
-}
-
 function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLeave: () => void }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const setPin = useSetPin()
-  const disablePin = useDisablePin()
   const logout = useLogout()
   const members = useMembers()
   const tasks = useTasks()
@@ -211,7 +76,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
   const today = useToday()
   const rewards = useRewards()
   const chores = useChores()
-  const [editingPin, setEditingPin] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | 'new' | null>(null)
   const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
   const [pointsMember, setPointsMember] = useState<Member | null>(null)
@@ -251,13 +115,10 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
                 ? 'wizard'
                 : pointsMember
                   ? 'points'
-                  : editingPin
-                    ? 'pin'
-                    : 'overview'
+                  : 'overview'
   useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [view, area])
-  const [confirmDisable, setConfirmDisable] = useState(false)
   // Rückkehr von der Google-Anmeldung: Ergebnis anzeigen und danach die Adresse aufräumen.
   // Hinweise („… ist gespeichert“) gehören zu dem Bereich, in dem sie entstanden sind.
   const [noticeState, setNoticeState] = useState<{ area: ParentArea; text: string } | null>(null)
@@ -432,29 +293,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
     )
   }
 
-  if (editingPin) {
-    return (
-      <CenteredCard>
-        {setPin.isError && <Alert>{errorMessage(t, setPin.error)}</Alert>}
-        <NewPinFlow
-          busy={setPin.isPending}
-          onDone={(pin) =>
-            setPin.mutate(pin, {
-              onSuccess: () => {
-                setEditingPin(false)
-                setNotice(t('parents.pin_saved'))
-              },
-            })
-          }
-          onCancel={() => setEditingPin(false)}
-        />
-      </CenteredCard>
-    )
-  }
-
-  const pinEnabled = me.family.pin_enabled
-  const PinStatusIcon = pinEnabled ? LockedIcon : UnlockedIcon
-
   return (
     <div className="flex min-h-dvh">
       <ParentsNav area={area} pending={today.data?.pending_approvals ?? 0} />
@@ -469,7 +307,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
             {notice}
           </p>
         )}
-        {disablePin.isError && <Alert>{errorMessage(t, disablePin.error)}</Alert>}
 
         {area === 'review' && (
           <>
@@ -613,49 +450,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
         {area === 'settings' && (
           <>
             <FamilySection me={me} onSaved={setNotice} />
-            <Section title={t('parents.pin_section')}>
-              <p className="flex items-center gap-3 text-lg text-slate-600">
-                <PinStatusIcon className="size-10 shrink-0" aria-hidden="true" />
-                {t(pinEnabled ? 'parents.pin_on' : 'parents.pin_off')}
-              </p>
-              {confirmDisable ? (
-                <div className="flex flex-col gap-3 rounded-2xl bg-red-50 p-4">
-                  <p className="text-lg font-semibold text-red-800">
-                    {t('parents.disable_confirm')}
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      variant="danger"
-                      disabled={disablePin.isPending}
-                      onClick={() =>
-                        disablePin.mutate(undefined, {
-                          onSuccess: () => {
-                            setConfirmDisable(false)
-                            setNotice(t('parents.pin_disabled'))
-                          },
-                        })
-                      }
-                    >
-                      {t('parents.disable_pin')}
-                    </Button>
-                    <Button variant="secondary" onClick={() => setConfirmDisable(false)}>
-                      {t('actions.cancel')}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-3">
-                  <Button onClick={() => setEditingPin(true)}>
-                    {t(pinEnabled ? 'parents.change_pin' : 'parents.enable_pin')}
-                  </Button>
-                  {pinEnabled && (
-                    <Button variant="danger" onClick={() => setConfirmDisable(true)}>
-                      {t('parents.disable_pin')}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </Section>
             <DeviceSection />
             <Section title={t('parents.account_section')}>
               <p className="text-lg text-slate-600">
