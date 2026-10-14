@@ -492,6 +492,11 @@
     "todo": {
       "not_found": "Diesen Eintrag gibt es nicht mehr.",
       "duplicate": "Das steht schon auf der Liste."
+    },
+    "money": {
+      "child_required": "Diese Funktion ist nur für Kinder verfügbar",
+      "invalid_allowance": "Ungültiger Taschengeldbetrag",
+      "invalid_pagination": "Ungültige Seitennummerierung"
     }
   },
   "rewards": {
