@@ -266,6 +266,37 @@ class TaskCompletion(Base):
     task: Mapped[Task] = relationship(lazy="joined")
 
 
+
+class MemberBankAccount(Base):
+    """Read-only external account metadata; never store banking credentials."""
+
+    __tablename__ = "member_bank_accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(60))
+    display_name: Mapped[str] = mapped_column(String(100))
+    external_reference: Mapped[str | None] = mapped_column(String(200))
+    currency: Mapped[str] = mapped_column(String(3), default="EUR", server_default="EUR")
+    active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BankBalanceSnapshot(Base):
+    """Immutable observed external balance; not a FamQuest earnings transaction."""
+
+    __tablename__ = "bank_balance_snapshots"
+    __table_args__ = (
+        UniqueConstraint("account_id", "observed_at", name="uq_bank_balance_account_observed"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"), index=True)
+    balance_cents: Mapped[int]
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class MoneyTransaction(Base):
     """Immutable euro-cent ledger, separate from store XP."""
 
