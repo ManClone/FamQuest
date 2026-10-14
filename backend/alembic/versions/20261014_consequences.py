@@ -1,14 +1,14 @@
 """Consequence presets and auditable penalty events.
 
 Revision ID: c20261014pen
-Revises: TODO_SET_CURRENT_HEAD
+Revises: 5ec074ee95f5
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 revision = "c20261014pen"
-down_revision = "TODO_SET_CURRENT_HEAD"
+down_revision = "5ec074ee95f5"
 branch_labels = None
 depends_on = None
 
