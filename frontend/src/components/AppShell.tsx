@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import BroomIcon from '~icons/fluent-emoji-flat/broom'
 import GearIcon from '~icons/fluent-emoji-flat/gear'
-import PhotoIcon from '~icons/fluent-emoji-flat/framed-picture'
 import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 import HouseIcon from '~icons/fluent-emoji-flat/house-with-garden'
@@ -96,9 +95,6 @@ export function AppShell() {
           icon={BroomIcon}
           active={pathname.startsWith('/household')}
         />
-        {hasPhotos && (
-          <NavItem to="/frame" label={t('nav.frame')} icon={PhotoIcon} active={false} />
-        )}
         {/* Einstellungen abgesetzt am Ende der Leiste. */}
         <NavItem
           to="/parents"
