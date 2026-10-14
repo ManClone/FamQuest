@@ -310,7 +310,6 @@ class MoneyPaymentMatch(Base):
 
     __tablename__ = "money_payment_matches"
     __table_args__ = (
-        UniqueConstraint("member_id", "category", "week_start", name="uq_payment_match_week_category"),
         CheckConstraint("category IN ('allowance', 'bonus')", name="payment_match_category"),
         CheckConstraint("amount_cents > 0", name="payment_match_positive"),
     )
