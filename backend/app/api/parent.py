@@ -37,4 +37,3 @@ class PinResetRequest(BaseModel):
     pin: Pin
 
 
-
