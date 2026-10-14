@@ -39,16 +39,7 @@ def get_routine(db: DbSession, routine_id: int) -> Routine:
 
 
 def _claim_days(db: DbSession, routine: Routine, weekdays: list[int]) -> None:
-    """Gibt der Routine diese Tage; andere Varianten desselben Abschnitts geben sie ab."""
-    siblings = db.scalars(
-        select(Routine).where(
-            Routine.member_id == routine.member_id,
-            Routine.time_of_day == routine.time_of_day,
-            Routine.id != routine.id,
-        )
-    )
-    for sibling in siblings:
-        sibling.weekdays = [day for day in sibling.weekdays if day not in weekdays]
+    """Setzt die Tage dieser Routine ohne andere Routinen zu verändern."""
     routine.weekdays = sorted(weekdays)
 
 
