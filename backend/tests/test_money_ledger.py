@@ -311,3 +311,31 @@ def test_configured_allowance_books_current_week_once(client, parent, lena, now)
         assert credit_configured_allowances(db, dt.date(2026, 10, 14)) == []
         db.commit()
         assert allowance_balance(db, lena) == 425
+
+
+def test_bank_balance_is_separate_from_allowance_and_bonus(client, parent, lena, now):
+    import datetime as dt
+    from app.models import MemberBankAccount, BankBalanceSnapshot
+    from app.money import book_money
+
+    with Session(engine) as db:
+        account = MemberBankAccount(
+            member_id=lena, provider="test-provider", display_name="Sparguthaben", currency="EUR"
+        )
+        db.add(account)
+        db.flush()
+        db.add(BankBalanceSnapshot(
+            account_id=account.id, balance_cents=12345,
+            observed_at=dt.datetime(2026, 10, 13, tzinfo=dt.UTC),
+        ))
+        db.add(BankBalanceSnapshot(
+            account_id=account.id, balance_cents=15000,
+            observed_at=dt.datetime(2026, 10, 14, tzinfo=dt.UTC),
+        ))
+        book_money(db, lena, 500, "allowance", "weekly:2026-10-12")
+        db.commit()
+    response = client.get(f"/api/members/{lena}/money/bank-balances")
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 1
+    assert response.json()[0]["balance_cents"] == 15000
+    assert client.get(f"/api/members/{lena}/money").json()["total_cents"] == 500
