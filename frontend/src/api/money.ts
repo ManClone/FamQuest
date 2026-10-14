@@ -61,3 +61,27 @@ export function useWeeklyAllowanceStatus(memberId: number, monday: string) {
     enabled: memberId > 0 && /^\d{4}-\d{2}-\d{2}$/.test(monday),
   })
 }
+
+export interface WeeklyAllowanceSettings {
+  member_id: number
+  weekly_amount_cents: number | null
+}
+
+export const allowanceSettingsKey = (memberId: number) =>
+  ['money', memberId, 'settings'] as const
+
+export function useWeeklyAllowanceSettings(memberId: number) {
+  return useQuery({
+    queryKey: allowanceSettingsKey(memberId),
+    queryFn: () => apiGet<WeeklyAllowanceSettings>(`/members/${memberId}/money/settings`),
+    enabled: memberId > 0,
+  })
+}
+
+export function useSaveWeeklyAllowanceSettings(memberId: number) {
+  return useParentMutation(
+    (weekly_amount_cents: number | null) =>
+      api<WeeklyAllowanceSettings>('PUT', `/members/${memberId}/money/settings`, { weekly_amount_cents }),
+    [allowanceSettingsKey(memberId)],
+  )
+}
