@@ -305,6 +305,26 @@ class BankTransaction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class MoneyPaymentMatch(Base):
+    """Confirmed bank receipt for a weekly allowance or bonus payout."""
+
+    __tablename__ = "money_payment_matches"
+    __table_args__ = (
+        UniqueConstraint("member_id", "category", "week_start", name="uq_payment_match_week_category"),
+        CheckConstraint("category IN ('allowance', 'bonus')", name="payment_match_category"),
+        CheckConstraint("amount_cents > 0", name="payment_match_positive"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"))
+    bank_transaction_id: Mapped[int] = mapped_column(ForeignKey("bank_transactions.id", ondelete="CASCADE"), unique=True)
+    category: Mapped[str] = mapped_column(String(20))
+    week_start: Mapped[dt.date] = mapped_column(Date)
+    amount_cents: Mapped[int] = mapped_column(BigInteger)
+    reference: Mapped[str] = mapped_column(String(80))
+    matched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class BankBalanceSnapshot(Base):
     """Immutable observed external balance; not a FamQuest earnings transaction."""
 
