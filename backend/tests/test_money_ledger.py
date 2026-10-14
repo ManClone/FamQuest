@@ -177,3 +177,12 @@ def test_weekly_batch_only_credits_configured_children_once(client, parent, lena
         assert due_weekly_allowances(db, {lena: 450}, monday + dt.timedelta(days=7)) == [lena]
         db.commit()
         assert allowance_balance(db, lena) == 900
+
+
+def test_money_overview_rejects_non_child(client, parent, now):
+    from tests.test_tasks import add_member
+
+    adult = add_member(client, parent, name="Elternteil", role="adult")
+    response = client.get(f"/api/members/{adult}/money")
+    assert response.status_code == 422
+    assert response.json()["code"] == "money.child_required"
