@@ -192,3 +192,18 @@ def test_money_overview_rejects_non_child(client, parent, now):
     response = client.get(f"/api/members/{adult}/money")
     assert response.status_code == 422
     assert response.json()["code"] == "money.child_required"
+
+
+def test_weekly_batch_validates_all_amounts_before_booking(client, parent, lena, now):
+    import datetime as dt
+    import pytest
+    from app.money import allowance_balance, due_weekly_allowances
+
+    monday = dt.date(2026, 10, 5)
+    with Session(engine) as db:
+        with pytest.raises(ValueError):
+            due_weekly_allowances(db, {lena: 500, lena + 100: -1}, monday)
+        assert allowance_balance(db, lena) == 0
+        with pytest.raises(ValueError):
+            due_weekly_allowances(db, {lena: 500}, monday + dt.timedelta(days=1))
+        assert allowance_balance(db, lena) == 0
