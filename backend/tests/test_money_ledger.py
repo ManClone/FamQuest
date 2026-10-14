@@ -220,3 +220,22 @@ def test_weekly_allowance_is_not_affected_by_quest_bonus_reversal(client, parent
         db.commit()
         assert allowance_balance(db, lena) == 600
         assert bonus_balance(db, lena) == 0
+
+
+def test_weekly_allowance_does_not_credit_a_parent(client, parent, now):
+    import datetime as dt
+    import pytest
+    from app.money import post_weekly_allowance
+    from tests.conftest import csrf
+
+    response = client.post(
+        "/api/members",
+        json={"name": "Erwachsener", "role": "adult", "color": "blue"},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 201, response.text
+    adult_id = response.json()["id"]
+    with Session(engine) as db:
+        with pytest.raises(ValueError, match="child"):
+            post_weekly_allowance(db, adult_id, 500, dt.date(2026, 10, 5))
+        assert list(db.scalars(select(MoneyTransaction.id).where(MoneyTransaction.member_id == adult_id))) == []
