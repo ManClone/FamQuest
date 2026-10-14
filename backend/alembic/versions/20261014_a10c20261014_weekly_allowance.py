@@ -73,7 +73,6 @@ def upgrade() -> None:
         sa.Column("matched_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("category IN ('allowance', 'bonus')", name="payment_match_category"),
         sa.CheckConstraint("amount_cents > 0", name="payment_match_positive"),
-        sa.UniqueConstraint("member_id", "category", "week_start", name="uq_payment_match_week_category"),
     )
 
 
