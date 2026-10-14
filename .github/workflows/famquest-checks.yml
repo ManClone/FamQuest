@@ -46,5 +46,9 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
         working-directory: backend
+      - run: uv run python -m compileall -q app tests
+        working-directory: backend
+      - run: uv run alembic heads
+        working-directory: backend
       - run: uv run pytest
         working-directory: backend
