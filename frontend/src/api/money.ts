@@ -39,6 +39,25 @@ export const creditWeeklyAllowance = (memberId: number, input: WeeklyAllowanceIn
 export function useCreditWeeklyAllowance(memberId: number) {
   return useParentMutation(
     (input: WeeklyAllowanceInput) => creditWeeklyAllowance(memberId, input),
-    [moneyKey(memberId)],
+    [moneyKey(memberId), ['money', memberId, 'weekly-allowance']],
   )
+}
+
+export interface WeeklyAllowanceStatus {
+  member_id: number
+  week_start: string
+  booked: boolean
+}
+
+export const weeklyAllowanceStatusKey = (memberId: number, monday: string) =>
+  ['money', memberId, 'weekly-allowance', monday] as const
+
+export function useWeeklyAllowanceStatus(memberId: number, monday: string) {
+  return useQuery({
+    queryKey: weeklyAllowanceStatusKey(memberId, monday),
+    queryFn: () => apiGet<WeeklyAllowanceStatus>(
+      `/members/${memberId}/money/weekly-allowance?week_start=${encodeURIComponent(monday)}`,
+    ),
+    enabled: memberId > 0 && /^\d{4}-\d{2}-\d{2}$/.test(monday),
+  })
 }
