@@ -163,3 +163,37 @@ def credit_configured_allowances(db: Session, today) -> list[int]:
         .where(FamilyMember.role == "child", FamilyMember.weekly_allowance_cents.is_not(None))
     ).all())
     return due_weekly_allowances(db, configured, monday)
+
+
+def run_weekly_allowance_check() -> list[int]:
+    """One transactional check; safe for concurrent app workers and restarts."""
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+
+    from app.db import engine
+    from app.models import Family
+
+    with Session(engine) as db:
+        family = db.scalar(select(Family))
+        if family is None:
+            return []
+        today = dt.datetime.now(ZoneInfo(family.timezone or "Europe/Berlin")).date()
+        credited = credit_configured_allowances(db, today)
+        db.commit()
+        return credited
+
+
+async def run_weekly_allowance_scheduler() -> None:
+    """Check once per hour; ledger keys and row locks prevent double booking."""
+    import asyncio
+
+    from app.logs import logger
+
+    while True:
+        try:
+            credited = await asyncio.to_thread(run_weekly_allowance_check)
+            if credited:
+                logger.info("Wöchentliches Grundtaschengeld gebucht für %s Kinder", len(credited))
+        except Exception:
+            logger.exception("Grundtaschengeld-Wochenbuchung fehlgeschlagen")
+        await asyncio.sleep(3600)
