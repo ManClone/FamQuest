@@ -67,7 +67,8 @@ export function AppShell() {
   const onTasks = pathname.startsWith('/tasks') || pathname.startsWith('/member/')
   const role = useMe().data?.user.role
   const isParent = role === 'admin' || role === 'parent'
-  const pending = isParent ? (useToday().data?.pending_approvals ?? 0) : 0
+  const today = useToday()
+  const pending = isParent ? (today.data?.pending_approvals ?? 0) : 0
   // Den Bilderrahmen gibt es erst, wenn mindestens ein Foto sichtbar ist.
   const hasPhotos = usePhotos().data?.some((photo) => photo.visible) ?? false
   // Nach Leerlauf nur, wenn es auf diesem Gerät eingeschaltet ist (gelesen beim Betreten).
