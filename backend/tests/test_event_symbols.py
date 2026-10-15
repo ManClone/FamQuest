@@ -78,9 +78,21 @@ def test_invalid_symbols(client, parent, symbol):
     assert set_symbols(client, parent, [symbol]).status_code == 422
 
 
-def test_symbols_need_unlocked_parent_area(client, admin):
+def test_symbols_require_parent_account(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-symbols@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-symbols@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     assert client.get("/api/calendar/symbols").status_code == 403
-    assert set_symbols(client, admin, []).status_code == 403
+    assert set_symbols(client, login.json(), []).status_code == 403
 
 
 def test_new_children_get_symbols_adults_not(client, parent):
