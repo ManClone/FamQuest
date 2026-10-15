@@ -1,7 +1,7 @@
 """Manage a person's login inside the same transaction as their profile."""
 
 from fastapi import Request
-from sqlalchemy import delete, select
+from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -43,15 +43,20 @@ def save_member_login(
             if user is None:
                 if login.password is None:
                     raise ApiError(422, "auth.login_password_required")
-                user = User(
-                    email=login.email, password_hash=hash_secret(login.password), role=member.role
-                )
-                db.add(user)
                 try:
-                    db.flush([user])
+                    user = db.scalar(
+                        insert(User)
+                        .values(
+                            email=login.email,
+                            password_hash=hash_secret(login.password),
+                            role=member.role,
+                        )
+                        .returning(User)
+                    )
                 except IntegrityError as exc:
                     db.rollback()
                     raise ApiError(409, "auth.email_taken") from exc
+                assert user is not None
                 member.user_id = user.id
             else:
                 user.email = login.email
