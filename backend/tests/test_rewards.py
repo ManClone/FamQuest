@@ -103,7 +103,11 @@ def test_managing_rewards_requires_parent_role(client, parent, lena):
     reward = add_reward(client, parent, lena)
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-rewards@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-rewards@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(parent),
     )
     assert account.status_code == 201, account.text
