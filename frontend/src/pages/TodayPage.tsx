@@ -12,6 +12,8 @@ import {
   visibleTiles,
 } from '../api/home'
 import { useToday } from '../api/today'
+import { useMembers } from '../api/members'
+import { ApprovalsSection } from './parents/ApprovalsSection'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { useNow } from '../useNow'
 import { formatLongDate } from '../weekdays'
@@ -25,10 +27,11 @@ import { WeatherBadge } from './home/WeatherBadge'
  * Startseite „Heute“ als Wochen-Dashboard: im Kopf Datum, Wetter und Uhr; darunter die aktuelle
  * Routine der Kinder und der Haushalt. Welche Bereiche sichtbar sind, legen die Eltern über das Zahnrad fest.
  */
-export function TodayPage() {
+export function TodayPage({ parentDashboard = false }: { parentDashboard?: boolean }) {
   const { t, i18n } = useTranslation()
   const { data: me } = useMe()
   const today = useToday().data
+  const members = useMembers().data ?? []
   const layout = useHomeLayout()
   const now = useNow()
   const language = i18n.resolvedLanguage ?? i18n.language
@@ -52,7 +55,10 @@ export function TodayPage() {
       className={`flex flex-1 flex-col gap-4 p-4 sm:p-6 ${draft ? '' : 'lg:max-h-dvh lg:overflow-y-auto'}`}
     >
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <h1 className="text-3xl font-extrabold text-orange-600">{me?.family.name}</h1>
+        <h1 className="text-3xl font-extrabold text-orange-600">
+          {parentDashboard ? t('personal.dashboard') : me?.family.name}
+        </h1>
+        {parentDashboard && <p className="text-xl font-bold text-slate-600">{me?.family.name}</p>}
         {today && (
           <p className="text-xl font-bold text-slate-600">{formatLongDate(language, today.date)}</p>
         )}
@@ -73,8 +79,22 @@ export function TodayPage() {
           </button>
         )}
       </header>
-      {draft && <EditMode draft={draft} onChange={setEditing} onClose={() => setEditing(null)} />}
-      <Sections shown={shown} />
+      {draft && (
+        <EditMode
+          draft={draft}
+          onChange={setEditing}
+          onClose={() => setEditing(null)}
+          parentDashboard={parentDashboard}
+        />
+      )}
+      {parentDashboard ? (
+        <>
+          <ApprovalsSection members={members} today={today?.date} />
+          {shown.has('chores') && <ChoresWidget expanded />}
+        </>
+      ) : (
+        <Sections shown={shown} />
+      )}
     </main>
   )
 }
@@ -84,10 +104,12 @@ function EditMode({
   draft,
   onChange,
   onClose,
+  parentDashboard,
 }: {
   draft: HomeLayout
   onChange: (layout: HomeLayout) => void
   onClose: () => void
+  parentDashboard: boolean
 }) {
   const save = useSaveHomeLayout()
   const close = onClose
@@ -97,6 +119,7 @@ function EditMode({
     <>
       <HomeEditor
         layout={draft}
+        parentDashboard={parentDashboard}
         onChange={onChange}
         onSave={() => save.mutate(draft, { onSuccess: close })}
         onReset={() => onChange(DEFAULT_LAYOUT)}

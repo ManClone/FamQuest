@@ -1063,6 +1063,7 @@
     "all_tasks": "All my tasks",
     "edit_schedule": "Set the schedule directly on this task",
     "schedule_hint": "The existing schedule is preserved. If you replace it here, the selected days and time apply to all selected children. Tasks, assignments and previously earned points are preserved.",
-    "schedule_preserved": "The existing schedule is preserved until you replace it here."
+    "schedule_preserved": "The existing schedule is preserved until you replace it here.",
+    "manage_area": "Manage {{area}}"
   }
 }

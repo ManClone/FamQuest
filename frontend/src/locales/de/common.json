@@ -1063,6 +1063,7 @@
     "all_tasks": "Alle meine Aufgaben",
     "edit_schedule": "Zeitplan direkt in dieser Aufgabe festlegen",
     "schedule_hint": "Der bestehende Zeitplan bleibt erhalten. Wenn du ihn hier ersetzt, gelten die gewählten Tage und die Tageszeit für alle ausgewählten Kinder. Aufgaben, Zuordnungen und bisherige Punkte bleiben erhalten.",
-    "schedule_preserved": "Der bestehende Zeitplan bleibt erhalten, bis du ihn hier ersetzt."
+    "schedule_preserved": "Der bestehende Zeitplan bleibt erhalten, bis du ihn hier ersetzt.",
+    "manage_area": "{{area}} verwalten"
   }
 }

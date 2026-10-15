@@ -3,11 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
 
-import {
-  type Me,
-  useLogout,
-  useMe,
-} from '../api/auth'
+import { type Me, useLogout, useMe } from '../api/auth'
 import { type Chore, type ChoreRoom, useChores } from '../api/chores'
 import { type Member, childrenOf, useMembers } from '../api/members'
 import { type Reward, useRewards } from '../api/rewards'
@@ -35,7 +31,6 @@ import { RoutinesSection } from './parents/RoutinesSection'
 import { TaskEditor } from './parents/TaskEditor'
 import { TasksSection } from './parents/TasksSection'
 import { WeatherSection } from './parents/WeatherSection'
-import { ParentsNav } from './parents/ParentsNav'
 import { PhotosSection } from './parents/PhotosSection'
 import { FrameSettingsSection } from './parents/FrameSettingsSection'
 import { DEFAULT_AREA, type ParentArea, isParentArea } from './parents/areas'
@@ -53,7 +48,7 @@ export function ParentsPage() {
   if (area !== undefined && !isParentArea(area)) return <Navigate to="/parents" replace />
   if (!me) return null
   if (me.user.role !== 'admin' && me.user.role !== 'parent') return <Navigate to="/" replace />
-  return <ParentSettings me={me} area={area ?? DEFAULT_AREA} onLeave={leave} />
+  return <ParentSettings me={me} area={area ?? DEFAULT_AREA} />
 }
 
 function BackButton({ onClick }: { onClick: () => void }) {
@@ -61,12 +56,12 @@ function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <Button variant="secondary" onClick={onClick} className="self-start">
       <BackIcon className="size-8" aria-hidden="true" />
-      {t('parents.back')}
+      {t('nav.settings')}
     </Button>
   )
 }
 
-function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLeave: () => void }) {
+function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const logout = useLogout()
@@ -295,10 +290,13 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
 
   return (
     <div className="flex min-h-dvh">
-      <ParentsNav area={area} pending={today.data?.pending_approvals ?? 0} />
       <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 p-4 pb-32 sm:p-6 md:pb-6">
-        <BackButton onClick={onLeave} />
-        <h1 className="text-3xl font-extrabold text-orange-600">{t('parents.title')}</h1>
+        {area !== 'rewards' && <BackButton onClick={() => navigate('/settings')} />}
+        <h1 className="text-3xl font-extrabold text-orange-600">
+          {area === 'review'
+            ? t('parents.title')
+            : t('personal.manage_area', { area: t(`parents_nav.${area}`) })}
+        </h1>
         {notice && (
           <p
             role="status"

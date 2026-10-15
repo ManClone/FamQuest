@@ -20,6 +20,7 @@ export function HomeEditor({
   onCancel,
   busy,
   error,
+  parentDashboard = false,
 }: {
   layout: HomeLayout
   onChange: (layout: HomeLayout) => void
@@ -28,6 +29,7 @@ export function HomeEditor({
   onCancel: () => void
   busy: boolean
   error: unknown
+  parentDashboard?: boolean
 }) {
   const { t } = useTranslation()
 
@@ -39,7 +41,13 @@ export function HomeEditor({
     })
   // In der Reihenfolge, in der die Bereiche auf der Seite stehen.
   const ordered = tiles
-    .filter((tile) => tile.id !== 'shopping' && tile.id !== 'events' && tile.id !== 'meals')
+    .filter(
+      (tile) =>
+        tile.id !== 'shopping' &&
+        tile.id !== 'events' &&
+        tile.id !== 'meals' &&
+        (!parentDashboard || tile.id !== 'tasks'),
+    )
     .sort((a, b) => TILE_IDS.indexOf(a.id) - TILE_IDS.indexOf(b.id))
 
   return (
@@ -56,7 +64,9 @@ export function HomeEditor({
           Vorschau darunter sichtbar bleibt. */}
       <ol
         className="grid grid-cols-1 gap-2 lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-(--editor-rows)"
-        style={{ '--editor-rows': `repeat(${Math.ceil(ordered.length / 2)}, auto)` } as CSSProperties}
+        style={
+          { '--editor-rows': `repeat(${Math.ceil(ordered.length / 2)}, auto)` } as CSSProperties
+        }
       >
         {ordered.map((tile) => {
           const { title, icon: Icon } = TILES[tile.id]
