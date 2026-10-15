@@ -16,8 +16,8 @@ def test_weekly_preview_is_parent_only(client, parent, lena):
         "member_id": lena,
         "week_start": "2026-10-12",
         "week_end": "2026-10-18",
-        "earned_bonus_cents": 40,
-        "money_penalty_cents": 5,
+        "earned_bonus_cents": 300,
+        "money_penalty_cents": 50,
         "payable_bonus_cents": 250,
     }
 
