@@ -166,11 +166,10 @@ def complete_task(
     db: DbSession,
     request_key: Annotated[str | None, Query(pattern="^[a-f0-9]{32}$")] = None,
 ) -> None:
-    """Markiert die Aufgabe als erledigt und bucht die Punkte.
+    """Complete once per day, or submit an independently reviewed repeat execution.
 
-    Ist sie schon erledigt (Doppel-Tipp), passiert nichts: Der Unique-Constraint lässt nur eine
-    Erledigung je Tag zu, und nur wer sie tatsächlich anlegt, bucht Punkte. Aufgaben mit
-    Elternkontrolle warten ungeprüft; ihre Punkte bucht erst die Bestätigung (api/approvals).
+    A stable key makes retries idempotent even after approval. Repeatable tasks
+    require parent approval and allow only one pending execution at a time.
     """
     task, today = check_completable(db, task_id, member_id, date)
     # Serialize all executions for this task, including shared tasks and concurrent clients.

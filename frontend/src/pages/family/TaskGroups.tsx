@@ -101,9 +101,9 @@ function TaskGroup({ member, block, tasks, date, current, size }: TaskGroupProps
   const tokens = colorTokens(member.color)
   // Fertig ist ein Abschnitt, wenn alle Pflichtschritte erledigt sind; optionale dürfen offen bleiben.
   const required = tasks.filter((task) => !isOptionalFor(task, member.id))
-  const allDone = !tasks.some((task) => task.repeatable) && (required.length > 0 ? required : tasks).every((task) =>
-    isDoneFor(task, member.id),
-  )
+  const allDone =
+    !tasks.some((task) => task.repeatable) &&
+    (required.length > 0 ? required : tasks).every((task) => isDoneFor(task, member.id))
   // Ein gerade fertig gewordener Abschnitt klappt erst verzögert zu; beim Laden sofort.
   const [delayPassed, setDelayPassed] = useState(allDone)
   const [expanded, setExpanded] = useState(false)

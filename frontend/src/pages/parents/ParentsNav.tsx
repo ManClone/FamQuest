@@ -30,7 +30,9 @@ function Badge({ count }: { count: number }) {
 export function ParentsNav({ area, pending }: ParentsNavProps) {
   const { t } = useTranslation()
   const [moreOpen, setMoreOpen] = useState(false)
-  const visibleAreas = PARENT_AREAS.filter((candidate) => candidate !== 'photos')
+  const visibleAreas: readonly ParentArea[] = PARENT_AREAS.filter(
+    (candidate) => candidate !== 'photos',
+  )
   const secondary = visibleAreas.filter((candidate) => !PRIMARY_AREAS.includes(candidate))
 
   useEffect(() => {

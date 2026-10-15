@@ -118,7 +118,9 @@ export function TaskCard({ task, member, date, size }: TaskCardProps) {
             <StarIcon className="size-[1.25em]" aria-hidden="true" />
             {task.points}
           </span>
-          {task.repeatable && <span className="text-sm font-bold text-orange-700">{t('tasks.repeatable')}</span>}
+          {task.repeatable && (
+            <span className="text-sm font-bold text-orange-700">{t('tasks.repeatable')}</span>
+          )}
           {dueIn !== null && dueIn < 0 && (
             <span className="inline-flex w-fit items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-base font-bold text-red-800">
               <AlarmIcon className="size-5" aria-hidden="true" />

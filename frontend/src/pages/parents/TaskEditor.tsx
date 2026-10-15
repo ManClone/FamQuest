@@ -172,7 +172,7 @@ export function TaskEditor({
               color,
               active,
               needs_approval: needsApproval || repeatable,
-        ...(repeatable || task?.repeatable ? { repeatable } : {}),
+              ...(repeatable || task?.repeatable ? { repeatable } : {}),
               shared: false,
               recurrence: { kind: 'daily' },
               member_ids: [routineStep.memberId],
@@ -310,7 +310,9 @@ export function TaskEditor({
         <div className="flex flex-col gap-1">
           <Switch
             checked={needsApproval || repeatable}
-            onChange={(value) => { if (!repeatable) setNeedsApproval(value) }}
+            onChange={(value) => {
+              if (!repeatable) setNeedsApproval(value)
+            }}
             label={t('tasks.needs_approval')}
             showLabel
           />
@@ -318,8 +320,12 @@ export function TaskEditor({
         </div>
 
         <div className="flex flex-col gap-1">
-          <Switch checked={repeatable} onChange={setRepeatable}
-            label={t('tasks.repeatable')} showLabel />
+          <Switch
+            checked={repeatable}
+            onChange={setRepeatable}
+            label={t('tasks.repeatable')}
+            showLabel
+          />
           <p className="text-base text-slate-500">{t('tasks.repeatable_hint')}</p>
         </div>
 
