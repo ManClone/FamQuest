@@ -81,7 +81,11 @@ def test_invalid_symbols(client, parent, symbol):
 def test_symbols_require_parent_account(client, admin):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-symbols@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-symbols@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
