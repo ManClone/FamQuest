@@ -107,7 +107,11 @@ def test_credited_chore_undo_requires_parent_role(client, parent, now):
 
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-credits@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-credits@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(parent),
     )
     assert account.status_code == 201, account.text
