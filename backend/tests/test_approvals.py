@@ -117,13 +117,27 @@ def test_earlier_days_stay_approvable(client, parent, lena, now):
     assert history(client, lena)["transactions"][0]["task_date"] == "2026-10-03"
 
 
-def test_approvals_need_parent_pin(client, parent, lena, now):
+def test_approvals_require_parent_account(client, parent, lena, now):
     task = room_task(client, parent, [lena])
     complete(client, parent, task, lena)
-    client.post("/api/parent/lock", headers=csrf(parent))
+    [pending] = approvals(client)
+
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-approval@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(parent),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-approval@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    child = login.json()
 
     assert client.get("/api/approvals").status_code == 403
-    assert approve(client, parent, 1).status_code == 403
-    assert reject(client, parent, 1).status_code == 403
-    # Am Display bleibt der Zähler sichtbar.
+    assert approve(client, child, pending["id"]).status_code == 403
+    assert reject(client, child, pending["id"]).status_code == 403
+    # Der öffentliche Tagesüberblick zeigt weiterhin die ausstehende Freigabe.
     assert today(client)["pending_approvals"] == 1
