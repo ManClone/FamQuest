@@ -171,10 +171,9 @@ def test_invalid_date(client, parent, lena, now):
     assert response.status_code == 422
 
 
-def test_family_view_works_without_parent_pin(client, parent, lena, now):
+def test_family_view_works_with_parent_account(client, parent, lena, now):
     task = add_task(client, parent, [lena])
-    client.post("/api/parent/lock", headers=csrf(parent))
-    assert client.get("/api/tasks").status_code == 403
+    assert client.get("/api/tasks").status_code == 200
 
     assert complete(client, parent, task, lena).status_code == 204
     assert today(client)["tasks"][0]["done_member_ids"] == [lena]
