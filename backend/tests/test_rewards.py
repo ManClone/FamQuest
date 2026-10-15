@@ -99,18 +99,29 @@ def test_reward_validation(client, parent, lena, overrides, field, code):
     assert response.json()["fields"] == {field: code}
 
 
-def test_managing_rewards_needs_parent_pin(client, parent, lena):
+def test_managing_rewards_requires_parent_role(client, parent, lena):
     reward = add_reward(client, parent, lena)
-    client.post("/api/parent/lock", headers=csrf(parent))
-
-    assert (
-        client.post("/api/rewards", json=reward_data(lena), headers=csrf(parent)).status_code == 403
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-rewards@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(parent),
     )
-    assert client.delete(f"/api/rewards/{reward}", headers=csrf(parent)).status_code == 403
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-rewards@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    child = login.json()
+    assert (
+        client.post("/api/rewards", json=reward_data(lena), headers=csrf(child)).status_code == 403
+    )
+    assert client.delete(f"/api/rewards/{reward}", headers=csrf(child)).status_code == 403
     assert client.get("/api/redemptions").status_code == 403
-    # Anzeigen und Einlösen gehen am Display ohne PIN.
+    # Rewards remain visible to children; redemption still checks their points.
     assert client.get("/api/rewards").status_code == 200
-    assert redeem(client, parent, reward).json() == {"code": "reward.insufficient_points"}
+    assert redeem(client, child, reward).json() == {"code": "reward.insufficient_points"}
 
 
 def test_redeem_books_points_and_stores_redemption(client, parent, lena, now):
