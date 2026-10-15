@@ -66,7 +66,10 @@ def approve(completion_id: int, auth_session: ParentSession, db: DbSession) -> N
         task_date=approved.date,
         user_id=auth_session.user_id,
     )
-    book_money(db, approved.member_id, approved.money_cents, "task_completed", title or "Aufgabe", approved.id)
+    book_money(
+        db, approved.member_id, approved.money_cents,
+        "task_completed", title or "Aufgabe", approved.id,
+    )
     db.commit()
 
 
