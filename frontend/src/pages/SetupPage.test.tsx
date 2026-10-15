@@ -5,11 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from '../i18n'
 import { makeMe, mockApi, notAuthenticated, renderApp, setupRequired } from '../test/utils'
 
-async function enterPin(user: ReturnType<typeof userEvent.setup>, pin: string) {
-  for (const digit of pin) await user.click(screen.getByRole('button', { name: digit }))
-  await user.click(screen.getByRole('button', { name: i18n.t('pinpad.confirm') }))
-}
-
 beforeEach(async () => {
   await i18n.changeLanguage('de')
 })
@@ -58,7 +53,7 @@ describe('Setup', () => {
     expect(screen.queryByRole('heading', { name: 'Eltern-PIN festlegen' })).toBeNull()
   })
 
-  it('richtet die Familie mit Sprache, Konto und PIN ein', async () => {
+  it('richtet die Familie mit Sprache und Konto ohne PIN ein', async () => {
     const user = userEvent.setup()
     const calls = mockApi({
       'GET /api/setup/status': setupRequired,
@@ -80,10 +75,6 @@ describe('Setup', () => {
     await user.type(screen.getByLabelText('Repeat password'), 'sehr-geheim-123')
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
-    expect(screen.getByRole('heading', { name: 'Choose a parent PIN' })).toBeVisible()
-    await enterPin(user, '1234')
-    expect(screen.getByRole('heading', { name: 'Repeat the parent PIN' })).toBeVisible()
-    await enterPin(user, '1234')
 
     expect(await screen.findByRole('heading', { name: 'Familie Sonnenschein' })).toBeVisible()
     const setupCall = calls.find((call) => call.key === 'POST /api/setup')
@@ -92,24 +83,7 @@ describe('Setup', () => {
       family_name: 'Familie Sonnenschein',
       email: 'mama@example.org',
       password: 'sehr-geheim-123',
-      pin: '1234',
     })
   })
 
-  it('verlangt die PIN erneut, wenn die Wiederholung abweicht', async () => {
-    const user = userEvent.setup()
-    mockApi({ 'GET /api/setup/status': setupRequired })
-    renderApp('/setup')
-
-    await user.type(await screen.findByLabelText('Familienname'), 'Familie Test')
-    await user.type(screen.getByLabelText('E-Mail'), 'mama@example.org')
-    await user.type(screen.getByLabelText('Passwort'), 'sehr-geheim-123')
-    await user.type(screen.getByLabelText('Passwort wiederholen'), 'sehr-geheim-123')
-    await user.click(screen.getByRole('button', { name: 'Weiter' }))
-    await enterPin(user, '1234')
-    await enterPin(user, '9999')
-
-    expect(screen.getByRole('heading', { name: 'Eltern-PIN festlegen' })).toBeVisible()
-    expect(screen.getByRole('alert')).toHaveTextContent('Die PINs stimmen nicht überein')
-  })
 })
