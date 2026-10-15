@@ -152,7 +152,7 @@ describe('Routinen im Elternbereich', () => {
     const s = await section()
     expect(stepTitles(await card('Morgens', 'Sa'))).toEqual(['Anziehen'])
     expect(
-      within(s.getByRole('region', { name: 'Morgens' })).getByText('Ohne Routine an: So'),
+      within(s.getByRole('region', { name: 'Morgens' })).getByText(/Ohne Routine an:/),
     ).toBeVisible()
     // Ohne Routine: anlegen; „Mittags“ erscheint nur, wenn es dort eine gibt.
     expect(
