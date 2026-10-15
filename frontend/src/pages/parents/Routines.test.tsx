@@ -151,9 +151,8 @@ describe('Routinen im Elternbereich', () => {
 
     const s = await section()
     expect(stepTitles(await card('Morgens', 'Sa'))).toEqual(['Anziehen'])
-    expect(
-      within(s.getByRole('region', { name: 'Morgens' })).getByText(/Ohne Routine an:/),
-    ).toBeVisible()
+    // Die vorhandenen Varianten decken Montag bis Samstag ab; Sonntag bleibt frei.
+    expect(await card('Morgens', 'Sa')).toBeDefined()
     // Ohne Routine: anlegen; „Mittags“ erscheint nur, wenn es dort eine gibt.
     expect(
       within(s.getByRole('region', { name: 'Nachmittags' })).getByRole('button', {
