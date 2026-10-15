@@ -253,9 +253,22 @@ def test_remove_avatar(client, parent):
     assert client.get(url).status_code == 404
 
 
-def test_avatar_upload_needs_unlocked_parent_area(client, admin):
-    response = upload(client, admin, 1, image_bytes())
-
+def test_avatar_upload_requires_parent_role(client, admin):
+    member = create(client, admin)
+    assert member.status_code == 201, member.text
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-avatar@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-avatar@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    response = upload(client, login.json(), member.json()["id"], image_bytes())
     assert response.status_code == 403
     assert response.json() == {"code": "parent.locked"}
 
