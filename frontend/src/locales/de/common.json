@@ -386,6 +386,8 @@
     "auth": {
       "not_authenticated": "Bitte melde dich an",
       "invalid_credentials": "E-Mail oder Passwort ist falsch",
+      "email_taken": "Diese E-Mail-Adresse wird bereits verwendet.",
+      "invalid_role": "Diese Kontorolle ist nicht erlaubt.",
       "rate_limited": "Zu viele Versuche. Bitte warte ein paar Minuten.",
       "csrf_failed": "Sicherheitsprüfung fehlgeschlagen. Bitte lade die Seite neu."
     },
