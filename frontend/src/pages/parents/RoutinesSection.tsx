@@ -115,12 +115,14 @@ export function RoutinesSection({
           const Icon = TIME_OF_DAY_ICONS[time]
           const label = t(`times_of_day.${time}`)
 
-          /** Neue Version: bisher freie Tage, sonst das Wochenende; Schritte als Vorlage. */
+          /** Neue Version: freie Tage nutzen, sonst das Wochenende; Schritte als Vorlage. */
           const addVariant = () => {
+            const occupied = new Set(variants.flatMap((routine) => routine.weekdays))
+            const freeDays = ALL_DAYS.filter((day) => !occupied.has(day))
             create.mutate({
               member_id: member.id,
               time_of_day: time,
-              weekdays: ALL_DAYS,
+              weekdays: freeDays.length > 0 ? freeDays : [6, 7],
               copy_from: variants[0]?.id,
             })
           }
