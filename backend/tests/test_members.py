@@ -58,9 +58,20 @@ def test_list_needs_login_but_no_pin(client, admin):
     assert client.get("/api/members").status_code == 401
 
 
-def test_changes_need_unlocked_parent_area(client, admin):
-    response = create(client, admin)
-
+def test_member_changes_require_parent_role(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-members@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-members@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    response = create(client, login.json())
     assert response.status_code == 403
     assert response.json() == {"code": "parent.locked"}
 
