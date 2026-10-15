@@ -61,7 +61,11 @@ def test_list_needs_login_but_no_pin(client, admin):
 def test_member_changes_require_parent_role(client, admin):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-members@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-members@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
@@ -258,7 +262,11 @@ def test_avatar_upload_requires_parent_role(client, admin):
     assert member.status_code == 201, member.text
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-avatar@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-avatar@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
