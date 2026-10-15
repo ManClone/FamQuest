@@ -123,7 +123,7 @@ def test_money_overview_is_parent_only_and_separates_balances(client, parent, le
 
     from tests.conftest import csrf
 
-    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
     assert client.get(f"/api/members/{lena}/money").status_code == 401
 
 
@@ -153,7 +153,7 @@ def test_weekly_allowance_requires_parent_and_valid_monday(client, parent, lena,
     assert client.post(
         url, json={"amount_cents": 400, "week_start": "2026-10-06"}, headers=csrf(parent)
     ).status_code == 422
-    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
     assert client.post(
         url, json={"amount_cents": 400, "week_start": "2026-10-05"}, headers=csrf(parent)
     ).status_code == 401
@@ -263,7 +263,7 @@ def test_weekly_allowance_status_requires_login(client, parent, lena, now):
 
     url = f"/api/members/{lena}/money/weekly-allowance"
     assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 200
-    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
     assert client.get(url, params={"week_start": "2026-10-05"}).status_code == 401
 
 
@@ -292,7 +292,7 @@ def test_allowance_settings_are_opt_in_and_parent_only(client, parent, lena, now
     assert client.put(url, json={"weekly_amount_cents": 0}, headers=csrf(parent)).status_code == 422
     assert client.put(url, json={"weekly_amount_cents": None}, headers=csrf(parent)).status_code == 200
     assert client.get(url).json()["weekly_amount_cents"] is None
-    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
     assert client.get(url).status_code == 401
 
 
@@ -411,7 +411,7 @@ def test_bank_transactions_require_login_and_valid_pagination(client, parent, le
     url = f"/api/members/{lena}/money/bank-transactions"
     assert client.get(url, params={"limit": 0}).status_code == 422
     assert client.get(url, params={"offset": -1}).status_code == 422
-    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 200
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
     assert client.get(url).status_code == 401
 
 
