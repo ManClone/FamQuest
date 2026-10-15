@@ -134,7 +134,11 @@ def test_choosing_calendars_requires_parent_role(client, parent, connected):
     calendar_id = calendars(client)[MAMA]["id"]
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-calendar-sync@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-calendar-sync@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(parent),
     )
     assert account.status_code == 201, account.text
