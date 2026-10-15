@@ -522,8 +522,20 @@ def test_wizard_can_run_again_without_duplicates(client, parent, now):
     assert len(result["chores"]) == 4
 
 
-def test_wizard_needs_parent_pin(client, admin):
-    assert run_setup_wizard(client, admin).status_code == 403
+def test_wizard_requires_parent_role(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-wizard@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-wizard@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    assert run_setup_wizard(client, login.json()).status_code == 403
 
 
 def test_shares_count_who_did_it_in_the_last_30_days(client, parent, now):
