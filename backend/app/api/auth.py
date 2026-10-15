@@ -5,8 +5,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app.auth import (
     CurrentSession,
-    ParentSession,
     DbSession,
+    ParentSession,
     check_origin,
     client_ip,
     end_session,
@@ -82,8 +82,10 @@ class AccountOut(BaseModel):
 
 @router.get("/accounts", dependencies=[NotInDemo])
 def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
-    return [AccountOut(id=user.id, email=user.email, role=user.role)
-            for user in db.scalars(select(User).order_by(User.id))]
+    return [
+        AccountOut(id=user.id, email=user.email, role=user.role)
+        for user in db.scalars(select(User).order_by(User.id))
+    ]
 
 
 @router.post("/accounts", status_code=status.HTTP_201_CREATED, dependencies=[NotInDemo])
