@@ -28,13 +28,19 @@ def test_weekly_preview_keeps_fixed_shopping_and_balances_work(client, parent, n
     assert all(not chore["done_today"] for chore in chores)
 
 
-def test_weekly_preview_requires_parent_unlock(client, parent, now):
-    from app.db import SessionLocal
-    from app.models import AuthSession
-    from sqlalchemy import update
-    with SessionLocal() as db:
-        db.execute(update(AuthSession).values(parent_unlocked_until=None))
-        db.commit()
+def test_weekly_preview_requires_parent_role(client, parent, now):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-preview@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(parent),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-preview@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     response = client.get("/api/chores/weekly-preview")
     assert response.status_code == 403, response.text
 
