@@ -239,7 +239,11 @@ def test_task_editor_keeps_routine_consistent(client, parent, lena):
 def test_routines_require_parent_role(client, admin):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-routines@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-routines@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
