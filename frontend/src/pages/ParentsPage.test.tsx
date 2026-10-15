@@ -1,82 +1,48 @@
-import { act, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import i18n from '../i18n'
 import { makeMe, mockApi, renderApp, setupDone } from '../test/utils'
-import { PARENT_IDLE_TIMEOUT_MS } from './ParentsPage'
-
-async function enterPin(user: ReturnType<typeof userEvent.setup>, pin: string) {
-  for (const digit of pin) await user.click(screen.getByRole('button', { name: digit }))
-  await user.click(screen.getByRole('button', { name: 'Bestätigen' }))
-}
 
 beforeEach(async () => {
   await i18n.changeLanguage('de')
-})
-
-afterEach(() => {
-  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
-describe('Elternbereich', () => {
-  it('ist über das Zahnrad erreichbar und verlangt die PIN', async () => {
+describe('Elternbereich ohne PIN', () => {
+  it('ist für angemeldete Eltern direkt über Einstellungen erreichbar', async () => {
     const user = userEvent.setup()
     mockApi({ 'GET /api/setup/status': setupDone, 'GET /api/auth/me': Response.json(makeMe()) })
     renderApp('/')
 
     await user.click(await screen.findByRole('link', { name: 'Einstellungen' }))
-
-    expect(screen.getByRole('heading', { name: 'Eltern-PIN eingeben' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Elternbereich' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Eltern-PIN eingeben' })).not.toBeInTheDocument()
   })
 
-  it('meldet eine falsche PIN', async () => {
-    const user = userEvent.setup()
-    mockApi({
-      'GET /api/setup/status': setupDone,
-      'GET /api/auth/me': Response.json(makeMe()),
-      'POST /api/parent/unlock': Response.json({ code: 'pin.wrong' }, { status: 403 }),
-    })
-    renderApp('/parents')
-
-    await screen.findByRole('heading', { name: 'Eltern-PIN eingeben' })
-    await enterPin(user, '0000')
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Falsche PIN')
-  })
-
-  it('öffnet sich mit der richtigen PIN und sendet das CSRF-Token', async () => {
-    const user = userEvent.setup()
+  it('öffnet den Elternbereich ohne PIN-Entsperraufruf', async () => {
     const calls = mockApi({
       'GET /api/setup/status': setupDone,
       'GET /api/auth/me': Response.json(makeMe()),
-      'POST /api/parent/unlock': Response.json(makeMe({ parent_unlocked: true })),
     })
     renderApp('/parents')
-
-    await screen.findByRole('heading', { name: 'Eltern-PIN eingeben' })
-    await enterPin(user, '1234')
 
     expect(await screen.findByRole('heading', { name: 'Elternbereich' })).toBeVisible()
-    const unlock = calls.find((call) => call.key === 'POST /api/parent/unlock')
-    expect(unlock?.body).toEqual({ pin: '1234' })
-    expect(unlock?.headers['X-CSRF-Token']).toBe('csrf-123')
+    expect(calls.some((call) => call.key === 'POST /api/parent/unlock')).toBe(false)
   })
 
-  it('kehrt nach Inaktivität zur Familienansicht zurück und sperrt', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    const calls = mockApi({
+  it('zeigt Kindern keine Elternverwaltung', async () => {
+    mockApi({
       'GET /api/setup/status': setupDone,
-      'GET /api/auth/me': Response.json(makeMe({ parent_unlocked: true })),
-      'POST /api/parent/lock': Response.json(makeMe()),
+      'GET /api/auth/me': Response.json(
+        makeMe({ user: { ...makeMe().user, role: 'child' } }),
+      ),
     })
     renderApp('/parents')
-    await screen.findByRole('heading', { name: 'Elternbereich' })
 
-    await act(() => vi.advanceTimersByTimeAsync(PARENT_IDLE_TIMEOUT_MS + 100))
-
-    expect(await screen.findByRole('heading', { name: 'Familie Sonnenschein' })).toBeVisible()
-    expect(calls.some((call) => call.key === 'POST /api/parent/lock')).toBe(true)
+    expect(await screen.findByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Elternbereich' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Einstellungen' })).not.toBeInTheDocument()
   })
 })
