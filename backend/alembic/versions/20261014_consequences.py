@@ -21,7 +21,7 @@ def upgrade() -> None:
         sa.Column("money_penalty_cents", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("xp_penalty", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("money_penalty_cents >= 0", name="consequence_preset_money_nonnegative"),
         sa.CheckConstraint("xp_penalty >= 0", name="consequence_preset_xp_nonnegative"),
     )
@@ -40,7 +40,7 @@ def upgrade() -> None:
         sa.Column("reversed_at", sa.DateTime(timezone=True)),
         sa.Column("reversed_by_user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="SET NULL")),
         sa.Column("reversal_note", sa.String(500)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("money_penalty_cents >= 0", name="consequence_entry_money_nonnegative"),
         sa.CheckConstraint("xp_penalty_requested >= 0", name="consequence_entry_xp_nonnegative"),
         sa.CheckConstraint("xp_penalty_applied >= 0", name="consequence_entry_applied_nonnegative"),
