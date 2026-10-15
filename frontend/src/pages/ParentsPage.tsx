@@ -34,6 +34,7 @@ import { RewardsSection } from './parents/RewardsSection'
 import { RoutinesSection } from './parents/RoutinesSection'
 import { TaskEditor } from './parents/TaskEditor'
 import { TasksSection } from './parents/TasksSection'
+import { WeatherSection } from './parents/WeatherSection'
 import { ParentsNav } from './parents/ParentsNav'
 import { PhotosSection } from './parents/PhotosSection'
 import { FrameSettingsSection } from './parents/FrameSettingsSection'
@@ -449,6 +450,7 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
         {area === 'settings' && (
           <>
             <FamilySection me={me} onSaved={setNotice} />
+            <WeatherSection onSaved={setNotice} />
             <AccountsSection />
             <DeviceSection />
             <Section title={t('parents.account_section')}>
