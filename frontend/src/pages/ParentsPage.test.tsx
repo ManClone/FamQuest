@@ -17,7 +17,7 @@ describe('Elternbereich ohne PIN', () => {
     renderApp('/')
 
     await user.click(await screen.findByRole('link', { name: 'Einstellungen' }))
-    expect(await screen.findByRole('heading', { name: 'Elternbereich' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Einstellungen' })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'Eltern-PIN eingeben' })).not.toBeInTheDocument()
   })
 
@@ -35,14 +35,12 @@ describe('Elternbereich ohne PIN', () => {
   it('zeigt Kindern keine Elternverwaltung', async () => {
     mockApi({
       'GET /api/setup/status': setupDone,
-      'GET /api/auth/me': Response.json(
-        makeMe({ user: { ...makeMe().user, role: 'child' } }),
-      ),
+      'GET /api/auth/me': Response.json(makeMe({ user: { ...makeMe().user, role: 'child' } })),
     })
     renderApp('/parents')
 
     expect(await screen.findByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'Elternbereich' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Einstellungen' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('href', '/settings')
   })
 })

@@ -262,7 +262,9 @@
     "move_up": "{{title}} nach oben",
     "move_down": "{{title}} nach unten",
     "kids_only": "Aufgaben sind für die Kinder. Was im Haushalt anfällt, steht im Putzplan:",
-    "kids_only_link": "zum Bereich „Haushalt“"
+    "kids_only_link": "zum Bereich „Haushalt“",
+    "repeatable": "Mehrmals täglich",
+    "repeatable_hint": "Nach jeder Elternbestätigung wieder verfügbar. Jede Ausführung wird einzeln geprüft und vergütet."
   },
   "routines": {
     "section": "Routinen",
@@ -389,7 +391,11 @@
       "email_taken": "Diese E-Mail-Adresse wird bereits verwendet.",
       "invalid_role": "Diese Kontorolle ist nicht erlaubt.",
       "rate_limited": "Zu viele Versuche. Bitte warte ein paar Minuten.",
-      "csrf_failed": "Sicherheitsprüfung fehlgeschlagen. Bitte lade die Seite neu."
+      "csrf_failed": "Sicherheitsprüfung fehlgeschlagen. Bitte lade die Seite neu.",
+      "login_already_linked": "Dieser Login ist bereits einer Person zugeordnet.",
+      "login_role_mismatch": "Die Rolle des Logins passt nicht zur Person.",
+      "login_password_required": "Bitte lege ein Passwort für den neuen Login fest.",
+      "login_role_protected": "Das eigene Elternkonto und Administratorkonten können nicht in ein Kinderkonto umgewandelt werden."
     },
     "setup": {
       "already_done": "Die Einrichtung ist bereits abgeschlossen",
@@ -424,7 +430,10 @@
       "step_invalid": "Dieser Schritt passt nicht in die Routine. Bitte neu laden."
     },
     "completion": {
-      "day_changed": "Ein neuer Tag hat begonnen. Die Aufgaben sind jetzt aktualisiert."
+      "day_changed": "Ein neuer Tag hat begonnen. Die Aufgaben sind jetzt aktualisiert.",
+      "request_key_required": "Bitte lade die Aufgabe neu.",
+      "request_key_used": "Diese Anfrage gehört zu einer anderen Ausführung.",
+      "not_repeatable": "Diese Aufgabe ist nicht mehrfach ausführbar."
     },
     "points": {
       "insufficient": "So viele Punkte sind nicht vorhanden."
@@ -499,6 +508,10 @@
       "child_required": "Diese Funktion ist nur für Kinder verfügbar",
       "invalid_allowance": "Ungültiger Taschengeldbetrag",
       "invalid_pagination": "Ungültige Seitennummerierung"
+    },
+    "profile": {
+      "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
+      "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen."
     }
   },
   "rewards": {
@@ -992,5 +1005,64 @@
     "repeat": "„{{title}}“ kommt wieder: in den Putzplan übernehmen",
     "repeat_hint": "Kommt wieder: Wählt Raum und Abstand. Der Eintrag wandert damit von „Zu erledigen“ in den Putzplan.",
     "need_room": "„{{title}}“ kommt wieder? Dafür braucht der Putzplan zuerst einen Raum."
+  },
+  "member_login": {
+    "title": "Login",
+    "add": "Login hinzufügen",
+    "change": "Login ändern",
+    "enable": "Eigenen Login einrichten",
+    "choose": "Login zuordnen",
+    "new": "Neue Zugangsdaten anlegen",
+    "new_password": "Neues Passwort",
+    "keep_password": "Leer lassen, um das bisherige Passwort zu behalten.",
+    "password_hint": "Mindestens 10 Zeichen.",
+    "role_hint": "Die Zugriffsrechte folgen der Rolle der Person. Administratorrechte bleiben erhalten."
+  },
+  "pocket_money": {
+    "title": "Taschengeld",
+    "bonus": "Bonus",
+    "no_child": "Lege zuerst ein Kind in der Familienverwaltung an.",
+    "child": "Kind",
+    "automatic": "Automatisches wöchentliches Taschengeld",
+    "current": "Wochenbetrag",
+    "not_configured": "Noch nicht eingerichtet",
+    "weekly_amount": "Wochenbetrag in Euro",
+    "save": "Wochenbetrag speichern",
+    "disable": "Automatik deaktivieren",
+    "disabled": "Automatische Buchung deaktiviert. Bestehende Ansprüche bleiben erhalten.",
+    "saved": "Wochenbetrag gespeichert. Das Taschengeld wird automatisch gebucht.",
+    "invalid_amount": "Bitte einen Betrag zwischen 0,01 und 1.000 Euro mit höchstens zwei Nachkommastellen eingeben.",
+    "schedule_hint": "Nach dem Einrichten wird die aktuelle Woche automatisch gebucht, danach jede Woche ab Montag. Bereits gebuchte Wochen werden nicht doppelt gebucht.",
+    "payment_status": "Zahlungseingang diese Woche",
+    "expected": "Taschengeldanspruch",
+    "received": "Bestätigter Zahlungseingang",
+    "missing": "Noch offen: {{amount}}",
+    "confirmed": "Zahlungseingang vollständig bestätigt.",
+    "no_bank": "Noch kein Bankkonto angebunden. Der Zahlungseingang ist noch nicht bestätigt.",
+    "not_due": "Für diese Woche ist noch kein Taschengeld gebucht.",
+    "bank_hint": "Ein gebuchter Anspruch ist noch kein Zahlungseingang. Die Bankanbindung kann später Zahlungseingänge abgleichen und fehlende Beträge melden.",
+    "no_balance": "Noch kein Kontostand verfügbar",
+    "transactions": "Kontobewegungen"
+  },
+  "personal": {
+    "profile": "Mein Profil",
+    "access": "Mein Zugang",
+    "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen.",
+    "saved": "Profil gespeichert.",
+    "current_password": "Bisheriges Passwort",
+    "new_password": "Neues Passwort",
+    "password_saved": "Passwort geändert. Andere Sitzungen wurden abgemeldet.",
+    "password_mismatch": "Die neuen Passwörter stimmen nicht überein.",
+    "change_password": "Passwort ändern",
+    "manage_family": "Familie verwalten",
+    "dashboard": "Dashboard",
+    "overdue": "Überfällig",
+    "current": "Aktuelle Aufgaben",
+    "my_points_one": "{{count}} Punkt",
+    "my_points_other": "{{count}} Punkte",
+    "all_tasks": "Alle meine Aufgaben",
+    "edit_schedule": "Zeitplan direkt in dieser Aufgabe festlegen",
+    "schedule_hint": "Der bestehende Zeitplan bleibt erhalten. Wenn du ihn hier ersetzt, gelten die gewählten Tage und die Tageszeit für alle ausgewählten Kinder. Aufgaben, Zuordnungen und bisherige Punkte bleiben erhalten.",
+    "schedule_preserved": "Der bestehende Zeitplan bleibt erhalten, bis du ihn hier ersetzt."
   }
 }

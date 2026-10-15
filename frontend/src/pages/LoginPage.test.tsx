@@ -66,7 +66,7 @@ describe('Login', () => {
     await user.type(screen.getByLabelText('Passwort'), 'sehr-geheim-123')
     await user.click(screen.getByRole('button', { name: 'Anmelden' }))
 
-    expect(await screen.findByRole('link', { name: 'Today' })).toBeVisible()
+    expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeVisible()
     expect(document.documentElement.lang).toBe('en')
   })
 
@@ -92,6 +92,6 @@ describe('Login', () => {
     expect(screen.queryByLabelText('Passwort')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Demo öffnen' }))
 
-    expect(await screen.findByRole('link', { name: 'Heute' })).toBeVisible()
+    expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeVisible()
   })
 })

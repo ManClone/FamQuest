@@ -123,9 +123,9 @@ def test_managing_rewards_requires_parent_role(client, parent, lena):
     )
     assert client.delete(f"/api/rewards/{reward}", headers=csrf(child)).status_code == 403
     assert client.get("/api/redemptions").status_code == 403
-    # Rewards remain visible to children; redemption still checks their points.
-    assert client.get("/api/rewards").status_code == 200
-    assert redeem(client, child, reward).json() == {"code": "reward.insufficient_points"}
+    # An unlinked child cannot see or redeem another member's rewards.
+    assert client.get("/api/rewards").json() == []
+    assert redeem(client, child, reward).json() == {"code": "profile.own_only"}
 
 
 def test_redeem_books_points_and_stores_redemption(client, parent, lena, now):

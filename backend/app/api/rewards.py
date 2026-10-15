@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
 from app.api.members import get_member
-from app.auth import CurrentSession, DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id, ensure_member_access
 from app.errors import ApiError
 from app.models import FamilyMember, Reward, RewardRedemption
 from app.points import balance, book, lock_member
@@ -61,10 +61,11 @@ def apply_reward(db: DbSession, reward: Reward, body: RewardIn) -> None:
 
 
 @router.get("/rewards")
-def list_rewards(_: CurrentSession, db: DbSession) -> list[RewardOut]:
+def list_rewards(auth: CurrentSession, db: DbSession) -> list[RewardOut]:
     """Alle Belohnungen; das Display zeigt davon nur die aktiven."""
     rewards = db.scalars(select(Reward).order_by(Reward.member_id, Reward.cost, Reward.id))
-    return [reward_out(reward) for reward in rewards]
+    own = child_member_id(db, auth)
+    return [reward_out(reward) for reward in rewards if own is None or reward.member_id == own]
 
 
 @router.post("/rewards", status_code=status.HTTP_201_CREATED)
@@ -91,13 +92,14 @@ def delete_reward(reward_id: int, _: ParentSession, db: DbSession) -> None:
 
 
 @router.post("/rewards/{reward_id}/redeem", status_code=status.HTTP_201_CREATED)
-def redeem_reward(reward_id: int, _: CurrentSession, db: DbSession) -> RedemptionOut:
+def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> RedemptionOut:
     """Löst eine Belohnung für ihr Kind ein, am Display ohne Eltern-PIN.
 
     Punktestand und Kosten werden in derselben Transaktion geprüft; die Sperre auf die Person
     verhindert, dass zwei gleichzeitige Einlösungen den Stand ins Minus bringen.
     """
     reward = get_reward(db, reward_id)
+    ensure_member_access(db, auth, reward.member_id)
     member = get_member(db, reward.member_id)
     check_child(member)
     if not reward.active:

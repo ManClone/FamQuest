@@ -75,8 +75,7 @@ describe('Setup', () => {
     await user.type(screen.getByLabelText('Repeat password'), 'sehr-geheim-123')
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
-
-    expect(await screen.findByRole('heading', { name: 'Familie Sonnenschein' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeVisible()
     const setupCall = calls.find((call) => call.key === 'POST /api/setup')
     expect(setupCall?.body).toMatchObject({
       language: 'en',
@@ -85,5 +84,4 @@ describe('Setup', () => {
       password: 'sehr-geheim-123',
     })
   })
-
 })

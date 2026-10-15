@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.members import get_member
 from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
-from app.auth import CurrentSession, DbSession, ParentSession, get_family
+from app.auth import DbSession, ParentSession, get_family
 from app.chores import chore_state
 from app.errors import ApiError
 from app.household_assignment import HouseholdChore, suggest_week
@@ -310,7 +310,7 @@ def _commit_room(db: DbSession) -> None:
 
 
 @router.get("")
-def list_chores(_: CurrentSession, db: DbSession) -> ChoresOut:
+def list_chores(_: ParentSession, db: DbSession) -> ChoresOut:
     """Alle Räume und Aufgaben mit ihrem Stand; das Display zeigt davon nur die aktiven."""
     today = _today(db)
     rooms = db.scalars(select(ChoreRoom).order_by(ChoreRoom.position, ChoreRoom.id))
@@ -675,7 +675,7 @@ def delete_chore(chore_id: int, _: ParentSession, db: DbSession) -> None:
 
 
 @router.put("/{chore_id}/done")
-def mark_done(chore_id: int, body: DoneIn, _: CurrentSession, db: DbSession) -> ChoreOut:
+def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> ChoreOut:
     """Heute erledigt. Ein zweiter Aufruf am selben Tag trägt nur nach, wer es war."""
     chore = _get_chore(db, chore_id)
     if body.member_id is not None:
@@ -739,7 +739,7 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
 
 
 @router.delete("/{chore_id}/done")
-def undo_done(chore_id: int, auth_session: CurrentSession, db: DbSession) -> ChoreOut:
+def undo_done(chore_id: int, auth_session: ParentSession, db: DbSession) -> ChoreOut:
     """Nimmt die heutige Erledigung zurück; frühere bleiben stehen."""
     chore = _get_chore(db, chore_id)
     completion = db.scalar(

@@ -30,7 +30,10 @@ function Badge({ count }: { count: number }) {
 export function ParentsNav({ area, pending }: ParentsNavProps) {
   const { t } = useTranslation()
   const [moreOpen, setMoreOpen] = useState(false)
-  const secondary = PARENT_AREAS.filter((candidate) => !PRIMARY_AREAS.includes(candidate))
+  const visibleAreas: readonly ParentArea[] = PARENT_AREAS.filter(
+    (candidate) => !['photos', 'routines', 'review'].includes(candidate),
+  )
+  const secondary = visibleAreas.filter((candidate) => !PRIMARY_AREAS.includes(candidate))
 
   useEffect(() => {
     if (!moreOpen) return
@@ -54,7 +57,7 @@ export function ParentsNav({ area, pending }: ParentsNavProps) {
         aria-label={t('parents_nav.label')}
         className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-1 overflow-y-auto border-r border-orange-100 bg-white p-3 md:flex"
       >
-        {PARENT_AREAS.map((candidate) => {
+        {visibleAreas.map((candidate) => {
           const Icon = AREA_ICONS[candidate]
           return (
             <Link

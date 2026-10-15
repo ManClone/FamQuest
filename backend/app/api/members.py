@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import FileResponse
 from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.auth import CurrentSession, DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.avatars import (
     avatar_path,
     delete_avatar,
@@ -16,6 +16,7 @@ from app.avatars import (
 from app.calendar_sync import unselect_member_calendars
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
+from app.member_accounts import save_member_login
 from app.models import FamilyMember, Routine, TaskAssignment
 from app.schemas import MemberIn, MemberOrderIn, MemberOut
 
@@ -65,17 +66,24 @@ def commit_member(db: DbSession) -> None:
     except IntegrityError as error:
         # Zwei gleichzeitige Anfragen mit derselben Farbe: der Unique-Constraint entscheidet.
         db.rollback()
-        raise ApiError(status.HTTP_409_CONFLICT, "member.color_taken") from error
+        constraint = getattr(getattr(error.orig, "diag", None), "constraint_name", "") or ""
+        code = "auth.email_taken" if "users_email" in constraint else "member.color_taken"
+        if "family_members_user_id" in constraint:
+            code = "auth.login_already_linked"
+        raise ApiError(status.HTTP_409_CONFLICT, code) from error
 
 
 @router.get("/members")
-def list_members(_: CurrentSession, db: DbSession) -> list[MemberOut]:
+def list_members(auth: CurrentSession, db: DbSession) -> list[MemberOut]:
     members = db.scalars(select(FamilyMember).order_by(FamilyMember.position, FamilyMember.id))
-    return [member_out(member) for member in members]
+    own = child_member_id(db, auth)
+    return [member_out(member) for member in members if own is None or member.id == own]
 
 
 @router.post("/members", status_code=status.HTTP_201_CREATED)
-def create_member(body: MemberIn, _: ParentSession, db: DbSession) -> MemberOut:
+def create_member(
+    body: MemberIn, auth: ParentSession, db: DbSession, request: Request
+) -> MemberOut:
     check_color_free(db, body.color)
     # Neue Personen kommen ans Ende.
     last = db.scalar(select(func.max(FamilyMember.position))) or 0
@@ -88,6 +96,7 @@ def create_member(body: MemberIn, _: ParentSession, db: DbSession) -> MemberOut:
         event_symbols=event_symbols,
     )
     db.add(member)
+    save_member_login(db, member, body.login, auth, request)
     commit_member(db)
     return member_out(member)
 
@@ -105,13 +114,17 @@ def reorder_members(body: MemberOrderIn, _: ParentSession, db: DbSession) -> lis
 
 
 @router.put("/members/{member_id}")
-def update_member(member_id: int, body: MemberIn, _: ParentSession, db: DbSession) -> MemberOut:
+def update_member(
+    member_id: int, body: MemberIn, auth: ParentSession, db: DbSession, request: Request
+) -> MemberOut:
     member = get_member(db, member_id)
+    db.refresh(member, with_for_update=True)
     check_color_free(db, body.color, member_id)
     if member.role == "child" and body.role != "child" and _has_tasks(db, member_id):
         # Aufgaben und Routinen gibt es nur für Kinder; nichts davon geht stillschweigend verloren.
         raise ApiError(status.HTTP_409_CONFLICT, "member.has_tasks")
     member.name, member.role, member.color = body.name, body.role, body.color
+    save_member_login(db, member, body.login, auth, request)
     if body.event_symbols is not None:
         member.event_symbols = body.event_symbols
     commit_member(db)

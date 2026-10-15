@@ -30,4 +30,4 @@ Basis: craebby/FamQuest (AGPL-3.0). Änderungen zunächst ausschließlich im Bra
 ## Noch offen
 - FamQuest API-Endpunkte, Authentifizierung und Datenmodell detailliert prüfen.
 - Bankanbieter und Rechte für Kinderkonten prüfen.
-- Betrag, Rhythmus und Zielkonto für Grundtaschengeld festlegen.
+- Betrag, Rhythmus und Zielkonto für Taschengeld festlegen.

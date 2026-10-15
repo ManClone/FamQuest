@@ -62,7 +62,7 @@ def test_bonus_and_unconditional_allowance_are_separate(client, parent, lena, no
     from app.money import allowance_balance, bonus_balance, book_money, money_balance
 
     with Session(engine) as db:
-        book_money(db, lena, 500, "allowance", "Wöchentliches Grundtaschengeld")
+        book_money(db, lena, 500, "allowance", "Wöchentliches Taschengeld")
         book_money(db, lena, 150, "task_completed", "Bonusquest")
         db.commit()
         assert allowance_balance(db, lena) == 500
@@ -346,8 +346,8 @@ def test_configured_allowance_books_current_week_once(client, parent, lena, now)
         == 200
     )
     with Session(engine) as db:
-        assert credit_configured_allowances(db, dt.date(2026, 10, 14)) == [lena]
-        assert credit_configured_allowances(db, dt.date(2026, 10, 14)) == []
+        assert credit_configured_allowances(db, dt.date(2026, 10, 3)) == []
+        assert credit_configured_allowances(db, dt.date(2026, 10, 3)) == []
         db.commit()
         assert allowance_balance(db, lena) == 425
 

@@ -114,13 +114,26 @@ class FamilyOut(BaseModel):
 
 
 class MeResponse(BaseModel):
+    member_id: int | None = None
     user: UserOut
     family: FamilyOut
     csrf_token: str
     parent_unlocked: bool
 
 
+class MemberLoginCredentials(BaseModel):
+    model_config = {"extra": "forbid"}
+    email: Email
+    password: Password | None = None
+
+
+class MemberExistingLogin(BaseModel):
+    model_config = {"extra": "forbid"}
+    account_id: int = Field(gt=0)
+
+
 class MemberIn(BaseModel):
+    login: MemberLoginCredentials | MemberExistingLogin | None = None
     name: MemberName
     role: MemberRole
     color: MemberColor
@@ -174,6 +187,7 @@ Recurrence = Annotated[
 
 
 class TaskIn(BaseModel):
+    replace_routine_schedule: bool = False
     title: TaskTitle
     icon: IconName
     description: TaskDescription = ""
@@ -183,6 +197,7 @@ class TaskIn(BaseModel):
     color: MemberColor | None = None
     active: bool = True
     needs_approval: bool = False
+    repeatable: bool = False
     shared: bool = False
     extra: bool = False
     recurrence: Recurrence
@@ -207,6 +222,7 @@ class TaskOut(BaseModel):
     color: str | None
     active: bool
     needs_approval: bool
+    repeatable: bool = False
     shared: bool
     extra: bool
     recurrence: Recurrence
@@ -279,6 +295,7 @@ class TodayTaskOut(BaseModel):
     color: str | None
     member_ids: list[int]
     needs_approval: bool
+    repeatable: bool = False
     # „Einer für alle“: erledigt für alle, sobald eine Person in done_member_ids steht.
     shared: bool
     extra: bool

@@ -8,8 +8,8 @@ import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 import HouseIcon from '~icons/fluent-emoji-flat/house-with-garden'
 
 import { useMe } from '../api/auth'
-import { usePhotos } from '../api/photos'
 import { useToday } from '../api/today'
+import { usePhotos } from '../api/photos'
 import { getFrameIdleMinutes } from '../frameIdle'
 import { useIdleTimeout } from '../useIdleTimeout'
 
@@ -69,12 +69,10 @@ export function AppShell() {
   const isParent = role === 'admin' || role === 'parent'
   const today = useToday()
   const pending = isParent ? (today.data?.pending_approvals ?? 0) : 0
-  // Den Bilderrahmen gibt es erst, wenn mindestens ein Foto sichtbar ist.
   const hasPhotos = usePhotos().data?.some((photo) => photo.visible) ?? false
-  // Nach Leerlauf nur, wenn es auf diesem Gerät eingeschaltet ist (gelesen beim Betreten).
   const [idleMinutes] = useState(getFrameIdleMinutes)
   const navigate = useNavigate()
-  useIdleTimeout(hasPhotos && idleMinutes > 0 ? idleMinutes * 60 * 1000 : null, () =>
+  useIdleTimeout(isParent && hasPhotos && idleMinutes > 0 ? idleMinutes * 60 * 1000 : null, () =>
     navigate('/frame'),
   )
 
@@ -84,31 +82,39 @@ export function AppShell() {
         aria-label={t('nav.label')}
         className="fixed inset-x-0 bottom-0 z-10 flex gap-2 border-t border-orange-100 bg-white/95 p-2 backdrop-blur sm:sticky sm:top-0 sm:h-dvh sm:w-28 sm:shrink-0 sm:flex-col sm:border-t-0 sm:border-r sm:p-3"
       >
-        <NavItem to="/" label={t('nav.today')} icon={HouseIcon} active={pathname === '/'} />
-        {/* Der Stern bleibt bei den Aufgaben: Kinder finden ihre Aufgaben wie bisher. */}
-        <NavItem to="/tasks" label={t('nav.tasks')} icon={StarIcon} active={onTasks} />
         <NavItem
-          to="/rewards"
-          label={t('nav.rewards')}
-          icon={GiftIcon}
-          active={pathname.startsWith('/rewards')}
-        />
-        <NavItem
-          to="/household"
-          label={t('nav.household')}
-          icon={BroomIcon}
-          active={pathname.startsWith('/household')}
-        />
-        {/* Einstellungen abgesetzt am Ende der Leiste. */}
-        {isParent && <NavItem
-          to="/parents"
-          label={t('nav.settings')}
-          icon={GearIcon}
-          active={false}
+          to="/"
+          label={t(isParent ? 'personal.dashboard' : 'nav.today')}
+          icon={HouseIcon}
+          active={pathname === '/'}
           badge={pending}
           badgeLabel={t('nav.pending', { count: pending })}
-          className="ml-auto sm:mt-auto sm:ml-0"
-        />}
+        />
+        {isParent ? (
+          <NavItem
+            to="/household"
+            label={t('nav.household')}
+            icon={BroomIcon}
+            active={pathname.startsWith('/household')}
+          />
+        ) : (
+          <NavItem to="/tasks" label={t('nav.tasks')} icon={StarIcon} active={onTasks} />
+        )}
+        <NavItem
+          to={isParent ? '/parents/rewards' : '/rewards'}
+          label={t('nav.rewards')}
+          icon={GiftIcon}
+          active={pathname.startsWith('/rewards') || pathname.startsWith('/parents/rewards')}
+        />
+        <NavItem
+          to="/settings"
+          label={t('nav.settings')}
+          icon={GearIcon}
+          active={
+            pathname === '/settings' ||
+            (pathname.startsWith('/parents') && !pathname.startsWith('/parents/rewards'))
+          }
+        />
       </nav>
       <div className="flex min-w-0 flex-1 flex-col pb-28 sm:pb-0">
         <Outlet />

@@ -517,20 +517,17 @@ describe('Familienansicht', () => {
     ).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('hat eine Navigationsleiste mit Heute, Aufgaben und Einstellungen', async () => {
+  it('zeigt die vier Hauptreiter für das angemeldete Elternkonto', async () => {
     mockApi(familyRoutes())
     renderApp('/tasks')
-
-    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' })
-    expect(within(nav).getByRole('link', { name: 'Heute' })).toHaveAttribute('href', '/')
-    expect(within(nav).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-    expect(within(nav).getByRole('link', { name: 'Einstellungen' })).toHaveAttribute(
-      'href',
-      '/parents',
-    )
+    const nav = within(await screen.findByRole('navigation', { name: 'Hauptnavigation' }))
+    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Dashboard',
+      'Haushalt',
+      'Belohnungen',
+      'Einstellungen',
+    ])
+    expect(nav.getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('href', '/settings')
   })
 
   it('zeigt Routinen in der festgelegten Reihenfolge und Extras als eigenen Block', async () => {
@@ -618,7 +615,7 @@ describe('Familienansicht', () => {
     )
     expect(lenaColumn.getByRole('img', { name: '0 of 3 tasks done' })).toBeVisible()
     expect(lenaColumn.getByText('10 points in total')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Today' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeVisible()
   })
 })
 
@@ -657,7 +654,7 @@ describe('Personenansicht', () => {
 
     await act(() => vi.advanceTimersByTimeAsync(PERSON_IDLE_TIMEOUT_MS + 100))
 
-    expect(await screen.findByRole('link', { name: 'Alle Aufgaben öffnen' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   })
 
   it('leitet bei unbekannter Person zur Familienansicht', async () => {

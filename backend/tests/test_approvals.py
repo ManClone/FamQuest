@@ -143,5 +143,5 @@ def test_approvals_require_parent_account(client, parent, lena, now):
     assert client.get("/api/approvals").status_code == 403
     assert approve(client, child, pending["id"]).status_code == 403
     assert reject(client, child, pending["id"]).status_code == 403
-    # Der öffentliche Tagesüberblick zeigt weiterhin die ausstehende Freigabe.
-    assert today(client)["pending_approvals"] == 1
+    # An unlinked child cannot see another member's pending approvals.
+    assert today(client)["pending_approvals"] == 0

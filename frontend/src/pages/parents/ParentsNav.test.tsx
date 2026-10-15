@@ -38,7 +38,8 @@ describe('Menü im Elternbereich', () => {
 
     expect(await screen.findByRole('heading', { name: 'Punkte' })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'Aufgaben' })).toBeNull()
-    expect(within(sidebar()).getAllByRole('link')).toHaveLength(8)
+    expect(within(sidebar()).getAllByRole('link')).toHaveLength(5)
+    expect(within(sidebar()).queryByRole('link', { name: 'Fotos' })).toBeNull()
 
     await user.click(within(sidebar()).getByRole('link', { name: 'Aufgaben' }))
     expect(await screen.findByRole('heading', { name: 'Aufgaben' })).toBeVisible()
@@ -49,16 +50,11 @@ describe('Menü im Elternbereich', () => {
     )
   })
 
-  it('zeigt wartende Kontrollen als Zahl', async () => {
-    api(2)
-    renderApp('/parents/tasks')
-
-    await screen.findByRole('heading', { name: 'Aufgaben' })
-    expect(
-      await within(sidebar()).findByRole('link', {
-        name: 'Prüfen & Punkte, 2 Aufgaben warten auf Kontrolle',
-      }),
-    ).toHaveAttribute('href', '/parents/review')
+  it('zeigt wartende Kontrollen am Dashboard statt im Einstellungsmenü', async () => {
+    api(3)
+    renderApp('/parents/family')
+    expect(await screen.findByRole('link', { name: /Dashboard,.*3/ })).toBeVisible()
+    expect(within(sidebar()).queryByRole('link', { name: /Prüfen|Routinen/ })).toBeNull()
   })
 
   it('am Handy: vier Bereiche unten, der Rest hinter „Mehr“', async () => {
@@ -69,9 +65,9 @@ describe('Menü im Elternbereich', () => {
     await screen.findByRole('heading', { name: 'Aufgaben' })
     const bar = within(bottomBar())
     expect(bar.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
-      '/parents/review',
+      '/parents/family',
       '/parents/tasks',
-      '/parents/routines',
+      '/parents/household',
       '/parents/rewards',
     ])
     const more = bar.getByRole('button', { name: 'Mehr' })

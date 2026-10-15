@@ -77,6 +77,7 @@ def test_today_lists_only_due_active_assigned_tasks(client, parent, lena, now):
         "color": None,
         "member_ids": [lena],
         "needs_approval": False,
+        "repeatable": False,
         "shared": False,
         "extra": False,
         "positions": [{"member_id": lena, "position": 1000, "optional": False}],

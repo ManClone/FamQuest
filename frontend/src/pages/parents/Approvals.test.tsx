@@ -66,7 +66,7 @@ describe('Kontrolle durch die Eltern', () => {
       makeApproval(),
       makeApproval({ id: 8, member_id: 2, date: '2026-10-02', points: 3 }),
     ])
-    renderApp('/parents')
+    renderApp('/')
 
     await screen.findByRole('heading', { name: 'Zu prüfen' })
     // Erledigungen früherer Tage zeigen ihr Datum.
@@ -86,9 +86,9 @@ describe('Kontrolle durch die Eltern', () => {
 
   it('bleibt ohne wartende Erledigungen unsichtbar', async () => {
     parentsApi([])
-    renderApp('/parents')
+    renderApp('/')
 
-    await screen.findByRole('heading', { name: 'Punkte' })
+    await screen.findByRole('heading', { name: 'Dashboard' })
     expect(screen.queryByRole('heading', { name: 'Zu prüfen' })).toBeNull()
   })
 
@@ -152,7 +152,7 @@ describe('Aufgaben mit Kontrolle am Display', () => {
     expect(within(card).getByTestId('pending-badge')).toBeInTheDocument()
     expect(screen.getByText('Insgesamt 10 Punkte')).toBeInTheDocument()
     expect(
-      await screen.findByRole('link', { name: 'Einstellungen, 1 Aufgabe wartet auf Kontrolle' }),
+      await screen.findByRole('link', { name: 'Dashboard, 1 Aufgabe wartet auf Kontrolle' }),
     ).toBeVisible()
   })
 })

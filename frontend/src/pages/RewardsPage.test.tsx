@@ -81,10 +81,8 @@ describe('Belohnungen am Display', () => {
   it('führt über das Geschenk zu den Kindern und ihren Belohnungen', async () => {
     const user = userEvent.setup()
     mockApi(routes())
-    renderApp('/')
-
+    renderApp('/rewards')
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' })
-    await user.click(within(nav).getByRole('link', { name: 'Belohnungen' }))
 
     // Nur Kinder, Erwachsene bekommen keine Belohnungen.
     expect(await screen.findByRole('link', { name: 'Belohnungen von Lena' })).toBeVisible()

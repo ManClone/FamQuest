@@ -13,7 +13,7 @@ import CheckIcon from '~icons/lucide/check'
 
 import { ApiError } from '../../api/client'
 import type { Member } from '../../api/members'
-import { useAddRoutineStep } from '../../api/routines'
+import { useAddRoutineStep, useRoutines } from '../../api/routines'
 import {
   type RecurrenceKind,
   MAX_INTERVAL_DAYS,
@@ -112,6 +112,7 @@ export function TaskEditor({
   const [color, setColor] = useState<MemberColor | null>(task?.color ?? null)
   const [description, setDescription] = useState(task?.description ?? '')
   const [active, setActive] = useState(task?.active ?? true)
+  const [repeatable, setRepeatable] = useState(task?.repeatable ?? false)
   const [needsApproval, setNeedsApproval] = useState(task?.needs_approval ?? false)
   const [pickingIcon, setPickingIcon] = useState(false)
   const [pickingTemplate, setPickingTemplate] = useState(false)
@@ -124,13 +125,15 @@ export function TaskEditor({
   )
   const remove = useTasksMutation((id: number) => deleteTask(id))
   const addStep = useAddRoutineStep()
+  const schedules =
+    useRoutines().data?.filter((routine) =>
+      routine.steps.some((step) => step.task_id === task?.id),
+    ) ?? []
   // Für diese Personen ist die Aufgabe Schritt einer Routine; deren Tage bestimmt die Routine.
   const routineMembers = members.filter((member) => task?.routine_member_ids.includes(member.id))
+  const [replaceSchedule, setReplaceSchedule] = useState(false)
   const onlyInRoutines =
-    routineStep !== undefined ||
-    (task !== undefined &&
-      task.member_ids.length > 0 &&
-      task.member_ids.every((id) => task.routine_member_ids.includes(id)))
+    routineStep !== undefined || (routineMembers.length > 0 && !replaceSchedule)
   const saveError = save.error ?? addStep.error
 
   const fieldError = (field: string) =>
@@ -170,7 +173,9 @@ export function TaskEditor({
               extra: false,
               color,
               active,
-              needs_approval: needsApproval,
+              needs_approval: needsApproval || repeatable,
+              ...(replaceSchedule ? { replace_routine_schedule: true } : {}),
+              ...(repeatable || task?.repeatable ? { repeatable } : {}),
               shared: false,
               recurrence: { kind: 'daily' },
               member_ids: [routineStep.memberId],
@@ -194,7 +199,9 @@ export function TaskEditor({
         extra: block === 'extra',
         color,
         active,
-        needs_approval: needsApproval,
+        needs_approval: needsApproval || repeatable,
+        ...(replaceSchedule ? { replace_routine_schedule: true } : {}),
+        ...(repeatable || task?.repeatable ? { repeatable } : {}),
         // Bei nur einer Person hat „Einer für alle“ keine Wirkung.
         shared: shared && memberIds.length > 1,
         recurrence:
@@ -306,12 +313,24 @@ export function TaskEditor({
 
         <div className="flex flex-col gap-1">
           <Switch
-            checked={needsApproval}
-            onChange={setNeedsApproval}
+            checked={needsApproval || repeatable}
+            onChange={(value) => {
+              if (!repeatable) setNeedsApproval(value)
+            }}
             label={t('tasks.needs_approval')}
             showLabel
           />
           <p className="text-base text-slate-500">{t('tasks.needs_approval_hint')}</p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Switch
+            checked={repeatable}
+            onChange={setRepeatable}
+            label={t('tasks.repeatable')}
+            showLabel
+          />
+          <p className="text-base text-slate-500">{t('tasks.repeatable_hint')}</p>
         </div>
 
         {!routineStep && (
@@ -344,6 +363,17 @@ export function TaskEditor({
           </>
         )}
 
+        {routineMembers.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Switch
+              checked={replaceSchedule}
+              onChange={setReplaceSchedule}
+              label={t('personal.edit_schedule')}
+              showLabel
+            />
+            <p>{t('personal.schedule_hint')}</p>
+          </div>
+        )}
         {!onlyInRoutines && (
           <>
             <Field label={t('tasks.recurrence')}>
@@ -456,15 +486,20 @@ export function TaskEditor({
           </>
         )}
 
-        {routineStep || routineMembers.length > 0 ? (
+        {routineStep || (routineMembers.length > 0 && !replaceSchedule) ? (
           routineMembers.length > 0 && (
             <p className="rounded-2xl bg-orange-50 px-4 py-3 text-lg text-orange-900">
-              {t('routines.task_in_routines', {
-                names: new Intl.ListFormat(language, { type: 'conjunction' }).format(
-                  routineMembers.map((member) => member.name),
-                ),
-                time: t(`times_of_day.${task?.time_of_day ?? 'morning'}`),
-              })}
+              {schedules.length > 0
+                ? schedules.map((schedule) => (
+                    <span key={schedule.id} className="block">
+                      {members.find((member) => member.id === schedule.member_id)?.name}:{' '}
+                      {schedule.weekdays
+                        .map((day) => weekdayName(language, day, 'short'))
+                        .join(', ')}{' '}
+                      · {t(`times_of_day.${schedule.time_of_day}`)}
+                    </span>
+                  ))
+                : t('personal.schedule_preserved')}
             </p>
           )
         ) : (

@@ -4,6 +4,7 @@ import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
 import TrophyIcon from '~icons/fluent-emoji-flat/trophy'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 
+import { useMe } from '../api/auth'
 import { childrenOf } from '../api/members'
 import { pointsFor } from '../api/today'
 import { Avatar } from '../components/Avatar'
@@ -35,6 +36,7 @@ export function RewardsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { memberId } = useParams()
+  const me = useMe().data
   const { members, today, isPending, error, refetch } = useFamilyToday()
   useIdleTimeout(PERSON_IDLE_TIMEOUT_MS, () => navigate('/'))
 
@@ -55,6 +57,8 @@ export function RewardsPage() {
   }
 
   const children = childrenOf(members)
+  if (me?.user.role === 'child' && me.member_id && memberId === undefined)
+    return <Navigate to={`/rewards/${me.member_id}`} replace />
 
   if (memberId !== undefined) {
     const member = children.find((candidate) => String(candidate.id) === memberId)

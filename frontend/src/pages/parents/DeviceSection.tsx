@@ -48,7 +48,7 @@ function useDisplayInfo(size: DisplaySize) {
  * Einstellungen, die nur für dieses Gerät gelten: Anzeigegröße, Bilderrahmen, Anzeige-Info; dazu
  * der Weg in die Küchenansicht.
  */
-export function DeviceSection() {
+export function DeviceSection({ personalOnly = false }: { personalOnly?: boolean }) {
   const { t, i18n } = useTranslation()
   const language = i18n.resolvedLanguage ?? i18n.language
   const [size, setSize] = useState<DisplaySize>(getDisplaySize)
@@ -81,38 +81,42 @@ export function DeviceSection() {
           })}
         </div>
       </Field>
-      <Field label={t('device.frame_idle')}>
-        <p className="-mt-1 text-base text-slate-500">{t('device.frame_idle_hint')}</p>
-        <div className="grid grid-cols-3 gap-3 sm:max-w-2xl sm:grid-cols-5">
-          {FRAME_IDLE_OPTIONS.map((minutes) => (
-            <ChoiceTile
-              key={minutes}
-              name="frame-idle"
-              checked={frameIdle === minutes}
-              onChange={() => {
-                setFrameIdleMinutes(minutes)
-                setFrameIdle(minutes)
-              }}
+      {!personalOnly && (
+        <>
+          <Field label={t('device.frame_idle')}>
+            <p className="-mt-1 text-base text-slate-500">{t('device.frame_idle_hint')}</p>
+            <div className="grid grid-cols-3 gap-3 sm:max-w-2xl sm:grid-cols-5">
+              {FRAME_IDLE_OPTIONS.map((minutes) => (
+                <ChoiceTile
+                  key={minutes}
+                  name="frame-idle"
+                  checked={frameIdle === minutes}
+                  onChange={() => {
+                    setFrameIdleMinutes(minutes)
+                    setFrameIdle(minutes)
+                  }}
+                >
+                  {minutes === 0
+                    ? t('device.frame_idle_off')
+                    : t('device.frame_idle_minutes', { count: minutes })}
+                </ChoiceTile>
+              ))}
+            </div>
+          </Field>
+          <Field label={t('kitchen.title')}>
+            <p className="-mt-1 text-base text-slate-500">
+              {t('kitchen.hint', { path: KITCHEN_PATH })}
+            </p>
+            <Link
+              to={KITCHEN_PATH}
+              className="inline-flex min-h-14 items-center gap-2 self-start rounded-2xl bg-orange-100 px-4 py-2 text-lg font-bold text-orange-800 hover:bg-orange-200 focus-visible:outline-4 focus-visible:outline-orange-400"
             >
-              {minutes === 0
-                ? t('device.frame_idle_off')
-                : t('device.frame_idle_minutes', { count: minutes })}
-            </ChoiceTile>
-          ))}
-        </div>
-      </Field>
-      <Field label={t('kitchen.title')}>
-        <p className="-mt-1 text-base text-slate-500">
-          {t('kitchen.hint', { path: KITCHEN_PATH })}
-        </p>
-        <Link
-          to={KITCHEN_PATH}
-          className="inline-flex min-h-14 items-center gap-2 self-start rounded-2xl bg-orange-100 px-4 py-2 text-lg font-bold text-orange-800 hover:bg-orange-200 focus-visible:outline-4 focus-visible:outline-orange-400"
-        >
-          <KitchenIcon className="size-8" aria-hidden="true" />
-          {t('kitchen.open')}
-        </Link>
-      </Field>
+              <KitchenIcon className="size-8" aria-hidden="true" />
+              {t('kitchen.open')}
+            </Link>
+          </Field>
+        </>
+      )}
       <p className="text-base text-slate-600" data-testid="display-info">
         {t('device.info', {
           width: info.width,

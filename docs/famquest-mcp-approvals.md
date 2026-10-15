@@ -11,7 +11,7 @@
 - Eine taegliche Pruefung am Abend (ca. 19 Uhr, Europe/Berlin) soll nur bei offenen Approvals benachrichtigen.
 - Bei nicht erreichbarer oder nicht verbundener MCP-Integration darf keine erfolgreiche Pruefung vorgetaeuscht werden.
 - Idempotente API: doppelte Freigaben duerfen keine mehrfachen XP- oder Geldbuchungen ausloesen.
-- Grundtaschengeld ist unabhaengig von Freigaben und darf niemals gekuerzt werden.
+- Taschengeld ist unabhaengig von Freigaben und darf niemals gekuerzt werden.
 
 ## Integrationstest vor QNAP-Neuaufsetzung
 

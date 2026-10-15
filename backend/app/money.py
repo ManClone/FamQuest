@@ -207,9 +207,9 @@ async def run_weekly_allowance_scheduler() -> None:
         try:
             credited = await asyncio.to_thread(run_weekly_allowance_check)
             if credited:
-                logger.info("Wöchentliches Grundtaschengeld gebucht für %s Kinder", len(credited))
+                logger.info("Wöchentliches Taschengeld gebucht für %s Kinder", len(credited))
         except Exception:
-            logger.exception("Grundtaschengeld-Wochenbuchung fehlgeschlagen")
+            logger.exception("Taschengeld-Wochenbuchung fehlgeschlagen")
         await asyncio.sleep(3600)
 
 

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.errors import ApiError
 from app.logs import logger
-from app.models import AuthSession, Family, User
+from app.models import AuthSession, Family, FamilyMember, User
 from app.schemas import FamilyOut, MeResponse, UserOut
 from app.security import new_token, token_hash
 
@@ -148,5 +148,21 @@ def me_response(db: Session, auth_session: AuthSession) -> MeResponse:
             pin_enabled=family.pin_enabled,
         ),
         csrf_token=auth_session.csrf_token,
+        member_id=db.scalar(select(FamilyMember.id).where(FamilyMember.user_id == user.id)),
         parent_unlocked=user.role in ("admin", "parent"),
     )
+
+
+def child_member_id(db: Session, auth_session: AuthSession) -> int | None:
+    """None for parents, the linked member for children, zero for unlinked children."""
+    if auth_session.user.role != "child":
+        return None
+    return (
+        db.scalar(select(FamilyMember.id).where(FamilyMember.user_id == auth_session.user_id)) or 0
+    )
+
+
+def ensure_member_access(db: Session, auth_session: AuthSession, member_id: int) -> None:
+    own = child_member_id(db, auth_session)
+    if own is not None and own != member_id:
+        raise ApiError(403, "profile.own_only")

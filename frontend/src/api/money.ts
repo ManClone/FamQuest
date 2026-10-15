@@ -55,9 +55,10 @@ export const weeklyAllowanceStatusKey = (memberId: number, monday: string) =>
 export function useWeeklyAllowanceStatus(memberId: number, monday: string) {
   return useQuery({
     queryKey: weeklyAllowanceStatusKey(memberId, monday),
-    queryFn: () => apiGet<WeeklyAllowanceStatus>(
-      `/members/${memberId}/money/weekly-allowance?week_start=${encodeURIComponent(monday)}`,
-    ),
+    queryFn: () =>
+      apiGet<WeeklyAllowanceStatus>(
+        `/members/${memberId}/money/weekly-allowance?week_start=${encodeURIComponent(monday)}`,
+      ),
     enabled: memberId > 0 && /^\d{4}-\d{2}-\d{2}$/.test(monday),
   })
 }
@@ -67,8 +68,7 @@ export interface WeeklyAllowanceSettings {
   weekly_amount_cents: number | null
 }
 
-export const allowanceSettingsKey = (memberId: number) =>
-  ['money', memberId, 'settings'] as const
+export const allowanceSettingsKey = (memberId: number) => ['money', memberId, 'settings'] as const
 
 export function useWeeklyAllowanceSettings(memberId: number) {
   return useQuery({
@@ -81,8 +81,10 @@ export function useWeeklyAllowanceSettings(memberId: number) {
 export function useSaveWeeklyAllowanceSettings(memberId: number) {
   return useParentMutation(
     (weekly_amount_cents: number | null) =>
-      api<WeeklyAllowanceSettings>('PUT', `/members/${memberId}/money/settings`, { weekly_amount_cents }),
-    [allowanceSettingsKey(memberId)],
+      api<WeeklyAllowanceSettings>('PUT', `/members/${memberId}/money/settings`, {
+        weekly_amount_cents,
+      }),
+    [allowanceSettingsKey(memberId), moneyKey(memberId)],
   )
 }
 
@@ -118,7 +120,27 @@ export interface BankTransaction {
 export function useBankTransactions(memberId: number) {
   return useQuery({
     queryKey: ['money', memberId, 'bank-transactions'],
-    queryFn: () => apiGet<BankTransaction[]>(`/members/${memberId}/money/bank-transactions?limit=50`),
+    queryFn: () =>
+      apiGet<BankTransaction[]>(`/members/${memberId}/money/bank-transactions?limit=50`),
     enabled: memberId > 0,
+  })
+}
+
+export interface AllowancePaymentStatus {
+  member_id: number
+  week_start: string
+  expected_cents: number
+  received_cents: number
+  missing_cents: number
+  bank_connected: boolean
+}
+
+export function useAllowancePaymentStatus(memberId: number) {
+  return useQuery({
+    queryKey: ['money', memberId, 'allowance-payment-status'],
+    queryFn: () =>
+      apiGet<AllowancePaymentStatus>(`/members/${memberId}/money/allowance-payment-status`),
+    enabled: memberId > 0,
+    refetchInterval: 60_000,
   })
 }

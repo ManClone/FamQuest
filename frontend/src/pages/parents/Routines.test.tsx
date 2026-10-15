@@ -329,10 +329,18 @@ describe('Routinen im Elternbereich', () => {
     const morning = await card('Morgens', 'Montag bis Freitag')
     await user.click(morning.getByRole('button', { name: 'Anziehen bearbeiten' }))
 
-    expect(screen.getByText(/Schritt in der Routine \(Morgens\) von Lena/)).toBeVisible()
-    // Tageszeit und Wiederholung legt die Routine fest.
+    expect(screen.getByText(/Lena: Mo, Di, Mi, Do, Fr/)).toBeVisible()
+    expect(
+      screen.getByRole('switch', { name: 'Zeitplan direkt in dieser Aufgabe festlegen' }),
+    ).not.toBeChecked()
+    // Tageszeit und Wiederholung bleiben bis zur ausdruecklichen Umstellung erhalten.
     expect(screen.queryByRole('radio', { name: 'Abends' })).toBeNull()
     expect(screen.queryByRole('radio', { name: 'Jeden Tag' })).toBeNull()
     expect(screen.getByRole('checkbox', { name: /Lena/ })).toBeChecked()
+    await user.click(
+      screen.getByRole('switch', { name: 'Zeitplan direkt in dieser Aufgabe festlegen' }),
+    )
+    expect(screen.getByRole('radio', { name: 'Abends' })).toBeVisible()
+    expect(screen.getByRole('radio', { name: 'Jeden Tag' })).toBeVisible()
   })
 })

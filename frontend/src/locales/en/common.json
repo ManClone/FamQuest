@@ -262,7 +262,9 @@
     "move_up": "Move {{title}} up",
     "move_down": "Move {{title}} down",
     "kids_only": "Tasks are for the children. Household chores live in the cleaning plan:",
-    "kids_only_link": "go to “Household”"
+    "kids_only_link": "go to “Household”",
+    "repeatable": "Repeat during the day",
+    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately."
   },
   "routines": {
     "section": "Routines",
@@ -389,7 +391,11 @@
       "email_taken": "This email address is already in use.",
       "invalid_role": "This account role is not allowed.",
       "rate_limited": "Too many attempts. Please wait a few minutes.",
-      "csrf_failed": "Security check failed. Please reload the page."
+      "csrf_failed": "Security check failed. Please reload the page.",
+      "login_already_linked": "This login is already assigned to a person.",
+      "login_role_mismatch": "The login role does not match the person.",
+      "login_password_required": "Please set a password for the new login.",
+      "login_role_protected": "Your own parent account and administrator accounts cannot be changed into child accounts."
     },
     "setup": {
       "already_done": "Setup has already been completed",
@@ -424,7 +430,10 @@
       "step_invalid": "This step doesn't fit the routine. Please reload."
     },
     "completion": {
-      "day_changed": "A new day has started. The tasks have been updated."
+      "day_changed": "A new day has started. The tasks have been updated.",
+      "request_key_required": "Please reload this task.",
+      "request_key_used": "This request belongs to another execution.",
+      "not_repeatable": "This task is not repeatable."
     },
     "points": {
       "insufficient": "There aren't enough points for that."
@@ -499,6 +508,10 @@
       "child_required": "This feature is only available for children",
       "invalid_allowance": "Invalid pocket money amount",
       "invalid_pagination": "Invalid pagination parameters"
+    },
+    "profile": {
+      "own_only": "You can only access your own profile and tasks.",
+      "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family."
     }
   },
   "rewards": {
@@ -992,5 +1005,64 @@
     "repeat": "“{{title}}” comes back: move it to the cleaning plan",
     "repeat_hint": "Comes back: pick a room and an interval. This moves the entry from “To do” to the cleaning plan.",
     "need_room": "“{{title}}” comes back? The cleaning plan needs a room first."
+  },
+  "member_login": {
+    "title": "Login",
+    "add": "Add login",
+    "change": "Edit login",
+    "enable": "Set up a personal login",
+    "choose": "Assign login",
+    "new": "Create new credentials",
+    "new_password": "New password",
+    "keep_password": "Leave blank to keep the current password.",
+    "password_hint": "At least 10 characters.",
+    "role_hint": "Access follows the person’s role. Administrator access is preserved."
+  },
+  "pocket_money": {
+    "title": "Pocket money",
+    "bonus": "Bonus",
+    "no_child": "First add a child to your family.",
+    "child": "Child",
+    "automatic": "Automatic weekly pocket money",
+    "current": "Weekly amount",
+    "not_configured": "Not set up yet",
+    "weekly_amount": "Weekly amount in euros",
+    "save": "Save weekly amount",
+    "disable": "Disable automatic credits",
+    "disabled": "Automatic credits disabled. Existing entitlements are preserved.",
+    "saved": "Weekly amount saved. Pocket money is credited automatically.",
+    "invalid_amount": "Enter an amount between 0.01 and 1,000 euros with at most two decimal places.",
+    "schedule_hint": "The current week is credited when configured, then each week from Monday. Weeks already credited are never credited twice.",
+    "payment_status": "Payment received this week",
+    "expected": "Pocket money entitlement",
+    "received": "Confirmed receipt",
+    "missing": "Still outstanding: {{amount}}",
+    "confirmed": "Payment fully confirmed.",
+    "no_bank": "No bank account connected yet. Receipt has not been confirmed.",
+    "not_due": "No pocket money has been credited for this week yet.",
+    "bank_hint": "An entitlement is not a received payment. A future bank connection can reconcile receipts and report missing amounts.",
+    "no_balance": "No balance available yet",
+    "transactions": "Bank transactions"
+  },
+  "personal": {
+    "profile": "My profile",
+    "access": "My login",
+    "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family.",
+    "saved": "Profile saved.",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "password_saved": "Password changed. Other sessions have been signed out.",
+    "password_mismatch": "The new passwords do not match.",
+    "change_password": "Change password",
+    "manage_family": "Manage family",
+    "dashboard": "Dashboard",
+    "overdue": "Overdue",
+    "current": "Current tasks",
+    "my_points_one": "{{count}} point",
+    "my_points_other": "{{count}} points",
+    "all_tasks": "All my tasks",
+    "edit_schedule": "Set the schedule directly on this task",
+    "schedule_hint": "The existing schedule is preserved. If you replace it here, the selected days and time apply to all selected children. Tasks, assignments and previously earned points are preserved.",
+    "schedule_preserved": "The existing schedule is preserved until you replace it here."
   }
 }
