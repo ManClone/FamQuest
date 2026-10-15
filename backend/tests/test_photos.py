@@ -151,7 +151,11 @@ def test_too_large(client, parent):
 def test_photo_upload_requires_parent_role(client, admin):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-photos@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-photos@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
