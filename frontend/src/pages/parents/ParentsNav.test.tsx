@@ -81,7 +81,7 @@ describe('Menü im Elternbereich', () => {
     expect(more).toHaveAttribute('aria-expanded', 'true')
     await user.click(bar.getByRole('link', { name: 'Einstellungen' }))
 
-    expect(await screen.findByRole('heading', { name: 'Eltern-PIN' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Elternbereich' })).toBeVisible()
     expect(more).toHaveAttribute('aria-expanded', 'false')
     expect(bar.queryByRole('link', { name: 'Einstellungen' })).toBeNull()
   })
