@@ -1080,6 +1080,7 @@
     "earned_other": "{{count}} Erfahrungs-XP gesammelt",
     "level_hint": "{{count}} XP je Level. Einlösen kostet keine Erfahrung.",
     "reward_history": "Deine eingelösten Belohnungen",
-    "today_progress": "Dein Tag"
+    "today_progress": "Dein Tag",
+    "back_tasks": "Zurück zu meinen Aufgaben"
   }
 }

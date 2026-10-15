@@ -71,7 +71,7 @@ export function RewardsPage() {
         <header className="flex flex-wrap items-center gap-4">
           <Link
             to={me?.user.role === 'child' ? '/tasks' : '/rewards'}
-            aria-label={t('rewards.back')}
+            aria-label={t(me?.user.role === 'child' ? 'child_progress.back_tasks' : 'rewards.back')}
             className="flex size-20 shrink-0 items-center justify-center rounded-3xl bg-white shadow-sm hover:bg-orange-100 focus-visible:outline-4 focus-visible:outline-orange-400"
           >
             <BackIcon className="size-12" aria-hidden="true" />

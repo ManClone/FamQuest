@@ -1080,6 +1080,7 @@
     "earned_other": "{{count}} experience XP earned",
     "level_hint": "{{count}} XP per level. Redeeming rewards keeps your experience.",
     "reward_history": "Your redeemed rewards",
-    "today_progress": "Your day"
+    "today_progress": "Your day",
+    "back_tasks": "Back to my tasks"
   }
 }
