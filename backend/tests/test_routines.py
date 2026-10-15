@@ -236,7 +236,19 @@ def test_task_editor_keeps_routine_consistent(client, parent, lena):
     assert routines(client)[0]["steps"] == []
 
 
-def test_routines_need_unlocked_parent_area(client, admin):
+def test_routines_require_parent_role(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-routines@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-routines@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     assert client.get("/api/routines").status_code == 403
 
 
