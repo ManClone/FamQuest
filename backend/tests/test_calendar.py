@@ -63,9 +63,21 @@ def test_connect_requires_configuration(client, parent):
     assert response.json() == {"code": "calendar.not_configured"}
 
 
-def test_calendar_settings_need_unlocked_parent_area(client, admin, configured):
+def test_calendar_settings_require_parent_account(client, admin, configured):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-calendar@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-calendar@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     assert client.get("/api/calendar/settings").status_code == 403
-    response = client.post("/api/calendar/google/connect", headers=csrf(admin))
+    response = client.post("/api/calendar/google/connect", headers=csrf(login.json()))
     assert response.json() == {"code": "parent.locked"}
 
 
