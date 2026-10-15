@@ -2,6 +2,7 @@
 
 No database writes: callers may preview and override the plan before publishing.
 """
+
 from dataclasses import dataclass
 from typing import Literal
 

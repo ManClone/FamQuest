@@ -214,8 +214,11 @@ def undo_task(
         delete(TaskCompletion)
         .where(*condition)
         .returning(
-            TaskCompletion.member_id, TaskCompletion.points, TaskCompletion.approved_at,
-            TaskCompletion.money_cents, TaskCompletion.id,
+            TaskCompletion.member_id,
+            TaskCompletion.points,
+            TaskCompletion.approved_at,
+            TaskCompletion.money_cents,
+            TaskCompletion.id,
         )
     ).all()
     # Mehrere Zeilen nur, wenn eine Aufgabe erst nachträglich auf „Einer für alle“ gestellt wurde.
@@ -223,8 +226,12 @@ def undo_task(
         if completion.approved_at is None:
             continue
         book_money(
-            db, completion.member_id, -completion.money_cents,
-            "task_undone", task.title, completion.id,
+            db,
+            completion.member_id,
+            -completion.money_cents,
+            "task_undone",
+            task.title,
+            completion.id,
         )
         book(
             db,

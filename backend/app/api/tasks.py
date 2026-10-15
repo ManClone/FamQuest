@@ -90,7 +90,7 @@ def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
             db.delete(step)
 
     task.title, task.icon, task.points = body.title, body.icon, body.points
-    if 'money_cents' in body.model_fields_set or task.id is None:
+    if "money_cents" in body.model_fields_set or task.id is None:
         task.money_cents = body.money_cents
     task.description = body.description or None
     task.time_of_day, task.color, task.active = body.time_of_day, body.color, body.active

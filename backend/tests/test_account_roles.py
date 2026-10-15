@@ -15,11 +15,14 @@ def test_account_management_requires_parent_role(client, admin):
         json={"email": payload["email"], "password": payload["password"]},
     ).json()
     assert client.get("/api/auth/accounts").status_code == 403
-    assert client.post(
-        "/api/auth/accounts",
-        json={"email": "other@example.org", "password": "sehr-geheim-789", "role": "parent"},
-        headers=csrf(child),
-    ).status_code == 403
+    assert (
+        client.post(
+            "/api/auth/accounts",
+            json={"email": "other@example.org", "password": "sehr-geheim-789", "role": "parent"},
+            headers=csrf(child),
+        ).status_code
+        == 403
+    )
 
 
 def test_account_management_requires_login(client):
@@ -44,11 +47,14 @@ def test_account_creation_rejects_duplicates_and_invalid_roles(client, admin):
     payload = {"email": "tim@example.org", "password": "sehr-geheim-456", "role": "child"}
     assert client.post("/api/auth/accounts", json=payload, headers=csrf(admin)).status_code == 201
     assert client.post("/api/auth/accounts", json=payload, headers=csrf(admin)).status_code == 409
-    assert client.post(
-        "/api/auth/accounts",
-        json={**payload, "email": "another@example.org", "role": "admin"},
-        headers=csrf(admin),
-    ).status_code == 422
+    assert (
+        client.post(
+            "/api/auth/accounts",
+            json={**payload, "email": "another@example.org", "role": "admin"},
+            headers=csrf(admin),
+        ).status_code
+        == 422
+    )
 
 
 def test_child_cannot_access_money_or_allowance_settings(client, admin):
@@ -72,8 +78,11 @@ def test_child_cannot_access_money_or_allowance_settings(client, admin):
     assert child["parent_unlocked"] is False
     assert client.get(f"/api/members/{member_id}/money").status_code == 403
     assert client.get(f"/api/members/{member_id}/money/settings").status_code == 403
-    assert client.post(
-        f"/api/members/{member_id}/money/weekly-allowance",
-        json={"amount_cents": 500, "week_start": "2026-10-12"},
-        headers=csrf(child),
-    ).status_code == 403
+    assert (
+        client.post(
+            f"/api/members/{member_id}/money/weekly-allowance",
+            json={"amount_cents": 500, "week_start": "2026-10-12"},
+            headers=csrf(child),
+        ).status_code
+        == 403
+    )

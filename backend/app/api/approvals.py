@@ -4,8 +4,8 @@ from sqlalchemy import delete, func, select, update
 from app.auth import DbSession, ParentSession
 from app.errors import ApiError
 from app.models import Task, TaskCompletion
-from app.points import book
 from app.money import book_money
+from app.points import book
 from app.schemas import ApprovalOut
 
 router = APIRouter(tags=["approvals"])
@@ -67,8 +67,12 @@ def approve(completion_id: int, auth_session: ParentSession, db: DbSession) -> N
         user_id=auth_session.user_id,
     )
     book_money(
-        db, approved.member_id, approved.money_cents,
-        "task_completed", title or "Aufgabe", approved.id,
+        db,
+        approved.member_id,
+        approved.money_cents,
+        "task_completed",
+        title or "Aufgabe",
+        approved.id,
     )
     db.commit()
 

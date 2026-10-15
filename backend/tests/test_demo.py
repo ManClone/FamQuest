@@ -21,9 +21,7 @@ def test_demo_family(client, restore_clock, lang):
     demo.Demo(lang, now).run()
     demo.fixed_weather(now.astimezone(demo.ZoneInfo(demo.TIMEZONE)).date())
 
-    response = client.post(
-        "/api/auth/login", json={"email": demo.EMAIL, "password": demo.PASSWORD}
-    )
+    response = client.post("/api/auth/login", json={"email": demo.EMAIL, "password": demo.PASSWORD})
     assert response.status_code == 200
     today = client.get("/api/today").json()
     assert today["date"] == now.astimezone(demo.ZoneInfo(demo.TIMEZONE)).date().isoformat()

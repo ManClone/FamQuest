@@ -3,11 +3,12 @@
 Balances are shown separately so quest bonus reversals never masquerade as
 changes to unconditional pocket money. No payment is initiated here.
 """
+
 import datetime as dt
 
 from fastapi import APIRouter, status
-from sqlalchemy import select
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from app.api.members import get_member
 from app.auth import DbSession, ParentSession
@@ -166,10 +167,12 @@ def get_member_bank_balances(
     if member.role != "child":
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
     accounts = db.scalars(
-        select(MemberBankAccount).where(
+        select(MemberBankAccount)
+        .where(
             MemberBankAccount.member_id == member_id,
             MemberBankAccount.active.is_(True),
-        ).order_by(MemberBankAccount.id)
+        )
+        .order_by(MemberBankAccount.id)
     ).all()
     result = []
     for account in accounts:
@@ -179,14 +182,16 @@ def get_member_bank_balances(
             .order_by(BankBalanceSnapshot.observed_at.desc(), BankBalanceSnapshot.id.desc())
             .limit(1)
         )
-        result.append(BankBalanceOut(
-            account_id=account.id,
-            display_name=account.display_name,
-            provider=account.provider,
-            currency=account.currency,
-            balance_cents=snapshot.balance_cents if snapshot else None,
-            observed_at=snapshot.observed_at if snapshot else None,
-        ))
+        result.append(
+            BankBalanceOut(
+                account_id=account.id,
+                display_name=account.display_name,
+                provider=account.provider,
+                currency=account.currency,
+                balance_cents=snapshot.balance_cents if snapshot else None,
+                observed_at=snapshot.observed_at if snapshot else None,
+            )
+        )
     return result
 
 
@@ -217,6 +222,7 @@ def get_member_bank_transactions(
         .join(MemberBankAccount, BankTransaction.account_id == MemberBankAccount.id)
         .where(MemberBankAccount.member_id == member_id, MemberBankAccount.active.is_(True))
         .order_by(BankTransaction.booked_on.desc(), BankTransaction.id.desc())
-        .offset(offset).limit(limit)
+        .offset(offset)
+        .limit(limit)
     ).all()
     return [BankTransactionOut.model_validate(row, from_attributes=True) for row in rows]

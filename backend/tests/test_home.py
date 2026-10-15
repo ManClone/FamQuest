@@ -97,7 +97,9 @@ def test_home_layout_requires_parent_role(client, admin):
     assert login.status_code == 200, login.text
     tiles = [{"id": "meals", "visible": False}]
     assert (
-        client.put("/api/home/layout", json={"tiles": tiles}, headers=csrf(login.json())).status_code
+        client.put(
+            "/api/home/layout", json={"tiles": tiles}, headers=csrf(login.json())
+        ).status_code
         == 403
     )
     assert get_layout(client) == DEFAULT

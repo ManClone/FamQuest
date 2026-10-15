@@ -21,7 +21,8 @@ class HouseholdAssignmentTests(unittest.TestCase):
 
     def test_previous_work_counts(self):
         plan = suggest_week(
-            [HouseholdChore(5, 15)], [10, 20],
+            [HouseholdChore(5, 15)],
+            [10, 20],
             previous_minutes={10: 90, 20: 10},
         )
         self.assertEqual(plan[5], 20)

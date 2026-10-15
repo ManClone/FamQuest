@@ -1,4 +1,5 @@
 """Tests for adult XP approval on completed household chores."""
+
 from sqlalchemy import func, select
 
 from app.db import SessionLocal
@@ -8,23 +9,32 @@ from tests.test_chores import add_chore, add_room, done
 
 
 def parent_member(client, parent, name, color="blue"):
-    response = client.post("/api/members", json={
-        "name": name, "role": "parent", "color": color,
-    }, headers=csrf(parent))
+    response = client.post(
+        "/api/members",
+        json={
+            "name": name,
+            "role": "parent",
+            "color": color,
+        },
+        headers=csrf(parent),
+    )
     assert response.status_code == 201, response.text
     return response.json()["id"]
 
 
 def total(member_id):
     with SessionLocal() as db:
-        return db.scalar(select(func.coalesce(func.sum(PointTransaction.amount), 0)).where(
-            PointTransaction.member_id == member_id,
-        ))
+        return db.scalar(
+            select(func.coalesce(func.sum(PointTransaction.amount), 0)).where(
+                PointTransaction.member_id == member_id,
+            )
+        )
 
 
 def approve(client, parent, chore_id, member_id):
-    return client.post(f"/api/chores/{chore_id}/credit",
-                       json={"member_id": member_id}, headers=csrf(parent))
+    return client.post(
+        f"/api/chores/{chore_id}/credit", json={"member_id": member_id}, headers=csrf(parent)
+    )
 
 
 def test_approval_requires_completion(client, parent, now):
@@ -76,8 +86,13 @@ def test_legacy_update_preserves_adult_settings(client, parent, now):
     flo = parent_member(client, parent, "Flo")
     room = add_room(client, parent)
     item = add_chore(
-        client, parent, room["id"], adult_xp=15,
-        estimated_minutes=60, assignment_mode="fixed", fixed_member_id=flo,
+        client,
+        parent,
+        room["id"],
+        adult_xp=15,
+        estimated_minutes=60,
+        assignment_mode="fixed",
+        fixed_member_id=flo,
     )
     response = client.put(
         f"/api/chores/{item['id']}",
@@ -131,8 +146,10 @@ def test_uncredited_chore_can_be_undone_without_parent_unlock(client, parent, no
     item = add_chore(client, parent, room["id"], adult_xp=15)
     assert done(client, parent, item["id"]).status_code == 200
 
-    from app.models import AuthSession
     from sqlalchemy import update
+
+    from app.models import AuthSession
+
     with SessionLocal() as db:
         db.execute(update(AuthSession).values(parent_unlocked_until=None))
         db.commit()
@@ -145,15 +162,23 @@ def test_uncredited_chore_can_be_undone_without_parent_unlock(client, parent, no
 def test_legacy_update_validates_fixed_member_changes(client, parent, now):
     flo = parent_member(client, parent, "Flo", color="blue")
     from tests.test_tasks import add_member
+
     child = add_member(client, parent, name="Tim", color="purple")
     room = add_room(client, parent)
     item = add_chore(
-        client, parent, room["id"], assignment_mode="fixed", fixed_member_id=flo,
+        client,
+        parent,
+        room["id"],
+        assignment_mode="fixed",
+        fixed_member_id=flo,
     )
     original = client.get("/api/chores").json()["chores"][0]
     payload = {
-        "room_id": room["id"], "title": original["title"], "icon": original["icon"],
-        "interval_days": original["interval_days"], "active": True,
+        "room_id": room["id"],
+        "title": original["title"],
+        "icon": original["icon"],
+        "interval_days": original["interval_days"],
+        "active": True,
         "fixed_member_id": child,
     }
     response = client.put(f"/api/chores/{item['id']}", json=payload, headers=csrf(parent))
