@@ -82,7 +82,23 @@ def test_search_places(client, parent, open_meteo):
     assert (params["name"], params["language"]) == ("Köln", "de")
 
 
-def test_search_needs_unlocked_parent_area(client, admin, open_meteo):
+def test_search_requires_parent_role(client, admin, open_meteo):
+    account = client.post(
+        "/api/auth/accounts",
+        json={
+            "email": "child-weather@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-weather@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     response = client.get("/api/weather/places", params={"q": "Köln"})
     assert response.status_code == 403
     assert client.get("/api/weather/places", params={"q": "K"}).status_code in (403, 422)
