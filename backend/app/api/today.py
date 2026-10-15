@@ -213,13 +213,19 @@ def undo_task(
     removed = db.execute(
         delete(TaskCompletion)
         .where(*condition)
-        .returning(TaskCompletion.member_id, TaskCompletion.points, TaskCompletion.approved_at, TaskCompletion.money_cents, TaskCompletion.id)
+        .returning(
+            TaskCompletion.member_id, TaskCompletion.points, TaskCompletion.approved_at,
+            TaskCompletion.money_cents, TaskCompletion.id,
+        )
     ).all()
     # Mehrere Zeilen nur, wenn eine Aufgabe erst nachträglich auf „Einer für alle“ gestellt wurde.
     for completion in removed:
         if completion.approved_at is None:
             continue
-        book_money(db, completion.member_id, -completion.money_cents, "task_undone", task.title, completion.id)
+        book_money(
+            db, completion.member_id, -completion.money_cents,
+            "task_undone", task.title, completion.id,
+        )
         book(
             db,
             completion.member_id,
