@@ -97,7 +97,14 @@ function RoleHome() {
   return useMe().data?.user.role === 'child' ? <ChildTasksPage currentOnly /> : <DashboardPage />
 }
 function RoleTasks() {
-  return useMe().data?.user.role === 'child' ? <ChildTasksPage /> : <FamilyPage />
+  const week = useLocation().pathname === '/tasks/week'
+  return useMe().data?.user.role === 'child' ? (
+    <ChildTasksPage />
+  ) : week ? (
+    <TasksWeekPage />
+  ) : (
+    <FamilyPage />
+  )
 }
 function ParentOnly() {
   return useMe().data?.user.role === 'child' ? <Navigate to="/" replace /> : <Outlet />
@@ -113,7 +120,7 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route index element={<RoleHome />} />
             <Route path="/tasks" element={<RoleTasks />} />
-            <Route path="/tasks/week" element={<TasksWeekPage />} />
+            <Route path="/tasks/week" element={<RoleTasks />} />
             <Route path="/member/:memberId" element={<PersonPage />} />
             <Route path="/rewards" element={<RewardsPage />} />
             <Route path="/rewards/:memberId" element={<RewardsPage />} />

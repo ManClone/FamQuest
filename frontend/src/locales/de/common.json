@@ -1066,5 +1066,20 @@
     "schedule_hint": "Der bestehende Zeitplan bleibt erhalten. Wenn du ihn hier ersetzt, gelten die gewählten Tage und die Tageszeit für alle ausgewählten Kinder. Aufgaben, Zuordnungen und bisherige Punkte bleiben erhalten.",
     "schedule_preserved": "Der bestehende Zeitplan bleibt erhalten, bis du ihn hier ersetzt.",
     "manage_area": "{{area}} verwalten"
+  },
+  "child_progress": {
+    "overview": "Mein Abenteuer",
+    "adventure": "Jede Aufgabe bringt dich weiter!",
+    "stars_one": "{{count}} Stern",
+    "stars_other": "{{count}} Sterne",
+    "level": "Level {{level}}",
+    "remaining_one": "Noch {{count}} XP bis Level {{level}}",
+    "remaining_other": "Noch {{count}} XP bis Level {{level}}",
+    "level_progress": "Fortschritt zum nächsten Level",
+    "earned_one": "{{count}} Erfahrungs-XP gesammelt",
+    "earned_other": "{{count}} Erfahrungs-XP gesammelt",
+    "level_hint": "{{count}} XP je Level. Einlösen kostet keine Erfahrung.",
+    "reward_history": "Deine eingelösten Belohnungen",
+    "today_progress": "Dein Tag"
   }
 }

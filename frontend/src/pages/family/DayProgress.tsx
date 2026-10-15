@@ -38,10 +38,11 @@ interface DayProgressProps {
   tasks: TodayTask[]
   points: MemberPoints
   size: 'md' | 'lg'
+  showPoints?: boolean
 }
 
 /** Tagesfortschritt als Sterne-Reihe, darunter heute verdiente Punkte und Punktestand. */
-export function DayProgress({ member, tasks, points, size }: DayProgressProps) {
+export function DayProgress({ member, tasks, points, size, showPoints = true }: DayProgressProps) {
   const { t } = useTranslation()
   const tokens = colorTokens(member.color)
   const sizes = SIZES[size]
@@ -79,24 +80,26 @@ export function DayProgress({ member, tasks, points, size }: DayProgressProps) {
           )}
         </div>
       )}
-      <div className="flex flex-wrap justify-center gap-2">
-        <PointsBadge
-          icon={<GlowingStarIcon className={sizes.icon} aria-hidden="true" />}
-          value={points.today}
-          caption={t('points.today')}
-          label={t('points.today_label', { count: points.today })}
-          background={tokens.soft}
-          sizes={sizes}
-        />
-        <PointsBadge
-          icon={<TrophyIcon className={sizes.icon} aria-hidden="true" />}
-          value={points.total}
-          caption={t('points.total')}
-          label={t('points.total_label', { count: points.total })}
-          background="#ffffff"
-          sizes={sizes}
-        />
-      </div>
+      {showPoints && (
+        <div className="flex flex-wrap justify-center gap-2">
+          <PointsBadge
+            icon={<GlowingStarIcon className={sizes.icon} aria-hidden="true" />}
+            value={points.today}
+            caption={t('points.today')}
+            label={t('points.today_label', { count: points.today })}
+            background={tokens.soft}
+            sizes={sizes}
+          />
+          <PointsBadge
+            icon={<TrophyIcon className={sizes.icon} aria-hidden="true" />}
+            value={points.total}
+            caption={t('points.total')}
+            label={t('points.total_label', { count: points.total })}
+            background="#ffffff"
+            sizes={sizes}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -43,6 +43,7 @@ function routes(extra: Record<string, Response | ((body: unknown) => Response)> 
     'GET /api/auth/me': Response.json(makeMe()),
     'GET /api/members': Response.json([lena, tom, mama]),
     'GET /api/today': () => Response.json(today),
+    'GET /api/redemptions': Response.json({ redemptions: [], has_more: false }),
     'GET /api/rewards': Response.json([iceCream, cinema, hidden, tomsReward]),
     'POST /api/rewards/1/redeem': () => {
       today = {

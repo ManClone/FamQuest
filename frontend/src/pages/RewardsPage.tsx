@@ -14,6 +14,8 @@ import { useIdleTimeout } from '../useIdleTimeout'
 import { PERSON_IDLE_TIMEOUT_MS } from './PersonPage'
 import { useFamilyToday } from './family/useFamilyToday'
 import { RewardGrid } from './rewards/RewardGrid'
+import { RedemptionHistory } from './parents/RewardsSection'
+import { Section } from '../components/ui'
 
 function Balance({ total, size }: { total: number; size: 'md' | 'lg' }) {
   const { t } = useTranslation()
@@ -68,7 +70,7 @@ export function RewardsPage() {
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
         <header className="flex flex-wrap items-center gap-4">
           <Link
-            to="/rewards"
+            to={me?.user.role === 'child' ? '/tasks' : '/rewards'}
             aria-label={t('rewards.back')}
             className="flex size-20 shrink-0 items-center justify-center rounded-3xl bg-white shadow-sm hover:bg-orange-100 focus-visible:outline-4 focus-visible:outline-orange-400"
           >
@@ -82,6 +84,9 @@ export function RewardsPage() {
           <Balance total={total} size="lg" />
         </header>
         <RewardGrid member={member} balance={total} />
+        <Section title={t('child_progress.reward_history')}>
+          <RedemptionHistory member={member} timeZone={me?.family.timezone ?? 'Europe/Berlin'} />
+        </Section>
       </main>
     )
   }

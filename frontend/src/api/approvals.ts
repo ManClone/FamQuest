@@ -29,5 +29,5 @@ export const reject = (id: number) => api<void>('DELETE', `/approvals/${id}`)
 
 /** Bestätigen oder ablehnen; lädt danach Kontrollen, Familienansicht und Punkte neu. */
 export function useApprovalMutation<TVariables>(request: (variables: TVariables) => Promise<void>) {
-  return useParentMutation(request, [APPROVALS_KEY, TODAY_KEY, POINTS_KEY])
+  return useParentMutation(request, [APPROVALS_KEY, TODAY_KEY, POINTS_KEY, ['member-progress']])
 }

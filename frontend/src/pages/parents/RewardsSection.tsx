@@ -133,7 +133,7 @@ export function RewardsSection({
   )
 }
 
-function RedemptionHistory({ member, timeZone }: { member: Member; timeZone: string }) {
+export function RedemptionHistory({ member, timeZone }: { member: Member; timeZone: string }) {
   const { t } = useTranslation()
   const history = useRedemptions(member.id)
   const redemptions = history.data?.pages.flatMap((page) => page.redemptions) ?? []

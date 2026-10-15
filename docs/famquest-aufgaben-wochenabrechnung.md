@@ -8,7 +8,7 @@ Status: abgestimmtes Konzept; noch keine produktive Funktion. Umsetzung auf deve
 - Geld-Auszahlung = **max(0, in dieser Woche verdienter Geldbonus in Cent minus Geldstrafen in Cent)**. Beispiel: 3 € verdient, 4 € Strafen → 0 € Auszahlung. Überschüssige Geldstrafen verfallen zum Wochenwechsel, keine Schulden und kein Übertrag.
 - Das **bedingungslose Taschengeld bleibt immer unverändert** und wird separat ausgezahlt.
 - **Verfügbare XP** sind ein fortlaufendes, über Wochen ansparbares Guthaben für größere Belohnungen. XP-Strafen reduzieren dieses Guthaben; Belohnungskäufe ebenfalls. Guthaben nicht unter null reduzieren; wirksamen Abzug und eventuell nicht verrechneten Rest transparent ausweisen.
-- **Level-/Erfahrungs-XP** sind separat kumuliert. Level bleiben bei Strafabzügen und Belohnungskäufen bestehen. Levelgrenzen werden gesondert festgelegt.
+- **Level-/Erfahrungs-XP** sind separat kumuliert. Level bleiben bei Strafabzügen und Belohnungskäufen bestehen. Die Grenzen der Kinderanzeige stehen im Abschnitt Levelanzeige.
 - Konsequenzen nur durch Eltern, mit konfigurierbaren Vorlagen, optionaler Notiz, Urheber, Datum, Zielkind und nachvollziehbarer Stornierung/Gegenbuchung.
 - Wochenabschlüsse idempotent, historisch nachvollziehbar; nachträgliche Änderungen ausschließlich über protokollierte Korrekturen.
 - **Wichtig für den Code:** Die bereits angelegte `weekly_consequences.py` und Preview-API rechnen derzeit noch mit generischen `bonus_points`; sie sind **nicht** die freigegebene Euro-Abrechnung. Vor produktiver Verwendung auf Cent-Beträge und getrennte XP-Buchungen umstellen, Tests anpassen. Nicht ausrollen.
@@ -37,3 +37,7 @@ Status: abgestimmtes Konzept; noch keine produktive Funktion. Umsetzung auf deve
 5. QNAP-Deployment nach Backup und erfolgreichen CI-Tests; Root-Container-Sicherheitsproblem vor externer Freigabe beheben.
 
 **Wichtig:** Keine automatische Abrechnung auf bestehende Daten anwenden, bevor die Trennung zwischen Geldbonus in Cent, verfügbaren XP und Level-XP getestet ist.
+
+## Levelanzeige
+
+Die Kinderansicht zeigt Level 1 ab 0 Erfahrungs-XP und danach ein Level je 100 Erfahrungs-XP. Grundlage ist ausschliesslich das bestehende Level-XP-Ledger aus bestaetigten Aufgaben (einschliesslich Ruecknahmen), nicht das ausgebbare Guthaben. Belohnungseinloesungen und Strafabzuege verringern die Erfahrung nicht. Die Schwellen dienen der Anzeige und aendern keine Buchungen oder Taschengeldbetraege.
