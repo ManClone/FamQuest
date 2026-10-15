@@ -1200,3 +1200,6 @@ a network, you must publish its source code under the same licence.
 FamQuest is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; see the
 licence for details. The bundled [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) icons
 are © Microsoft, MIT licence.
+
+
+Manage each person’s optional login under **Parents > Family**: create credentials when adding a person, edit their email/password, or explicitly assign an existing unassigned account. An empty password keeps the current password. Access follows the person’s role; administrator access is preserved. Changing a password ends other sessions. No database migration is needed.

@@ -16,7 +16,7 @@ from app.auth import (
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
 from app.logs import logger
-from app.models import User
+from app.models import FamilyMember, User
 from app.schemas import Email, MeResponse, Password
 from app.security import hash_secret, login_limiter, needs_rehash, verify_secret
 
@@ -78,12 +78,18 @@ class AccountOut(BaseModel):
     id: int
     email: str
     role: str
+    member_id: int | None = None
 
 
 @router.get("/accounts", dependencies=[NotInDemo])
 def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
+    links = dict(
+        db.execute(
+            select(FamilyMember.user_id, FamilyMember.id).where(FamilyMember.user_id.is_not(None))
+        ).all()
+    )
     return [
-        AccountOut(id=user.id, email=user.email, role=user.role)
+        AccountOut(id=user.id, email=user.email, role=user.role, member_id=links.get(user.id))
         for user in db.scalars(select(User).order_by(User.id))
     ]
 

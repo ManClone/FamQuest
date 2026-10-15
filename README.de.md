@@ -1232,3 +1232,6 @@ betreibt, muss deren Quellcode unter derselben Lizenz veröffentlichen.
 FamQuest wird ohne jede Gewährleistung bereitgestellt; Details stehen im Lizenztext (englisch). Die
 mitgelieferten [Fluent-Emoji](https://github.com/microsoft/fluentui-emoji)-Symbole sind © Microsoft,
 MIT-Lizenz.
+
+
+Den optionalen Login jeder Person verwaltet ihr unter **Elternbereich > Familie**: Zugangsdaten beim Anlegen ergänzen, E-Mail/Passwort ändern oder ein vorhandenes, noch nicht zugeordnetes Konto auswählen. Ein leeres Passwort behält das bisherige Passwort bei. Die Rechte folgen der Personenrolle; Administratorrechte bleiben erhalten. Eine Passwortänderung beendet andere Sitzungen. Es ist keine Datenbankmigration erforderlich.

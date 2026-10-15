@@ -120,7 +120,19 @@ class MeResponse(BaseModel):
     parent_unlocked: bool
 
 
+class MemberLoginCredentials(BaseModel):
+    model_config = {"extra": "forbid"}
+    email: Email
+    password: Password | None = None
+
+
+class MemberExistingLogin(BaseModel):
+    model_config = {"extra": "forbid"}
+    account_id: int = Field(gt=0)
+
+
 class MemberIn(BaseModel):
+    login: MemberLoginCredentials | MemberExistingLogin | None = None
     name: MemberName
     role: MemberRole
     color: MemberColor

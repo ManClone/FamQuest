@@ -389,7 +389,11 @@
       "email_taken": "Diese E-Mail-Adresse wird bereits verwendet.",
       "invalid_role": "Diese Kontorolle ist nicht erlaubt.",
       "rate_limited": "Zu viele Versuche. Bitte warte ein paar Minuten.",
-      "csrf_failed": "Sicherheitsprüfung fehlgeschlagen. Bitte lade die Seite neu."
+      "csrf_failed": "Sicherheitsprüfung fehlgeschlagen. Bitte lade die Seite neu.",
+      "login_already_linked": "Dieser Login ist bereits einer Person zugeordnet.",
+      "login_role_mismatch": "Die Rolle des Logins passt nicht zur Person.",
+      "login_password_required": "Bitte lege ein Passwort für den neuen Login fest.",
+      "login_role_protected": "Das eigene Elternkonto und Administratorkonten können nicht in ein Kinderkonto umgewandelt werden."
     },
     "setup": {
       "already_done": "Die Einrichtung ist bereits abgeschlossen",
@@ -992,5 +996,17 @@
     "repeat": "„{{title}}“ kommt wieder: in den Putzplan übernehmen",
     "repeat_hint": "Kommt wieder: Wählt Raum und Abstand. Der Eintrag wandert damit von „Zu erledigen“ in den Putzplan.",
     "need_room": "„{{title}}“ kommt wieder? Dafür braucht der Putzplan zuerst einen Raum."
+  },
+  "member_login": {
+    "title": "Login",
+    "add": "Login hinzufügen",
+    "change": "Login ändern",
+    "enable": "Eigenen Login einrichten",
+    "choose": "Login zuordnen",
+    "new": "Neue Zugangsdaten anlegen",
+    "new_password": "Neues Passwort",
+    "keep_password": "Leer lassen, um das bisherige Passwort zu behalten.",
+    "password_hint": "Mindestens 10 Zeichen.",
+    "role_hint": "Die Zugriffsrechte folgen der Rolle der Person. Administratorrechte bleiben erhalten."
   }
 }

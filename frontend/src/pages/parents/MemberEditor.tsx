@@ -18,6 +18,7 @@ import {
   uploadAvatar,
   useMembersMutation,
 } from '../../api/members'
+import { useAccounts } from '../../api/accounts'
 import { ApiError } from '../../api/client'
 import { Avatar } from '../../components/Avatar'
 import { AvatarCropper } from '../../components/AvatarCropper'
@@ -42,6 +43,13 @@ interface MemberEditorProps {
 
 export function MemberEditor({ member, members, onSaved, onDeleted, onCancel }: MemberEditorProps) {
   const { t } = useTranslation()
+  const accounts = useAccounts()
+  const linked = accounts.data?.find((account) => account.member_id === member?.id)
+  const [addLogin, setAddLogin] = useState(false)
+  const [loginEmail, setLoginEmail] = useState<string | undefined>()
+  const [loginPassword, setLoginPassword] = useState('')
+  const [existingId, setExistingId] = useState('')
+  const loginEnabled = Boolean(linked) || addLogin
   const takenBy = new Map(
     members.filter((other) => other.id !== member?.id).map((other) => [other.color, other.name]),
   )
@@ -82,7 +90,22 @@ export function MemberEditor({ member, members, onSaved, onDeleted, onCancel }: 
     setNameMissing(!trimmed)
     if (!trimmed) return
     save.mutate(
-      { name: trimmed, role, color, event_symbols: showSymbols },
+      {
+        name: trimmed,
+        role,
+        color,
+        event_symbols: showSymbols,
+        ...(loginEnabled
+          ? {
+              login: existingId
+                ? { account_id: Number(existingId) }
+                : {
+                    email: loginEmail ?? linked?.email ?? '',
+                    ...(loginPassword ? { password: loginPassword } : {}),
+                  },
+            }
+          : {}),
+      },
       { onSuccess: (saved) => onSaved(saved.name) },
     )
   }
@@ -152,7 +175,10 @@ export function MemberEditor({ member, members, onSaved, onDeleted, onCancel }: 
                     name="role"
                     value={value}
                     checked={role === value}
-                    onChange={() => setRole(value)}
+                    onChange={() => {
+                      setRole(value)
+                      setExistingId('')
+                    }}
                     className="peer sr-only"
                   />
                   <span className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-slate-200 p-3 text-lg font-bold text-slate-700 peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-focus-visible:outline-4 peer-focus-visible:outline-orange-400">
@@ -217,8 +243,77 @@ export function MemberEditor({ member, members, onSaved, onDeleted, onCancel }: 
           <p className="text-base text-slate-500">{t('members.event_symbols_hint')}</p>
         </div>
 
+        <fieldset className="flex flex-col gap-3 rounded-2xl border-2 border-orange-100 p-4">
+          <legend className="px-2 text-lg font-bold">{t('member_login.title')}</legend>
+          {accounts.isError && <Alert>{errorMessage(t, accounts.error)}</Alert>}
+          {!linked && (
+            <Switch
+              checked={addLogin}
+              showLabel
+              label={t('member_login.enable')}
+              onChange={setAddLogin}
+            />
+          )}
+          {loginEnabled && (
+            <>
+              {!linked && (
+                <label className="flex flex-col gap-2 font-bold">
+                  {t('member_login.choose')}
+                  <select
+                    className="min-h-14 rounded-xl border-2 border-slate-200 px-3"
+                    value={existingId}
+                    onChange={(event) => {
+                      setExistingId(event.target.value)
+                      setLoginPassword('')
+                    }}
+                  >
+                    <option value="">{t('member_login.new')}</option>
+                    {accounts.data
+                      ?.filter(
+                        (account) =>
+                          account.member_id == null &&
+                          (account.role === role ||
+                            (account.role === 'admin' && role === 'parent')),
+                      )
+                      .map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.email}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+              {!existingId && (
+                <>
+                  <TextField
+                    label={t('login.email')}
+                    type="email"
+                    autoComplete="username"
+                    required
+                    value={loginEmail ?? linked?.email ?? ''}
+                    onChange={(event) => setLoginEmail(event.target.value)}
+                  />
+                  <TextField
+                    label={t(linked ? 'member_login.new_password' : 'login.password')}
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={10}
+                    required={!linked}
+                    value={loginPassword}
+                    onChange={(event) => setLoginPassword(event.target.value)}
+                  />
+                  <p className="text-base text-slate-500">
+                    {t(linked ? 'member_login.keep_password' : 'member_login.password_hint')}
+                  </p>
+                </>
+              )}
+              <p className="text-base text-slate-500">{t('member_login.role_hint')}</p>
+            </>
+          )}
+        </fieldset>
+
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" disabled={busy || (loginEnabled && !accounts.isSuccess)}>
             {t('members.save')}
           </Button>
           <Button variant="secondary" onClick={onCancel} disabled={busy}>

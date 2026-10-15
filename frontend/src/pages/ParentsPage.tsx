@@ -22,7 +22,7 @@ import { ChoreRoomEditor } from './parents/ChoreRoomEditor'
 import { ChoreWizard } from './parents/ChoreWizard'
 import { ChoresSection } from './parents/ChoresSection'
 import { DeviceSection } from './parents/DeviceSection'
-import { AccountsSection, FamilySection } from './parents/FamilySection'
+import { FamilySection } from './parents/FamilySection'
 import { MemberEditor } from './parents/MemberEditor'
 import { MembersSection } from './parents/MembersSection'
 import { PointsEditor } from './parents/PointsEditor'
@@ -451,7 +451,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
           <>
             <FamilySection me={me} onSaved={setNotice} />
             <WeatherSection onSaved={setNotice} />
-            <AccountsSection />
             <DeviceSection />
             <Section title={t('parents.account_section')}>
               <p className="text-lg text-slate-600">

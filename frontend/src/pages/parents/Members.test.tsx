@@ -14,7 +14,7 @@ vi.mock('../../components/AvatarCropper', () => ({
   ),
 }))
 
-const unlocked = { 'GET /api/setup/status': setupDone }
+const unlocked = { 'GET /api/setup/status': setupDone, 'GET /api/auth/accounts': Response.json([]) }
 const me = () => Response.json(makeMe({ parent_unlocked: true }))
 
 beforeEach(async () => {

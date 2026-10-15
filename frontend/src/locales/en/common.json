@@ -389,7 +389,11 @@
       "email_taken": "This email address is already in use.",
       "invalid_role": "This account role is not allowed.",
       "rate_limited": "Too many attempts. Please wait a few minutes.",
-      "csrf_failed": "Security check failed. Please reload the page."
+      "csrf_failed": "Security check failed. Please reload the page.",
+      "login_already_linked": "This login is already assigned to a person.",
+      "login_role_mismatch": "The login role does not match the person.",
+      "login_password_required": "Please set a password for the new login.",
+      "login_role_protected": "Your own parent account and administrator accounts cannot be changed into child accounts."
     },
     "setup": {
       "already_done": "Setup has already been completed",
@@ -992,5 +996,17 @@
     "repeat": "“{{title}}” comes back: move it to the cleaning plan",
     "repeat_hint": "Comes back: pick a room and an interval. This moves the entry from “To do” to the cleaning plan.",
     "need_room": "“{{title}}” comes back? The cleaning plan needs a room first."
+  },
+  "member_login": {
+    "title": "Login",
+    "add": "Add login",
+    "change": "Edit login",
+    "enable": "Set up a personal login",
+    "choose": "Assign login",
+    "new": "Create new credentials",
+    "new_password": "New password",
+    "keep_password": "Leave blank to keep the current password.",
+    "password_hint": "At least 10 characters.",
+    "role_hint": "Access follows the person’s role. Administrator access is preserved."
   }
 }
