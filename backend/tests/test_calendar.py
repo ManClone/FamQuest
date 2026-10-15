@@ -66,7 +66,11 @@ def test_connect_requires_configuration(client, parent):
 def test_calendar_settings_require_parent_account(client, admin, configured):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-calendar@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-calendar@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
