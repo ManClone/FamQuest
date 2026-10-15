@@ -3,16 +3,33 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import i18n from '../i18n'
-import { makeChorePlan, makeMe, makeMember, makeToday, makeTodayTask, mockApi, renderApp, setupDone } from '../test/utils'
+import {
+  makeChorePlan,
+  makeMe,
+  makeMember,
+  makeToday,
+  makeTodayTask,
+  mockApi,
+  renderApp,
+  setupDone,
+} from '../test/utils'
 
-beforeEach(async () => { await i18n.changeLanguage('de') })
-afterEach(() => { vi.unstubAllGlobals() })
+beforeEach(async () => {
+  await i18n.changeLanguage('de')
+})
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 function routes(child: boolean) {
   return {
     'GET /api/setup/status': setupDone,
-    'GET /api/auth/me': Response.json(makeMe({ member_id: 1,
-      user: { email: 'lena@example.org', role: child ? 'child' : 'parent', language: null } })),
+    'GET /api/auth/me': Response.json(
+      makeMe({
+        member_id: 1,
+        user: { email: 'lena@example.org', role: child ? 'child' : 'parent', language: null },
+      }),
+    ),
     'GET /api/members': Response.json([makeMember()]),
     'GET /api/today': Response.json(makeToday({ tasks: [makeTodayTask({ title: 'Katzenklo' })] })),
     'GET /api/tasks': Response.json([]),
@@ -27,7 +44,10 @@ it('gives children exactly four tabs and no household request', async () => {
   renderApp('/')
   const nav = within(await screen.findByRole('navigation'))
   expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([
-    'Heute', 'Aufgaben', 'Belohnungen', 'Einstellungen',
+    'Heute',
+    'Aufgaben',
+    'Belohnungen',
+    'Einstellungen',
   ])
   expect(nav.queryByRole('link', { name: 'Haushalt' })).not.toBeInTheDocument()
   expect(calls.some((call) => call.key === 'GET /api/chores')).toBe(false)
@@ -37,14 +57,21 @@ it('gives parents dashboard, household, rewards and settings', async () => {
   mockApi(routes(false))
   renderApp('/')
   await screen.findByRole('heading', { name: 'Dashboard', level: 1 })
-  expect(within(screen.getByRole('navigation')).getAllByRole('link').map((link) => link.textContent))
-    .toEqual(['Dashboard', 'Haushalt', 'Belohnungen', 'Einstellungen'])
+  expect(
+    within(screen.getByRole('navigation'))
+      .getAllByRole('link')
+      .map((link) => link.textContent),
+  ).toEqual(['Dashboard', 'Haushalt', 'Belohnungen', 'Einstellungen'])
 })
 
 it('lets children edit only their own profile and device settings', async () => {
   const user = userEvent.setup()
-  const calls = mockApi({ ...routes(true),
-    'PUT /api/profile': Response.json({ email: 'lena@example.org', member: makeMember({ name: 'Leni' }) }),
+  const calls = mockApi({
+    ...routes(true),
+    'PUT /api/profile': Response.json({
+      email: 'lena@example.org',
+      member: makeMember({ name: 'Leni' }),
+    }),
   })
   renderApp('/settings')
   const name = await screen.findByLabelText('Name')

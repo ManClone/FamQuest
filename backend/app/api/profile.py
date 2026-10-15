@@ -10,7 +10,7 @@ from app.demo_mode import NotInDemo
 from app.errors import ApiError
 from app.models import AuthSession, FamilyMember, User
 from app.schemas import MemberName, MemberOut, Password
-from app.security import hash_secret, verify_secret
+from app.security import hash_secret, login_limiter, verify_secret
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -54,9 +54,19 @@ def update_profile(body: ProfileIn, auth: CurrentSession, db: DbSession) -> Prof
 
 @router.put("/password", status_code=204, dependencies=[NotInDemo])
 def change_password(body: PasswordIn, auth: CurrentSession, db: DbSession) -> None:
-    user = db.scalar(select(User).where(User.id == auth.user_id).with_for_update())
+    key = f"profile-password:{auth.user_id}"
+    if login_limiter.is_blocked(key):
+        raise ApiError(429, "auth.rate_limited")
+    user = db.scalar(
+        select(User)
+        .where(User.id == auth.user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if user is None or not verify_secret(user.password_hash, body.current_password):
+        login_limiter.record_failure(key)
         raise ApiError(403, "auth.invalid_credentials")
+    login_limiter.reset(key)
     user.password_hash = hash_secret(body.new_password)
     db.execute(delete(AuthSession).where(AuthSession.user_id == user.id, AuthSession.id != auth.id))
     db.commit()

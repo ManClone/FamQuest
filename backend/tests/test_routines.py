@@ -327,3 +327,38 @@ def test_migration_turns_child_tasks_into_routines():
         (1, "morning", [1, 2, 3, 4, 5], [2, 1]),
         (1, "morning", [6, 7], [1]),
     ]
+
+
+def test_task_editor_can_replace_legacy_schedule_without_losing_completions(
+    client, parent, lena, now
+):
+    task = add_task(client, parent, [lena])
+    routine = new_routine(client, parent, lena, WEEKEND)
+    assert set_steps(client, parent, routine["id"], [{"task_id": task}]).status_code == 200
+    assert complete(client, parent, task, lena).status_code == 204
+
+    # Changing a title alone keeps the existing routine and its weekdays.
+    response = client.put(
+        f"/api/tasks/{task}",
+        json=task_data([lena], title="Updated"),
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    assert routines(client)[0]["steps"] == [{"task_id": task, "optional": False}]
+
+    # Explicitly editing the schedule moves this task out of the legacy routine.
+    response = client.put(
+        f"/api/tasks/{task}",
+        json=task_data(
+            [lena], title="Updated", time_of_day="evening", replace_routine_schedule=True
+        ),
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    assert routines(client)[0]["steps"] == []
+    updated = next(t for t in client.get("/api/tasks").json() if t["id"] == task)
+    assert updated["time_of_day"] == "evening"
+    assert updated["routine_member_ids"] == []
+    assert updated["member_ids"] == [lena]
+    entry = next(t for t in today(client)["tasks"] if t["id"] == task)
+    assert entry["done_member_ids"] == [lena]

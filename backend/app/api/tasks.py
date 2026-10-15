@@ -5,7 +5,7 @@ from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.errors import ApiError
 from app.models import Routine, RoutineStep, Task, TaskAssignment, TaskRecurrence
-from app.schemas import MemberPositionOut, TaskIn, TaskOut
+from app.schemas import MemberPositionOut, TaskIn, TaskOut, WeeklyRecurrence
 
 router = APIRouter(tags=["tasks"])
 
@@ -145,6 +145,16 @@ def list_tasks(auth: CurrentSession, db: DbSession) -> list[TaskOut]:
             out.member_ids = [own]
             out.positions = [entry for entry in out.positions if entry.member_id == own]
             out.routine_member_ids = [own] if own in out.routine_member_ids else []
+            if out.routine_member_ids:
+                schedules = db.scalars(
+                    select(Routine)
+                    .join(RoutineStep)
+                    .where(Routine.member_id == own, RoutineStep.task_id == task.id)
+                )
+                weekdays = sorted({day for routine in schedules for day in routine.weekdays})
+                if not weekdays:
+                    continue
+                out.recurrence = WeeklyRecurrence(kind="weekly", weekdays=weekdays)
         result.append(out)
     return result
 

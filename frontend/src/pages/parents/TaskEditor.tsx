@@ -13,7 +13,7 @@ import CheckIcon from '~icons/lucide/check'
 
 import { ApiError } from '../../api/client'
 import type { Member } from '../../api/members'
-import { useAddRoutineStep } from '../../api/routines'
+import { useAddRoutineStep, useRoutines } from '../../api/routines'
 import {
   type RecurrenceKind,
   MAX_INTERVAL_DAYS,
@@ -125,6 +125,10 @@ export function TaskEditor({
   )
   const remove = useTasksMutation((id: number) => deleteTask(id))
   const addStep = useAddRoutineStep()
+  const schedules =
+    useRoutines().data?.filter((routine) =>
+      routine.steps.some((step) => step.task_id === task?.id),
+    ) ?? []
   // Für diese Personen ist die Aufgabe Schritt einer Routine; deren Tage bestimmt die Routine.
   const routineMembers = members.filter((member) => task?.routine_member_ids.includes(member.id))
   const [replaceSchedule, setReplaceSchedule] = useState(false)
@@ -485,12 +489,17 @@ export function TaskEditor({
         {routineStep || (routineMembers.length > 0 && !replaceSchedule) ? (
           routineMembers.length > 0 && (
             <p className="rounded-2xl bg-orange-50 px-4 py-3 text-lg text-orange-900">
-              {t('routines.task_in_routines', {
-                names: new Intl.ListFormat(language, { type: 'conjunction' }).format(
-                  routineMembers.map((member) => member.name),
-                ),
-                time: t(`times_of_day.${task?.time_of_day ?? 'morning'}`),
-              })}
+              {schedules.length > 0
+                ? schedules.map((schedule) => (
+                    <span key={schedule.id} className="block">
+                      {members.find((member) => member.id === schedule.member_id)?.name}:{' '}
+                      {schedule.weekdays
+                        .map((day) => weekdayName(language, day, 'short'))
+                        .join(', ')}{' '}
+                      · {t(`times_of_day.${schedule.time_of_day}`)}
+                    </span>
+                  ))
+                : t('personal.schedule_preserved')}
             </p>
           )
         ) : (

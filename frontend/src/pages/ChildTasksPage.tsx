@@ -7,6 +7,7 @@ import { daysUntilDue, pointsFor } from '../api/today'
 import { TaskIcon } from '../components/TaskIcon'
 import { Alert, Section } from '../components/ui'
 import { errorMessage } from '../errors'
+import { ViewToggle } from './family/ViewToggle'
 import { TaskGroups } from './family/TaskGroups'
 import { tasksFor, useFamilyToday } from './family/useFamilyToday'
 
@@ -46,6 +47,7 @@ export function ChildTasksPage({ currentOnly = false }: { currentOnly?: boolean 
       <p className="text-2xl font-bold">
         {t('personal.my_points', { count: pointsFor(today, member.id).total })}
       </p>
+      {!currentOnly && <ViewToggle current="day" />}
       <TaskGroups
         member={member}
         tasks={tasks}
