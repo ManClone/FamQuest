@@ -52,9 +52,6 @@ def test_demo_login(client, admin, demo_on):
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [
-        ("PUT", "/api/parent/pin", {"pin": "9999"}),
-        ("DELETE", "/api/parent/pin", None),
-        ("POST", "/api/parent/pin/reset", {"password": "x", "pin": "9999"}),
         (
             "PUT",
             "/api/parent/family",
@@ -72,8 +69,12 @@ def test_blocked_in_demo(client, parent, demo_on, method, path, body):
 
 
 def test_not_blocked_without_demo(client, parent):
-    response = client.put("/api/parent/pin", json={"pin": "9999"}, headers=csrf(parent))
-    assert response.status_code == 200
+    response = client.put(
+        "/api/parent/family",
+        json={"name": "Familie Test", "default_language": "de", "timezone": "Europe/Berlin"},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
 
 
 def test_reset(client, restore_clock, demo_on):
@@ -86,7 +87,6 @@ def test_reset(client, restore_clock, demo_on):
     names = [m["name"] for m in client.get("/api/members").json()]
     assert names == ["Mia", "Ben", "Anna", "Tom"]
     # Was Besucher ändern, ist nach dem nächsten Zurücksetzen wieder weg.
-    client.post("/api/parent/unlock", json={"pin": demo.PIN}, headers=csrf(me))
     client.delete("/api/members/1", headers=csrf(me))
     assert len(client.get("/api/members").json()) == 3
 
