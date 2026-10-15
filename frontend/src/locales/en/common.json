@@ -125,7 +125,8 @@
     "connections": "Calendar & weather",
     "settings": "Settings",
     "more": "More",
-    "household": "Household"
+    "household": "Household",
+    "profile": "Profile"
   },
   "pinpad": {
     "delete": "Delete digit",

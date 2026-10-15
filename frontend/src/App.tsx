@@ -123,8 +123,10 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route element={<ParentOnly />}>
               <Route path="/household" element={<ChoresPage />} />
-              <Route path="/parents/:area?" element={<ParentsPage />} />
             </Route>
+          </Route>
+          <Route element={<ParentOnly />}>
+            <Route path="/parents/:area?" element={<ParentsPage />} />
           </Route>
           <Route path="/frame" element={<FramePage />} />
           <Route path={KITCHEN_PATH} element={<KitchenPage />} />

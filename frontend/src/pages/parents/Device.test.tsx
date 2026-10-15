@@ -31,7 +31,7 @@ describe('Einstellungen für dieses Gerät', () => {
       'GET /api/approvals': Response.json([]),
       'GET /api/today': Response.json(makeToday()),
     })
-    renderApp('/parents/settings')
+    renderApp('/parents/profile')
 
     expect(await screen.findByRole('radio', { name: 'Normal' })).toBeChecked()
     expect(screen.getByTestId('display-info')).toHaveTextContent(/^Anzeige: \d+ × \d+ px/)
@@ -52,7 +52,7 @@ describe('Einstellungen für dieses Gerät', () => {
       'GET /api/auth/me': Response.json(makeMe({ parent_unlocked: true })),
       'GET /api/today': Response.json(makeToday()),
     })
-    renderApp('/parents/settings')
+    renderApp('/parents/profile')
 
     expect(await screen.findByRole('radio', { name: 'Aus' })).toBeChecked()
     await user.click(screen.getByRole('radio', { name: '5 Minuten' }))

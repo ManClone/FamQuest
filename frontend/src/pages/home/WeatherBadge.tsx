@@ -22,7 +22,7 @@ export function WeatherBadge() {
   if (!data.place || !data.current) {
     return (
       <Link
-        to="/parents/settings"
+        to="/parents/family"
         className="flex min-h-12 items-center gap-2 rounded-2xl px-3 text-base font-bold text-slate-500 hover:bg-white/80 focus-visible:outline-4 focus-visible:outline-orange-400"
       >
         <SunCloudIcon className="size-8 opacity-60 grayscale" aria-hidden="true" />
