@@ -91,7 +91,11 @@ def test_needs_login(client):
 def test_managing_requires_parent_account(client, admin):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-chores@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-chores@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
@@ -525,7 +529,11 @@ def test_wizard_can_run_again_without_duplicates(client, parent, now):
 def test_wizard_requires_parent_role(client, admin):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-wizard@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-wizard@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(admin),
     )
     assert account.status_code == 201, account.text
