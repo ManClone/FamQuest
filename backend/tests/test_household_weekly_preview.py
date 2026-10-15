@@ -31,7 +31,11 @@ def test_weekly_preview_keeps_fixed_shopping_and_balances_work(client, parent, n
 def test_weekly_preview_requires_parent_role(client, parent, now):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-preview@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-preview@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(parent),
     )
     assert account.status_code == 201, account.text
