@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.members import get_member
 from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
-from app.auth import CurrentSession, DbSession, ParentSession, get_family, is_parent_unlocked
+from app.auth import CurrentSession, DbSession, ParentSession, get_family
 from app.chores import chore_state
 from app.errors import ApiError
 from app.household_assignment import HouseholdChore, suggest_week
@@ -679,8 +679,8 @@ def undo_done(chore_id: int, auth_session: CurrentSession, db: DbSession) -> Cho
     if completion is not None:
         credit = db.get(ChoreCredit, completion.id)
         if credit is not None:
-            # Undoing parent-approved XP requires an unlocked parent session.
-            if not is_parent_unlocked(auth_session, get_family(db)):
+            # Reversing parent-approved XP requires a parent account.
+            if auth_session.user.role not in ("admin", "parent"):
                 raise ApiError(status.HTTP_403_FORBIDDEN, "parent.locked")
             lock_member(db, credit.member_id)
             book(db, credit.member_id, -credit.amount, "chore_undone",
