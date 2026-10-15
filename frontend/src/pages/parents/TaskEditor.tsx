@@ -112,6 +112,7 @@ export function TaskEditor({
   const [color, setColor] = useState<MemberColor | null>(task?.color ?? null)
   const [description, setDescription] = useState(task?.description ?? '')
   const [active, setActive] = useState(task?.active ?? true)
+  const [repeatable, setRepeatable] = useState(task?.repeatable ?? false)
   const [needsApproval, setNeedsApproval] = useState(task?.needs_approval ?? false)
   const [pickingIcon, setPickingIcon] = useState(false)
   const [pickingTemplate, setPickingTemplate] = useState(false)
@@ -170,7 +171,8 @@ export function TaskEditor({
               extra: false,
               color,
               active,
-              needs_approval: needsApproval,
+              needs_approval: needsApproval || repeatable,
+        ...(repeatable || task?.repeatable ? { repeatable } : {}),
               shared: false,
               recurrence: { kind: 'daily' },
               member_ids: [routineStep.memberId],
@@ -194,7 +196,8 @@ export function TaskEditor({
         extra: block === 'extra',
         color,
         active,
-        needs_approval: needsApproval,
+        needs_approval: needsApproval || repeatable,
+        ...(repeatable || task?.repeatable ? { repeatable } : {}),
         // Bei nur einer Person hat „Einer für alle“ keine Wirkung.
         shared: shared && memberIds.length > 1,
         recurrence:
@@ -306,12 +309,18 @@ export function TaskEditor({
 
         <div className="flex flex-col gap-1">
           <Switch
-            checked={needsApproval}
-            onChange={setNeedsApproval}
+            checked={needsApproval || repeatable}
+            onChange={(value) => { if (!repeatable) setNeedsApproval(value) }}
             label={t('tasks.needs_approval')}
             showLabel
           />
           <p className="text-base text-slate-500">{t('tasks.needs_approval_hint')}</p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Switch checked={repeatable} onChange={setRepeatable}
+            label={t('tasks.repeatable')} showLabel />
+          <p className="text-base text-slate-500">{t('tasks.repeatable_hint')}</p>
         </div>
 
         {!routineStep && (

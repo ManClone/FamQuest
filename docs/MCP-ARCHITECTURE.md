@@ -20,7 +20,7 @@ Authentifizierung: Cookie famquest_session; bei schreibenden Requests X-CSRF-Tok
 3. Werkzeuge: list_tasks, list_members, propose_quest, list_quest_proposals, get_progress; publish_quest nur nach expliziter Elternfreigabe.
 4. Jede Schreibaktion mit Audit-Log, idempotency_key und Eingabevalidierung.
 5. Quests in Deutsch, altersgerecht; bestehende Aufgaben auf Duplikate prüfen.
-6. Euro-Beträge zunächst nur als Vorschläge; kein direkter Zugriff auf Bankkonten, Auszahlungen oder unveränderliches Grundtaschengeld.
+6. Euro-Beträge zunächst nur als Vorschläge; kein direkter Zugriff auf Bankkonten, Auszahlungen oder unveränderliches Taschengeld.
 7. Cloudflare-Tunnel erst nach Test der Authentifizierung und Autorisierung.
 
 ## Offene Implementierungsfragen

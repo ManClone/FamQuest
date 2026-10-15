@@ -1,6 +1,7 @@
 import datetime as dt
+from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 
@@ -101,18 +102,29 @@ def get_today(_: CurrentSession, db: DbSession) -> TodayOut:
                 color=task.color,
                 member_ids=list(due[task.id]),
                 needs_approval=task.needs_approval,
+                repeatable=task.repeatable,
                 shared=task.shared,
                 extra=task.extra,
                 positions=[
                     MemberPositionOut(
-                        member_id=member_id, position=slot.position, optional=slot.optional
+                        member_id=member_id,
+                        position=slot.position,
+                        optional=slot.optional or task.repeatable,
                     )
                     for member_id, slot in due[task.id].items()
                 ],
                 due_dates=dues.get(task.id, []),
                 # Nur Personen, für die die Aufgabe heute (noch) ansteht.
-                done_member_ids=[m for m in done.get(task.id, []) if m in due[task.id]],
-                pending_member_ids=[m for m in pending.get(task.id, []) if m in due[task.id]],
+                done_member_ids=sorted(
+                    {
+                        m
+                        for m in (pending if task.repeatable else done).get(task.id, [])
+                        if m in due[task.id]
+                    }
+                ),
+                pending_member_ids=sorted(
+                    {m for m in pending.get(task.id, []) if m in due[task.id]}
+                ),
             )
             for task in tasks
         ],
@@ -147,7 +159,12 @@ def check_completable(
 
 @router.put("/today/tasks/{task_id}/members/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 def complete_task(
-    task_id: int, member_id: int, date: dt.date, _: CurrentSession, db: DbSession
+    task_id: int,
+    member_id: int,
+    date: dt.date,
+    _: CurrentSession,
+    db: DbSession,
+    request_key: Annotated[str | None, Query(pattern="^[a-f0-9]{32}$")] = None,
 ) -> None:
     """Markiert die Aufgabe als erledigt und bucht die Punkte.
 
@@ -156,31 +173,43 @@ def complete_task(
     Elternkontrolle warten ungeprüft; ihre Punkte bucht erst die Bestätigung (api/approvals).
     """
     task, today = check_completable(db, task_id, member_id, date)
-    if task.shared:
-        # „Einer für alle“: Sperre auf die Aufgabe, damit gleichzeitige Tipps in verschiedenen
-        # Spalten nicht zwei Erledigungen anlegen.
-        db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
-        already = db.scalar(
-            select(TaskCompletion.id).where(
-                TaskCompletion.task_id == task_id, TaskCompletion.date == today
-            )
-        )
-        if already is not None:
+    # Serialize all executions for this task, including shared tasks and concurrent clients.
+    db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
+    condition = [TaskCompletion.task_id == task_id, TaskCompletion.date == today]
+    if not task.shared:
+        condition.append(TaskCompletion.member_id == member_id)
+    if task.repeatable:
+        if request_key is None:
+            raise ApiError(422, "completion.request_key_required")
+        used = db.scalar(select(TaskCompletion).where(TaskCompletion.request_key == request_key))
+        if used is not None:
+            if used.task_id != task_id or used.member_id != member_id or used.date != today:
+                raise ApiError(409, "completion.request_key_used")
             db.commit()
             return
-    created = db.scalar(
-        insert(TaskCompletion)
-        .values(
-            task_id=task_id,
-            member_id=member_id,
-            date=today,
-            points=task.points,
-            money_cents=task.money_cents,
-            approved_at=None if task.needs_approval else func.now(),
-        )
-        .on_conflict_do_nothing(index_elements=["task_id", "member_id", "date"])
-        .returning(TaskCompletion.id)
+        condition.append(TaskCompletion.approved_at.is_(None))
+    elif request_key is not None:
+        raise ApiError(422, "completion.not_repeatable")
+    if db.scalar(select(TaskCompletion.id).where(*condition)) is not None:
+        db.commit()
+        return
+    statement = insert(TaskCompletion).values(
+        task_id=task_id,
+        member_id=member_id,
+        date=today,
+        points=task.points,
+        money_cents=task.money_cents,
+        request_key=request_key,
+        approved_at=None if task.needs_approval else func.now(),
     )
+    if task.repeatable:
+        statement = statement.on_conflict_do_nothing(index_elements=["request_key"])
+    else:
+        statement = statement.on_conflict_do_nothing(
+            index_elements=["task_id", "member_id", "date"],
+            index_where=TaskCompletion.request_key.is_(None),
+        )
+    created = db.scalar(statement.returning(TaskCompletion.id))
     if created is not None and not task.needs_approval:
         book(
             db,
@@ -207,9 +236,13 @@ def undo_task(
     die Gegenbuchung trifft die Person, die sie erledigt hatte.
     """
     task, today = check_completable(db, task_id, member_id, date)
+    db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
     condition = [TaskCompletion.task_id == task_id, TaskCompletion.date == today]
     if not task.shared:
         condition.append(TaskCompletion.member_id == member_id)
+    # Approved repeat executions remain historical; only cancel the current pending execution.
+    if task.repeatable:
+        condition.append(TaskCompletion.approved_at.is_(None))
     removed = db.execute(
         delete(TaskCompletion)
         .where(*condition)

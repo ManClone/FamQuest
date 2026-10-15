@@ -31,6 +31,7 @@ export interface TaskData {
   color: MemberColor | null
   active: boolean
   /** Punkte erst nach Kontrolle durch die Eltern. */
+  repeatable?: boolean
   needs_approval: boolean
   /** „Einer für alle“: eine Erledigung gilt für alle zugeordneten Personen. */
   shared: boolean

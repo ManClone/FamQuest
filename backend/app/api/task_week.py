@@ -106,7 +106,8 @@ def task_week(
     # (Aufgabe, Tag) → {Person: geprüft?}
     done: dict[tuple[int, dt.date], dict[int, bool]] = {}
     for task_id, member_id, date, approved_at in completions:
-        done.setdefault((task_id, date), {})[member_id] = approved_at is not None
+        people = done.setdefault((task_id, date), {})
+        people[member_id] = people.get(member_id, True) and approved_at is not None
     dues = {
         task_id: {entry.member_id: entry.due_date for entry in entries}
         for task_id, entries in due_dates(db, active, today).items()

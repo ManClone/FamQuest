@@ -17,7 +17,7 @@ Stand: 2026-10-14. Diese Checkliste ist ein Testplan, **kein Nachweis bestandene
 - [ ] Demo-Reset und Seed-Ablauf bleiben funktionsfähig.
 
 ## Geld und XP
-- [ ] Grundtaschengeld bleibt unabhängig von Konsequenzen unverändert.
+- [ ] Taschengeld bleibt unabhängig von Konsequenzen unverändert.
 - [ ] Euro-Konsequenzen reduzieren höchstens den Wochenbonus; keine Übertragung in nächste Woche.
 - [ ] XP-Abzug höchstens bis zum verfügbaren Guthaben; Level-XP bleiben erhalten.
 - [ ] Stornierung erstattet exakt den tatsächlich abgezogenen Betrag; wiederholte Stornierung ist idempotent.

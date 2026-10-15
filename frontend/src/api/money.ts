@@ -82,7 +82,7 @@ export function useSaveWeeklyAllowanceSettings(memberId: number) {
   return useParentMutation(
     (weekly_amount_cents: number | null) =>
       api<WeeklyAllowanceSettings>('PUT', `/members/${memberId}/money/settings`, { weekly_amount_cents }),
-    [allowanceSettingsKey(memberId)],
+    [allowanceSettingsKey(memberId), moneyKey(memberId)],
   )
 }
 
@@ -121,4 +121,20 @@ export function useBankTransactions(memberId: number) {
     queryFn: () => apiGet<BankTransaction[]>(`/members/${memberId}/money/bank-transactions?limit=50`),
     enabled: memberId > 0,
   })
+}
+
+
+export interface AllowancePaymentStatus {
+  member_id: number
+  week_start: string
+  expected_cents: number
+  received_cents: number
+  missing_cents: number
+  bank_connected: boolean
+}
+
+export function useAllowancePaymentStatus(memberId: number) {
+  return useQuery({ queryKey: ['money', memberId, 'allowance-payment-status'],
+    queryFn: () => apiGet<AllowancePaymentStatus>(`/members/${memberId}/money/allowance-payment-status`),
+    enabled: memberId > 0, refetchInterval: 60_000 })
 }

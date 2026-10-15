@@ -262,7 +262,9 @@
     "move_up": "Move {{title}} up",
     "move_down": "Move {{title}} down",
     "kids_only": "Tasks are for the children. Household chores live in the cleaning plan:",
-    "kids_only_link": "go to “Household”"
+    "kids_only_link": "go to “Household”",
+    "repeatable": "Repeat during the day",
+    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately."
   },
   "routines": {
     "section": "Routines",
@@ -428,7 +430,10 @@
       "step_invalid": "This step doesn't fit the routine. Please reload."
     },
     "completion": {
-      "day_changed": "A new day has started. The tasks have been updated."
+      "day_changed": "A new day has started. The tasks have been updated.",
+      "request_key_required": "Please reload this task.",
+      "request_key_used": "This request belongs to another execution.",
+      "not_repeatable": "This task is not repeatable."
     },
     "points": {
       "insufficient": "There aren't enough points for that."
@@ -1008,5 +1013,31 @@
     "keep_password": "Leave blank to keep the current password.",
     "password_hint": "At least 10 characters.",
     "role_hint": "Access follows the person’s role. Administrator access is preserved."
+  },
+  "pocket_money": {
+    "title": "Pocket money",
+    "bonus": "Bonus",
+    "no_child": "First add a child to your family.",
+    "child": "Child",
+    "automatic": "Automatic weekly pocket money",
+    "current": "Weekly amount",
+    "not_configured": "Not set up yet",
+    "weekly_amount": "Weekly amount in euros",
+    "save": "Save weekly amount",
+    "disable": "Disable automatic credits",
+    "disabled": "Automatic credits disabled. Existing entitlements are preserved.",
+    "saved": "Weekly amount saved. Pocket money is credited automatically.",
+    "invalid_amount": "Enter an amount between 0.01 and 1,000 euros with at most two decimal places.",
+    "schedule_hint": "The current week is credited when configured, then each week from Monday. Weeks already credited are never credited twice.",
+    "payment_status": "Payment received this week",
+    "expected": "Pocket money entitlement",
+    "received": "Confirmed receipt",
+    "missing": "Still outstanding: {{amount}}",
+    "confirmed": "Payment fully confirmed.",
+    "no_bank": "No bank account connected yet. Receipt has not been confirmed.",
+    "not_due": "No pocket money has been credited for this week yet.",
+    "bank_hint": "An entitlement is not a received payment. A future bank connection can reconcile receipts and report missing amounts.",
+    "no_balance": "No balance available yet",
+    "transactions": "Bank transactions"
   }
 }

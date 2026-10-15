@@ -23,6 +23,7 @@ def task_out(task: Task, routine_members: set[int] | None = None) -> TaskOut:
         color=task.color,
         active=task.active,
         needs_approval=task.needs_approval,
+        repeatable=task.repeatable,
         shared=task.shared,
         extra=task.extra,
         recurrence={
@@ -94,7 +95,9 @@ def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
         task.money_cents = body.money_cents
     task.description = body.description or None
     task.time_of_day, task.color, task.active = body.time_of_day, body.color, body.active
-    task.needs_approval, task.shared, task.extra = body.needs_approval, body.shared, body.extra
+    task.repeatable = body.repeatable
+    task.needs_approval = body.needs_approval or body.repeatable
+    task.shared, task.extra = body.shared, body.extra
 
     rule = body.recurrence
     if task.recurrence is None:

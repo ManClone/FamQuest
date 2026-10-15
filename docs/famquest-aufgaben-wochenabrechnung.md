@@ -6,7 +6,7 @@ Status: abgestimmtes Konzept; noch keine produktive Funktion. Umsetzung auf deve
 - Wochenzeitraum: Montag bis Sonntag in der Familienzeitzone. Nur der **verdiente Geldbonus in Euro** wird wöchentlich abgerechnet.
 - Jede Konsequenz besitzt **zwei unabhängig konfigurierbare Abzüge**: Geldabzug in Cent vom laufenden Wochenbonus und XP-Abzug vom verfügbaren XP-Guthaben. Startvorlage „Nicht auf Anweisungen gehört“: **0,50 € und 5 XP**, ohne Pflichtnotiz. Werte sind einstellbar, keine automatische Umrechnung von XP in Euro.
 - Geld-Auszahlung = **max(0, in dieser Woche verdienter Geldbonus in Cent minus Geldstrafen in Cent)**. Beispiel: 3 € verdient, 4 € Strafen → 0 € Auszahlung. Überschüssige Geldstrafen verfallen zum Wochenwechsel, keine Schulden und kein Übertrag.
-- Das **bedingungslose Grundtaschengeld bleibt immer unverändert** und wird separat ausgezahlt.
+- Das **bedingungslose Taschengeld bleibt immer unverändert** und wird separat ausgezahlt.
 - **Verfügbare XP** sind ein fortlaufendes, über Wochen ansparbares Guthaben für größere Belohnungen. XP-Strafen reduzieren dieses Guthaben; Belohnungskäufe ebenfalls. Guthaben nicht unter null reduzieren; wirksamen Abzug und eventuell nicht verrechneten Rest transparent ausweisen.
 - **Level-/Erfahrungs-XP** sind separat kumuliert. Level bleiben bei Strafabzügen und Belohnungskäufen bestehen. Levelgrenzen werden gesondert festgelegt.
 - Konsequenzen nur durch Eltern, mit konfigurierbaren Vorlagen, optionaler Notiz, Urheber, Datum, Zielkind und nachvollziehbarer Stornierung/Gegenbuchung.

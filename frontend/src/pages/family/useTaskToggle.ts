@@ -59,7 +59,10 @@ export function useTaskToggle(task: TodayTask, member: Member, date: string) {
   const toggle = () => {
     setTapped(true)
     if (!done && task.points > 0) setFeedback((count) => count + 1)
-    setDone.mutate({ date, taskId: task.id, memberId: member.id, done: !done })
+    const requestKey = task.repeatable && !done
+      ? Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')
+      : undefined
+    setDone.mutate({ date, taskId: task.id, memberId: member.id, done: !done, requestKey })
   }
 
   return {

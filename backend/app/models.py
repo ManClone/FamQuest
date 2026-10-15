@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
     true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -137,6 +138,7 @@ class Task(Base):
     color: Mapped[str | None] = mapped_column(String(20))
     active: Mapped[bool] = mapped_column(default=True, server_default="true")
     # Punkte erst, nachdem Eltern die Erledigung geprüft haben (z. B. „Zimmer aufgeräumt“).
+    repeatable: Mapped[bool] = mapped_column(default=False, server_default="false")
     needs_approval: Mapped[bool] = mapped_column(default=False, server_default="false")
     # „Einer für alle“: Eine Erledigung durch eine zugeordnete Person gilt für alle.
     shared: Mapped[bool] = mapped_column(default=False, server_default="false")
@@ -242,7 +244,17 @@ class TaskCompletion(Base):
     """
 
     __tablename__ = "task_completions"
-    __table_args__ = (UniqueConstraint("task_id", "member_id", "date"),)
+    __table_args__ = (
+        Index(
+            "uq_task_completions_single",
+            "task_id",
+            "member_id",
+            "date",
+            unique=True,
+            postgresql_where=text("request_key IS NULL"),
+        ),
+    )
+    request_key: Mapped[str | None] = mapped_column(String(32), unique=True)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
