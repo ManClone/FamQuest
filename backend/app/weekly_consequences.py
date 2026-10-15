@@ -3,7 +3,6 @@
 import datetime as dt
 from dataclasses import dataclass
 
-
 # Initial suggestion; parents will be able to customize both deductions.
 DEFAULT_CONSEQUENCES = {
     "Nicht auf Anweisungen gehört": {"money_penalty_cents": 50, "xp_penalty": 5},

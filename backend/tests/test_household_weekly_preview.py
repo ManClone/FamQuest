@@ -1,7 +1,8 @@
 """Read-only weekly assignment preview integration tests."""
+
 from tests.conftest import csrf
-from tests.test_chores import add_chore, add_room
 from tests.test_adult_chore_credits import parent_member
+from tests.test_chores import add_chore, add_room
 
 
 def test_weekly_preview_keeps_fixed_shopping_and_balances_work(client, parent, now):
@@ -9,13 +10,26 @@ def test_weekly_preview_keeps_fixed_shopping_and_balances_work(client, parent, n
     viola = parent_member(client, parent, "Viola", color="green")
     room = add_room(client, parent)
     shopping = add_chore(
-        client, parent, room["id"], title="Wocheneinkauf", interval_days=7,
-        estimated_minutes=90, adult_xp=15, assignment_mode="fixed", fixed_member_id=flo,
+        client,
+        parent,
+        room["id"],
+        title="Wocheneinkauf",
+        interval_days=7,
+        estimated_minutes=90,
+        adult_xp=15,
+        assignment_mode="fixed",
+        fixed_member_id=flo,
         state="due",
     )
     cleaning = add_chore(
-        client, parent, room["id"], title="Bad putzen", interval_days=7,
-        estimated_minutes=30, adult_xp=15, state="due",
+        client,
+        parent,
+        room["id"],
+        title="Bad putzen",
+        interval_days=7,
+        estimated_minutes=30,
+        adult_xp=15,
+        state="due",
     )
     response = client.get("/api/chores/weekly-preview")
     assert response.status_code == 200, response.text
@@ -54,26 +68,44 @@ def test_confirmed_week_is_persisted_and_fixed_work_cannot_move(client, parent, 
     viola = parent_member(client, parent, "Viola", color="green")
     room = add_room(client, parent)
     shopping = add_chore(
-        client, parent, room["id"], title="Wocheneinkauf", interval_days=7,
-        estimated_minutes=90, adult_xp=15, assignment_mode="fixed", fixed_member_id=flo,
+        client,
+        parent,
+        room["id"],
+        title="Wocheneinkauf",
+        interval_days=7,
+        estimated_minutes=90,
+        adult_xp=15,
+        assignment_mode="fixed",
+        fixed_member_id=flo,
         state="due",
     )
     cleaning = add_chore(
-        client, parent, room["id"], title="Bad putzen", interval_days=7,
-        estimated_minutes=30, state="due",
+        client,
+        parent,
+        room["id"],
+        title="Bad putzen",
+        interval_days=7,
+        estimated_minutes=30,
+        state="due",
     )
     preview = client.get("/api/chores/weekly-preview").json()
     assignments = preview["assignments"]
-    changed = [{**entry, "member_id": viola} if entry["chore_id"] == shopping["id"] else entry
-               for entry in assignments]
+    changed = [
+        {**entry, "member_id": viola} if entry["chore_id"] == shopping["id"] else entry
+        for entry in assignments
+    ]
     rejected = client.post(
-        "/api/chores/weekly-confirmed", json={"assignments": changed}, headers=csrf(parent),
+        "/api/chores/weekly-confirmed",
+        json={"assignments": changed},
+        headers=csrf(parent),
     )
     assert rejected.status_code == 422, rejected.text
     assert client.get("/api/chores/weekly-confirmed").json()["assignments"] == []
 
     approved = client.post(
-        "/api/chores/weekly-confirmed", json={"assignments": assignments}, headers=csrf(parent),
+        "/api/chores/weekly-confirmed",
+        json={"assignments": assignments},
+        headers=csrf(parent),
     )
     assert approved.status_code == 200, approved.text
     saved = client.get("/api/chores/weekly-confirmed").json()
@@ -84,10 +116,13 @@ def test_confirmed_week_is_persisted_and_fixed_work_cannot_move(client, parent, 
         entry["member_id"] for entry in assignments if entry["chore_id"] == cleaning["id"]
     )
     assert {entry["chore_id"] for entry in saved["assignments"]} == {
-        shopping["id"], cleaning["id"],
+        shopping["id"],
+        cleaning["id"],
     }
     again = client.post(
-        "/api/chores/weekly-confirmed", json={"assignments": assignments}, headers=csrf(parent),
+        "/api/chores/weekly-confirmed",
+        json={"assignments": assignments},
+        headers=csrf(parent),
     )
     assert again.status_code == 200, again.text
     assert len(again.json()["assignments"]) == 2
@@ -98,7 +133,9 @@ def test_confirmed_week_rejects_incomplete_plan(client, parent, now):
     room = add_room(client, parent)
     add_chore(client, parent, room["id"], title="Bad putzen", state="due")
     response = client.post(
-        "/api/chores/weekly-confirmed", json={"assignments": []}, headers=csrf(parent),
+        "/api/chores/weekly-confirmed",
+        json={"assignments": []},
+        headers=csrf(parent),
     )
     assert response.status_code == 422, response.text
 
@@ -107,11 +144,17 @@ def test_weekly_preview_reports_deleted_fixed_adult_as_conflict(client, parent, 
     flo = parent_member(client, parent, "Flo", color="blue")
     room = add_room(client, parent)
     add_chore(
-        client, parent, room["id"], title="Wocheneinkauf",
-        assignment_mode="fixed", fixed_member_id=flo, state="due",
+        client,
+        parent,
+        room["id"],
+        title="Wocheneinkauf",
+        assignment_mode="fixed",
+        fixed_member_id=flo,
+        state="due",
     )
     from app.db import SessionLocal
     from app.models import FamilyMember
+
     with SessionLocal() as db:
         member = db.get(FamilyMember, flo)
         db.delete(member)

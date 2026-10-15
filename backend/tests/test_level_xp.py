@@ -1,7 +1,7 @@
 """Level XP must not fall when spendable XP is used or deducted."""
 
-from app.points import level_xp, spendable_xp
 from app.db import SessionLocal
+from app.points import level_xp, spendable_xp
 from tests.conftest import csrf
 from tests.test_today import add_task, complete
 

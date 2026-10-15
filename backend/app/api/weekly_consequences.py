@@ -3,16 +3,15 @@
 import datetime as dt
 
 from fastapi import APIRouter
-from sqlalchemy import select, func
-from app.demo_mode import NotInDemo
-from app.models import ConsequenceEntry, MoneyTransaction, TaskCompletion
-from app.points import balance, book, lock_member
-from app.auth import utcnow
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 
 from app.api.members import get_member
-from app.auth import DbSession, ParentSession
+from app.auth import DbSession, ParentSession, utcnow
+from app.demo_mode import NotInDemo
 from app.errors import ApiError
+from app.models import ConsequenceEntry, MoneyTransaction, TaskCompletion
+from app.points import balance, book, lock_member
 from app.weekly_consequences import monday_of, weekly_statement, xp_penalty
 
 router = APIRouter(tags=["weekly-consequences"])
@@ -92,8 +91,12 @@ def list_consequences(member_id: int, _: ParentSession, db: DbSession) -> list[C
     return [consequence_out(entry) for entry in entries]
 
 
-@router.post("/consequences", response_model=ConsequenceOut, status_code=201, dependencies=[NotInDemo])
-def create_consequence(body: ConsequenceIn, auth_session: ParentSession, db: DbSession) -> ConsequenceOut:
+@router.post(
+    "/consequences", response_model=ConsequenceOut, status_code=201, dependencies=[NotInDemo]
+)
+def create_consequence(
+    body: ConsequenceIn, auth_session: ParentSession, db: DbSession
+) -> ConsequenceOut:
     member = get_member(db, body.member_id)
     if member.role != "child":
         raise ApiError(422, "money.child_required")
@@ -111,14 +114,25 @@ def create_consequence(body: ConsequenceIn, auth_session: ParentSession, db: DbS
     )
     db.add(entry)
     if deduction.deducted_xp:
-        book(db, member.id, -deduction.deducted_xp, "consequence", reason=body.title, user_id=auth_session.user_id)
+        book(
+            db,
+            member.id,
+            -deduction.deducted_xp,
+            "consequence",
+            reason=body.title,
+            user_id=auth_session.user_id,
+        )
     db.commit()
     db.refresh(entry)
     return consequence_out(entry)
 
 
-@router.post("/consequences/{entry_id}/reverse", response_model=ConsequenceOut, dependencies=[NotInDemo])
-def reverse_consequence(entry_id: int, auth_session: ParentSession, db: DbSession) -> ConsequenceOut:
+@router.post(
+    "/consequences/{entry_id}/reverse", response_model=ConsequenceOut, dependencies=[NotInDemo]
+)
+def reverse_consequence(
+    entry_id: int, auth_session: ParentSession, db: DbSession
+) -> ConsequenceOut:
     entry = db.get(ConsequenceEntry, entry_id)
     if entry is None:
         raise ApiError(404, "common.not_found")
@@ -127,7 +141,14 @@ def reverse_consequence(entry_id: int, auth_session: ParentSession, db: DbSessio
     if entry.reversed_at is not None:
         return consequence_out(entry)
     if entry.xp_penalty_applied:
-        book(db, entry.member_id, entry.xp_penalty_applied, "consequence_reversed", reason=entry.title, user_id=auth_session.user_id)
+        book(
+            db,
+            entry.member_id,
+            entry.xp_penalty_applied,
+            "consequence_reversed",
+            reason=entry.title,
+            user_id=auth_session.user_id,
+        )
     entry.reversed_at = utcnow()
     entry.reversed_by_user_id = auth_session.user_id
     db.commit()
@@ -136,31 +157,38 @@ def reverse_consequence(entry_id: int, auth_session: ParentSession, db: DbSessio
 
 
 @router.get("/members/{member_id}/weekly-bonus", response_model=WeeklyPreviewOut)
-def actual_weekly_bonus(member_id: int, date: dt.date, _: ParentSession, db: DbSession) -> WeeklyPreviewOut:
+def actual_weekly_bonus(
+    member_id: int, date: dt.date, _: ParentSession, db: DbSession
+) -> WeeklyPreviewOut:
     """Read actual task bonus and active penalties for one family-local ISO week."""
     member = get_member(db, member_id)
     if member.role != "child":
         raise ApiError(422, "money.child_required")
     start = monday_of(date)
     end = start + dt.timedelta(days=6)
-    earned = db.scalar(
-        select(func.coalesce(func.sum(MoneyTransaction.amount_cents), 0))
-        .join(TaskCompletion, MoneyTransaction.completion_id == TaskCompletion.id)
-        .where(
-            MoneyTransaction.member_id == member_id,
-            MoneyTransaction.kind.in_(("task_completed", "task_undone")),
-            TaskCompletion.date >= start,
-            TaskCompletion.date <= end,
+    earned = (
+        db.scalar(
+            select(func.coalesce(func.sum(MoneyTransaction.amount_cents), 0))
+            .join(TaskCompletion, MoneyTransaction.completion_id == TaskCompletion.id)
+            .where(
+                MoneyTransaction.member_id == member_id,
+                MoneyTransaction.kind.in_(("task_completed", "task_undone")),
+                TaskCompletion.date >= start,
+                TaskCompletion.date <= end,
+            )
         )
-    ) or 0
-    penalties = db.scalar(
-        select(func.coalesce(func.sum(ConsequenceEntry.money_penalty_cents), 0))
-        .where(
-            ConsequenceEntry.member_id == member_id,
-            ConsequenceEntry.effective_date >= start,
-            ConsequenceEntry.effective_date <= end,
-            ConsequenceEntry.reversed_at.is_(None),
+        or 0
+    )
+    penalties = (
+        db.scalar(
+            select(func.coalesce(func.sum(ConsequenceEntry.money_penalty_cents), 0)).where(
+                ConsequenceEntry.member_id == member_id,
+                ConsequenceEntry.effective_date >= start,
+                ConsequenceEntry.effective_date <= end,
+                ConsequenceEntry.reversed_at.is_(None),
+            )
         )
-    ) or 0
+        or 0
+    )
     result = weekly_statement(date, max(0, int(earned)), int(penalties))
     return WeeklyPreviewOut(member_id=member_id, **result.__dict__)

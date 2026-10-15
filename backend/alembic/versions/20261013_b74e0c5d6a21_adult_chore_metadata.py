@@ -28,12 +28,19 @@ def upgrade():
     )
     op.add_column(
         "chores",
-        sa.Column("fixed_member_id", sa.Integer(), sa.ForeignKey("family_members.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "fixed_member_id",
+            sa.Integer(),
+            sa.ForeignKey("family_members.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
     op.create_check_constraint("chore_minutes_positive", "chores", "estimated_minutes > 0")
     op.create_check_constraint("chore_xp_nonnegative", "chores", "adult_xp >= 0")
     op.create_check_constraint(
-        "chore_assignment_mode_valid", "chores", "assignment_mode IN ('fixed', 'rotate', 'flexible')",
+        "chore_assignment_mode_valid",
+        "chores",
+        "assignment_mode IN ('fixed', 'rotate', 'flexible')",
     )
 
 

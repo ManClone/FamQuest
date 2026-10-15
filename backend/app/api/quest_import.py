@@ -1,4 +1,5 @@
 """Internal service endpoint: only accepts already parent-approved quest proposals."""
+
 import hmac
 from typing import Annotated
 
@@ -7,10 +8,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.tasks import apply_task, task_out
+from app.api.tasks import apply_task
 from app.config import get_settings
 from app.db import get_db
-from app.models import Task, QuestImport
+from app.models import QuestImport, Task
 from app.schemas import TaskIn
 
 router = APIRouter(tags=["quest-import"])
@@ -28,8 +29,11 @@ def import_quest(
     authorization: Annotated[str | None, Header()] = None,
 ):
     secret = get_settings().quest_import_token
-    if not secret or len(secret) < 32 or not authorization or not hmac.compare_digest(
-        authorization, "Bearer " + secret
+    if (
+        not secret
+        or len(secret) < 32
+        or not authorization
+        or not hmac.compare_digest(authorization, "Bearer " + secret)
     ):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unauthorized")
     # Serialize imports to avoid duplicate publication on retries.
