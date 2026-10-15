@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.auth import CurrentSession, DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.avatars import (
     avatar_path,
     delete_avatar,
@@ -74,9 +74,10 @@ def commit_member(db: DbSession) -> None:
 
 
 @router.get("/members")
-def list_members(_: CurrentSession, db: DbSession) -> list[MemberOut]:
+def list_members(auth: CurrentSession, db: DbSession) -> list[MemberOut]:
     members = db.scalars(select(FamilyMember).order_by(FamilyMember.position, FamilyMember.id))
-    return [member_out(member) for member in members]
+    own = child_member_id(db, auth)
+    return [member_out(member) for member in members if own is None or member.id == own]
 
 
 @router.post("/members", status_code=status.HTTP_201_CREATED)

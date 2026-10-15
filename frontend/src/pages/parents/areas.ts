@@ -27,7 +27,7 @@ export type ParentArea = (typeof PARENT_AREAS)[number]
 export const DEFAULT_AREA: ParentArea = 'review'
 
 /** Am Handy direkt in der unteren Leiste, der Rest steckt hinter „Mehr“. */
-export const PRIMARY_AREAS: readonly ParentArea[] = ['review', 'tasks', 'routines', 'rewards']
+export const PRIMARY_AREAS: readonly ParentArea[] = ['family', 'tasks', 'household', 'rewards']
 
 export const AREA_ICONS: Record<ParentArea, Icon> = {
   review: CheckIcon,

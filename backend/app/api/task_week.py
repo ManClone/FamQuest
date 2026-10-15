@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from app.api.calendar_week import MAX_WEEK_OFFSET
 from app.api.today import due_dates
-from app.auth import CurrentSession, DbSession, get_family
+from app.auth import CurrentSession, DbSession, child_member_id, get_family
 from app.models import Task, TaskCompletion
 from app.routines import AFTER_ROUTINE, RoutinePlan, Slot
 from app.today import family_now
@@ -83,10 +83,11 @@ def _position(task: Task, member_id: int) -> int:
 
 @router.get("/tasks/week")
 def task_week(
-    _: CurrentSession,
+    auth: CurrentSession,
     db: DbSession,
     offset: Annotated[int, Query(ge=-MAX_WEEK_OFFSET, le=MAX_WEEK_OFFSET)] = 0,
 ) -> TaskWeekOut:
+    own = child_member_id(db, auth)
     family = get_family(db)
     zone = ZoneInfo(family.timezone)
     today = family_now(family).date()
@@ -126,6 +127,8 @@ def task_week(
         for task in known.values():
             who = done.get((task.id, day), {})
             for member_id in sorted(a.member_id for a in task.assignments):
+                if own is not None and member_id != own:
+                    continue
                 if member_id in who:
                     by = member_id
                 elif task.shared and who:
@@ -154,7 +157,7 @@ def task_week(
                         task_id=task.id,
                         member_id=member_id,
                         status=status,
-                        done_by=by,
+                        done_by=own if own is not None and by is not None else by,
                         position=slot.position,
                         optional=slot.optional,
                     )

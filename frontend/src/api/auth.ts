@@ -3,6 +3,7 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tansta
 import { ApiError, api, apiGet, setCsrfToken } from './client'
 
 export interface Me {
+  member_id?: number | null
   user: { email: string; role: string; language: string | null }
   family: { name: string; default_language: string; timezone: string; pin_enabled: boolean }
   csrf_token: string
@@ -116,4 +117,3 @@ export const useUpdateFamily = () =>
     (settings: FamilySettings) => api<Me>('PUT', '/parent/family', settings),
     (queryClient) => void queryClient.invalidateQueries({ queryKey: ['today'] }),
   )
-

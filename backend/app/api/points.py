@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
 from app.api.members import get_member
-from app.auth import DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, ensure_member_access
 from app.errors import ApiError
 from app.models import PointTransaction
 from app.points import balance, book, lock_member
@@ -34,12 +34,13 @@ def transaction_out(transaction: PointTransaction) -> PointTransactionOut:
 @router.get("/members/{member_id}/points")
 def get_points(
     member_id: int,
-    _: ParentSession,
+    auth: CurrentSession,
     db: DbSession,
     before: Annotated[int | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=HISTORY_PAGE_SIZE)] = HISTORY_PAGE_SIZE,
 ) -> PointHistoryOut:
     """Punktestand und Buchungen einer Person, neueste zuerst."""
+    ensure_member_access(db, auth, member_id)
     get_member(db, member_id)
     query = select(PointTransaction).where(PointTransaction.member_id == member_id)
     if before is not None:

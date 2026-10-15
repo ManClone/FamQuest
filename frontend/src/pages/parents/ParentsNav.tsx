@@ -31,7 +31,7 @@ export function ParentsNav({ area, pending }: ParentsNavProps) {
   const { t } = useTranslation()
   const [moreOpen, setMoreOpen] = useState(false)
   const visibleAreas: readonly ParentArea[] = PARENT_AREAS.filter(
-    (candidate) => candidate !== 'photos',
+    (candidate) => !['photos', 'routines', 'review'].includes(candidate),
   )
   const secondary = visibleAreas.filter((candidate) => !PRIMARY_AREAS.includes(candidate))
 

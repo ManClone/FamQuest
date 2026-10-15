@@ -6,7 +6,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.api.tasks import get_task
-from app.auth import CurrentSession, DbSession, get_family
+from app.auth import CurrentSession, DbSession, child_member_id, ensure_member_access, get_family
 from app.errors import ApiError
 from app.models import FamilyMember, Task, TaskCompletion
 from app.money import book_money
@@ -62,15 +62,18 @@ def due_dates(db: DbSession, tasks: list[Task], day: dt.date) -> dict[int, list[
 
 
 @router.get("/today")
-def get_today(_: CurrentSession, db: DbSession) -> TodayOut:
+def get_today(auth: CurrentSession, db: DbSession) -> TodayOut:
     now = family_now(get_family(db))
     day = now.date()
     plan = RoutinePlan(db)
+    own = child_member_id(db, auth)
     # Aufgabe → Personen, für die sie heute ansteht (mit ihrem Platz in der Reihenfolge).
     due: dict[int, dict[int, Slot]] = {}
     tasks: list[Task] = []
     for task in db.scalars(select(Task).where(Task.active).order_by(Task.id)):
         members = plan.due_members(task, day)
+        if own is not None:
+            members = {key: slot for key, slot in members.items() if key == own}
         if members:
             due[task.id] = members
             tasks.append(task)
@@ -81,6 +84,12 @@ def get_today(_: CurrentSession, db: DbSession) -> TodayOut:
         .where(TaskCompletion.date == day)
         .order_by(TaskCompletion.member_id)
     ):
+        if own is not None:
+            task = db.get(Task, task_id)
+            if task and task.shared and own in due.get(task_id, {}):
+                member_id = own
+            elif member_id != own:
+                continue
         done.setdefault(task_id, []).append(member_id)
         if approved_at is None:
             pending.setdefault(task_id, []).append(member_id)
@@ -135,9 +144,13 @@ def get_today(_: CurrentSession, db: DbSession) -> TodayOut:
                 total=total.get(member_id, 0),
             )
             for member_id in db.scalars(select(FamilyMember.id).order_by(FamilyMember.id))
+            if own is None or member_id == own
         ],
         pending_approvals=db.scalar(
-            select(func.count()).where(TaskCompletion.approved_at.is_(None))
+            select(func.count()).where(
+                TaskCompletion.approved_at.is_(None),
+                *([TaskCompletion.member_id == own] if own is not None else []),
+            )
         )
         or 0,
     )
@@ -162,7 +175,7 @@ def complete_task(
     task_id: int,
     member_id: int,
     date: dt.date,
-    _: CurrentSession,
+    auth: CurrentSession,
     db: DbSession,
     request_key: Annotated[str | None, Query(pattern="^[a-f0-9]{32}$")] = None,
 ) -> None:
@@ -171,6 +184,7 @@ def complete_task(
     A stable key makes retries idempotent even after approval. Repeatable tasks
     require parent approval and allow only one pending execution at a time.
     """
+    ensure_member_access(db, auth, member_id)
     task, today = check_completable(db, task_id, member_id, date)
     # Serialize all executions for this task, including shared tasks and concurrent clients.
     db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
@@ -226,7 +240,7 @@ def complete_task(
 
 @router.delete("/today/tasks/{task_id}/members/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 def undo_task(
-    task_id: int, member_id: int, date: dt.date, _: CurrentSession, db: DbSession
+    task_id: int, member_id: int, date: dt.date, auth: CurrentSession, db: DbSession
 ) -> None:
     """Macht die heutige Erledigung rückgängig und bucht ihre Punkte zurück (Gegenbuchung).
 
@@ -234,6 +248,7 @@ def undo_task(
     Bei „Einer für alle“ nimmt jede zugeordnete Person die Erledigung zurück, egal wer sie war;
     die Gegenbuchung trifft die Person, die sie erledigt hatte.
     """
+    ensure_member_access(db, auth, member_id)
     task, today = check_completable(db, task_id, member_id, date)
     db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
     condition = [TaskCompletion.task_id == task_id, TaskCompletion.date == today]

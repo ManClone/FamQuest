@@ -21,6 +21,7 @@ export type Recurrence =
 export type RecurrenceKind = Recurrence['kind']
 
 export interface TaskData {
+  replace_routine_schedule?: boolean
   title: string
   icon: string
   description: string

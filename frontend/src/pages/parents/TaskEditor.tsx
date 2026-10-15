@@ -127,11 +127,9 @@ export function TaskEditor({
   const addStep = useAddRoutineStep()
   // Für diese Personen ist die Aufgabe Schritt einer Routine; deren Tage bestimmt die Routine.
   const routineMembers = members.filter((member) => task?.routine_member_ids.includes(member.id))
+  const [replaceSchedule, setReplaceSchedule] = useState(false)
   const onlyInRoutines =
-    routineStep !== undefined ||
-    (task !== undefined &&
-      task.member_ids.length > 0 &&
-      task.member_ids.every((id) => task.routine_member_ids.includes(id)))
+    routineStep !== undefined || (routineMembers.length > 0 && !replaceSchedule)
   const saveError = save.error ?? addStep.error
 
   const fieldError = (field: string) =>
@@ -172,6 +170,7 @@ export function TaskEditor({
               color,
               active,
               needs_approval: needsApproval || repeatable,
+              ...(replaceSchedule ? { replace_routine_schedule: true } : {}),
               ...(repeatable || task?.repeatable ? { repeatable } : {}),
               shared: false,
               recurrence: { kind: 'daily' },
@@ -197,6 +196,7 @@ export function TaskEditor({
         color,
         active,
         needs_approval: needsApproval || repeatable,
+        ...(replaceSchedule ? { replace_routine_schedule: true } : {}),
         ...(repeatable || task?.repeatable ? { repeatable } : {}),
         // Bei nur einer Person hat „Einer für alle“ keine Wirkung.
         shared: shared && memberIds.length > 1,
@@ -359,6 +359,17 @@ export function TaskEditor({
           </>
         )}
 
+        {routineMembers.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Switch
+              checked={replaceSchedule}
+              onChange={setReplaceSchedule}
+              label={t('personal.edit_schedule')}
+              showLabel
+            />
+            <p>{t('personal.schedule_hint')}</p>
+          </div>
+        )}
         {!onlyInRoutines && (
           <>
             <Field label={t('tasks.recurrence')}>
@@ -471,7 +482,7 @@ export function TaskEditor({
           </>
         )}
 
-        {routineStep || routineMembers.length > 0 ? (
+        {routineStep || (routineMembers.length > 0 && !replaceSchedule) ? (
           routineMembers.length > 0 && (
             <p className="rounded-2xl bg-orange-50 px-4 py-3 text-lg text-orange-900">
               {t('routines.task_in_routines', {

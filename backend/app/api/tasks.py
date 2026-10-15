@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 from sqlalchemy import func, select
 
 from app.api.members import get_member
-from app.auth import DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.errors import ApiError
 from app.models import Routine, RoutineStep, Task, TaskAssignment, TaskRecurrence
 from app.schemas import MemberPositionOut, TaskIn, TaskOut
@@ -76,6 +76,10 @@ def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
         if get_member(db, member_id).role != "child":
             # Hausarbeit der Erwachsenen steht im Putzplan (api/chores), nicht bei den Aufgaben.
             raise ApiError(status.HTTP_409_CONFLICT, "task.child_only")
+    if body.replace_routine_schedule and task.id:
+        for step in db.scalars(select(RoutineStep).where(RoutineStep.task_id == task.id)):
+            db.delete(step)
+        db.flush()
     in_routines = routine_members(db, [task.id]).get(task.id, set()) if task.id else set()
     if in_routines and (body.time_of_day != task.time_of_day or body.extra):
         # Routinenschritte haben den Tagesabschnitt ihrer Routine und sind keine Extras.
@@ -124,10 +128,25 @@ def _next_position(db: DbSession, member_id: int) -> int:
 
 
 @router.get("/tasks")
-def list_tasks(_: ParentSession, db: DbSession) -> list[TaskOut]:
+def list_tasks(auth: CurrentSession, db: DbSession) -> list[TaskOut]:
     tasks = db.scalars(select(Task).order_by(Task.id))
     members = routine_members(db)
-    return [task_out(task, members.get(task.id)) for task in tasks]
+    own = child_member_id(db, auth)
+    if own == 0:
+        raise ApiError(403, "profile.not_linked")
+    result = []
+    for task in tasks:
+        if own is not None and (
+            not task.active or not any(a.member_id == own for a in task.assignments)
+        ):
+            continue
+        out = task_out(task, members.get(task.id))
+        if own is not None:
+            out.member_ids = [own]
+            out.positions = [entry for entry in out.positions if entry.member_id == own]
+            out.routine_member_ids = [own] if own in out.routine_member_ids else []
+        result.append(out)
+    return result
 
 
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)

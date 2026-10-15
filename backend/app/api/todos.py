@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 
 from app.api.members import get_member
-from app.auth import CurrentSession, DbSession, get_family
+from app.auth import DbSession, ParentSession, get_family
 from app.errors import ApiError
 from app.models import Todo
 from app.schemas import IconName, TypedName
@@ -84,7 +84,7 @@ def _get(db: DbSession, todo_id: int) -> Todo:
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def add_todo(body: TodoIn, _: CurrentSession, db: DbSession) -> TodoOut:
+def add_todo(body: TodoIn, _: ParentSession, db: DbSession) -> TodoOut:
     """Trägt etwas ein. Steht dasselbe schon offen auf der Liste, bleibt es bei einem Eintrag."""
     todo = db.scalar(
         select(Todo).where(Todo.done_date.is_(None), func.lower(Todo.title) == body.title.lower())
@@ -98,7 +98,7 @@ def add_todo(body: TodoIn, _: CurrentSession, db: DbSession) -> TodoOut:
 
 
 @router.put("/{todo_id}")
-def update_todo(todo_id: int, body: TodoIn, _: CurrentSession, db: DbSession) -> TodoOut:
+def update_todo(todo_id: int, body: TodoIn, _: ParentSession, db: DbSession) -> TodoOut:
     """Ändert Titel und Symbol. Derselbe Titel darf nicht zweimal offen auf der Liste stehen."""
     todo = _get(db, todo_id)
     twin = db.scalar(
@@ -116,7 +116,7 @@ def update_todo(todo_id: int, body: TodoIn, _: CurrentSession, db: DbSession) ->
 
 
 @router.put("/{todo_id}/done")
-def mark_done(todo_id: int, body: TodoDoneIn, _: CurrentSession, db: DbSession) -> TodoOut:
+def mark_done(todo_id: int, body: TodoDoneIn, _: ParentSession, db: DbSession) -> TodoOut:
     """Erledigt. Ein zweiter Aufruf am selben Tag trägt nur nach, wer es war."""
     todo = _get(db, todo_id)
     if body.member_id is not None:
@@ -129,7 +129,7 @@ def mark_done(todo_id: int, body: TodoDoneIn, _: CurrentSession, db: DbSession) 
 
 
 @router.delete("/{todo_id}/done")
-def undo_done(todo_id: int, _: CurrentSession, db: DbSession) -> TodoOut:
+def undo_done(todo_id: int, _: ParentSession, db: DbSession) -> TodoOut:
     """Nimmt das Abhaken zurück; der Eintrag steht wieder offen auf der Liste."""
     todo = _get(db, todo_id)
     todo.done_date, todo.done_by = None, None
@@ -138,7 +138,7 @@ def undo_done(todo_id: int, _: CurrentSession, db: DbSession) -> TodoOut:
 
 
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_todo(todo_id: int, _: CurrentSession, db: DbSession) -> None:
+def delete_todo(todo_id: int, _: ParentSession, db: DbSession) -> None:
     """Streicht einen Eintrag, ohne ihn zu erledigen."""
     db.delete(_get(db, todo_id))
     db.commit()

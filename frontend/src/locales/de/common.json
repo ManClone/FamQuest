@@ -508,6 +508,10 @@
       "child_required": "Diese Funktion ist nur für Kinder verfügbar",
       "invalid_allowance": "Ungültiger Taschengeldbetrag",
       "invalid_pagination": "Ungültige Seitennummerierung"
+    },
+    "profile": {
+      "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
+      "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen."
     }
   },
   "rewards": {
@@ -1039,5 +1043,25 @@
     "bank_hint": "Ein gebuchter Anspruch ist noch kein Zahlungseingang. Die Bankanbindung kann später Zahlungseingänge abgleichen und fehlende Beträge melden.",
     "no_balance": "Noch kein Kontostand verfügbar",
     "transactions": "Kontobewegungen"
+  },
+  "personal": {
+    "profile": "Mein Profil",
+    "access": "Mein Zugang",
+    "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen.",
+    "saved": "Profil gespeichert.",
+    "current_password": "Bisheriges Passwort",
+    "new_password": "Neues Passwort",
+    "password_saved": "Passwort geändert. Andere Sitzungen wurden abgemeldet.",
+    "password_mismatch": "Die neuen Passwörter stimmen nicht überein.",
+    "change_password": "Passwort ändern",
+    "manage_family": "Familie verwalten",
+    "dashboard": "Dashboard",
+    "overdue": "Überfällig",
+    "current": "Aktuelle Aufgaben",
+    "my_points_one": "{{count}} Punkt",
+    "my_points_other": "{{count}} Punkte",
+    "all_tasks": "Alle meine Aufgaben",
+    "edit_schedule": "Zeitplan direkt in dieser Aufgabe festlegen",
+    "schedule_hint": "Der bestehende Zeitplan bleibt erhalten. Wenn du ihn hier ersetzt, gelten die gewählten Tage und die Tageszeit für alle ausgewählten Kinder. Aufgaben, Zuordnungen und bisherige Punkte bleiben erhalten."
   }
 }

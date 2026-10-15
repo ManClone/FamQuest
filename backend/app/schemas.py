@@ -114,6 +114,7 @@ class FamilyOut(BaseModel):
 
 
 class MeResponse(BaseModel):
+    member_id: int | None = None
     user: UserOut
     family: FamilyOut
     csrf_token: str
@@ -186,6 +187,7 @@ Recurrence = Annotated[
 
 
 class TaskIn(BaseModel):
+    replace_routine_schedule: bool = False
     title: TaskTitle
     icon: IconName
     description: TaskDescription = ""
