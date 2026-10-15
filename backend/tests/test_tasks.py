@@ -223,9 +223,23 @@ def test_deleting_member_removes_assignment_but_keeps_task(client, parent, lena)
     assert task["member_ids"] == [tom]
 
 
-def test_tasks_need_unlocked_parent_area(client, admin):
+def test_tasks_require_parent_role(client, admin):
+    assert client.get("/api/tasks").status_code == 200
+    response = client.post(
+        "/api/auth/accounts",
+        json={"email": "child@example.org", "password": "sehr-geheim-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert response.status_code == 201, response.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child@example.org", "password": "sehr-geheim-456"},
+    )
+    assert login.status_code == 200, login.text
+    child = login.json()
     assert client.get("/api/tasks").status_code == 403
-    response = client.post("/api/tasks", json={}, headers=csrf(admin))
+    response = client.post("/api/tasks", json={}, headers=csrf(child))
     assert response.status_code == 403
     assert response.json() == {"code": "parent.locked"}
 
