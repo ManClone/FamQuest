@@ -6,7 +6,7 @@ from tests.conftest import csrf
 from tests.test_today import add_task, complete
 
 
-def test_level_xp_ignores_manual_penalty_and_spending(client, parent, lena):
+def test_level_xp_ignores_manual_penalty_and_spending(client, parent, lena, now):
     task = add_task(client, parent, [lena], points=20)
     assert complete(client, parent, task, lena).status_code == 204
     with SessionLocal() as db:
