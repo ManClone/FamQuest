@@ -162,7 +162,11 @@ def test_manual_booking_validation(client, parent, lena, body, field, code):
 def test_points_area_requires_parent_role(client, parent, lena):
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-points@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-points@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(parent),
     )
     assert account.status_code == 201, account.text
