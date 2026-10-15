@@ -80,13 +80,13 @@ export function RewardsSection({
           {own.map((reward) => (
             <li
               key={reward.id}
-              className={`flex items-center gap-3 rounded-2xl border-2 border-slate-100 p-2 sm:p-3 ${reward.active ? '' : 'bg-slate-50'}`}
+              className={`flex flex-wrap items-center justify-end gap-3 rounded-2xl border-2 border-slate-100 p-2 sm:flex-nowrap sm:p-3 ${reward.active ? '' : 'bg-slate-50'}`}
             >
               <button
                 type="button"
                 onClick={() => onEdit(reward)}
                 aria-label={t('rewards.edit_title', { name: reward.name })}
-                className="flex min-w-0 flex-1 items-center gap-4 rounded-xl p-1 text-left transition-colors hover:bg-orange-50 focus-visible:outline-4 focus-visible:outline-orange-400 active:bg-orange-100"
+                className="flex min-w-0 flex-1 basis-full items-center gap-4 rounded-xl p-1 text-left sm:basis-auto transition-colors hover:bg-orange-50 focus-visible:outline-4 focus-visible:outline-orange-400 active:bg-orange-100"
               >
                 <TaskIcon
                   icon={reward.icon}
