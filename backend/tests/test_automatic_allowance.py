@@ -64,6 +64,7 @@ def test_weekly_credits_continue_and_are_distinct_from_bank_receipts(client, par
                 member_id=lena,
                 bank_transaction_id=receipt.id,
                 category="allowance",
+                reference="Taschengeld",
                 week_start=dt.date(2026, 9, 28),
                 amount_cents=300,
             )

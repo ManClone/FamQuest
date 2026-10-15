@@ -78,3 +78,37 @@ def test_rejected_execution_can_be_repeated(client, parent, lena, now):
     assert client.delete(f"/api/approvals/{entry['id']}", headers=csrf(parent)).status_code == 204
     assert execute(client, parent, task, lena, "b" * 32).status_code == 204
     assert len(client.get("/api/approvals").json()) == 1
+
+
+def test_shared_repeat_task_waits_for_one_approval_before_next_person(client, parent, lena, now):
+    from tests.test_tasks import add_member
+
+    tom = add_member(client, parent, "Tom", "green")
+    task = add_task(client, parent, [lena, tom], repeatable=True, shared=True)
+    assert execute(client, parent, task, lena, "a" * 32).status_code == 204
+    assert execute(client, parent, task, tom, "b" * 32).status_code == 204
+    pending = client.get("/api/approvals").json()
+    assert len(pending) == 1
+    assert (
+        client.post(f"/api/approvals/{pending[0]['id']}", headers=csrf(parent)).status_code == 204
+    )
+    assert execute(client, parent, task, tom, "c" * 32).status_code == 204
+    assert client.get("/api/approvals").json()[0]["member_id"] == tom
+
+
+def test_downgrade_never_discards_repeat_history(client, parent, lena, now):
+    from alembic import command
+
+    from tests.conftest import alembic_config
+
+    task = add_task(client, parent, [lena], repeatable=True)
+    for key in ("a" * 32, "b" * 32):
+        assert execute(client, parent, task, lena, key).status_code == 204
+        pending = client.get("/api/approvals").json()[0]
+        assert (
+            client.post(f"/api/approvals/{pending['id']}", headers=csrf(parent)).status_code == 204
+        )
+    with pytest.raises(RuntimeError, match="Repeated task executions exist"):
+        command.downgrade(alembic_config(), "c20261014pen")
+    with Session(engine) as db:
+        assert db.scalar(select(func.count()).select_from(TaskCompletion)) == 2
