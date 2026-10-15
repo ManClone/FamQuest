@@ -124,7 +124,11 @@ def test_approvals_require_parent_account(client, parent, lena, now):
 
     account = client.post(
         "/api/auth/accounts",
-        json={"email": "child-approval@example.org", "password": "test-password-456", "role": "child"},
+        json={
+            "email": "child-approval@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
         headers=csrf(parent),
     )
     assert account.status_code == 201, account.text
