@@ -88,9 +88,21 @@ def test_needs_login(client):
     assert client.get("/api/chores").status_code == 401
 
 
-def test_managing_needs_parent_pin(client, admin):
+def test_managing_requires_parent_account(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-chores@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-chores@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     response = client.post(
-        "/api/chores/rooms", json={"name": "Bad", "icon": TOILET}, headers=csrf(admin)
+        "/api/chores/rooms", json={"name": "Bad", "icon": TOILET}, headers=csrf(login.json())
     )
 
     assert response.status_code == 403
