@@ -142,7 +142,7 @@ it('keeps the same personal progress above day/week and removes the duplicate ta
   expect(screen.getByRole('region', { name: 'My adventure' })).toBe(overview)
   expect(within(overview).getByRole('progressbar')).toBe(level)
   expect(screen.getByRole('heading', { name: 'Tim', level: 1 })).toBeVisible()
-  expect(within(overview).getByText('32 stars')).toBeVisible()
+  expect(within(overview).getByLabelText('32 stars')).toBeVisible()
 })
 
 it('shows own redemption history without a redundant back control for children', async () => {
@@ -164,7 +164,7 @@ it('shows own redemption history without a redundant back control for children',
   )
   expect(await screen.findByRole('heading', { name: 'Tim', level: 1 })).toBeVisible()
   expect(await screen.findByText('Level 2')).toBeVisible()
-  expect(screen.getByText('22 stars')).toBeVisible()
+  expect(screen.getByLabelText('22 stars')).toBeVisible()
 })
 
 it('zeigt automatisch zugeteilte Hausarbeit separat und wartet auf die Eltern', async () => {
@@ -174,6 +174,6 @@ it('zeigt automatisch zugeteilte Hausarbeit separat und wartet auf die Eltern', 
   expect(await within(household).findByText('Clean litter box')).toBeVisible()
   await user.click(within(household).getByRole('button', { name: 'Done!' }))
   expect(await within(household).findByText('1 completions awaiting approval')).toBeVisible()
-  expect(screen.getByText('32 stars')).toBeVisible()
+  expect(screen.getByLabelText('32 stars')).toBeVisible()
   expect(calls.some((call) => call.key === 'GET /api/chores')).toBe(false)
 })

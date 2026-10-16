@@ -506,7 +506,8 @@
       "not_completed": "Diese Hausarbeit ist noch nicht erledigt.",
       "parent_required": "Für diese Aktion ist ein Erwachsenenkonto erforderlich.",
       "request_conflict": "Diese Ausführung wurde bereits anderweitig gespeichert. Bitte neu laden.",
-      "not_repeatable": "Diese Aufgabe ist heute bereits erledigt oder wartet auf Bestätigung."
+      "not_repeatable": "Diese Aufgabe ist heute bereits erledigt oder wartet auf Bestätigung.",
+      "fixed_assignee_only": "Diese Aufgabe ist fest zugeteilt und kann nur für diese Person erledigt werden. Die Zuteilung lässt sich in den Einstellungen unter Haushalt ändern."
     },
     "todo": {
       "not_found": "Diesen Eintrag gibt es nicht mehr.",
@@ -520,6 +521,10 @@
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
       "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen."
+    },
+    "praise": {
+      "child_required": "Bitte ein Kind auswählen.",
+      "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
     }
   },
   "rewards": {
@@ -1023,7 +1028,8 @@
     "child_hint": "Zugewiesene Haushaltsaufgaben erscheinen automatisch bei den Kindern. Erledigungen bestätigen die Eltern.",
     "future_money": "Geld (später verfügbar)",
     "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
-    "child_complete": "Erledigt!"
+    "child_complete": "Erledigt!",
+    "who_before_completion": "Wer hat {{title}} erledigt?"
   },
   "todos": {
     "title": "Zu erledigen",
@@ -1113,5 +1119,19 @@
     "reward_history": "Deine eingelösten Belohnungen",
     "today_progress": "Dein Tag",
     "back_tasks": "Zurück zu meinen Aufgaben"
+  },
+  "praise": {
+    "section": "Lob & Sterne",
+    "count": "{{count}} Lobe",
+    "give": "Lob vergeben",
+    "deduct": "Strafpunkte",
+    "amount": "Sterne abziehen",
+    "reason": "Begründung",
+    "saved": "Gespeichert.",
+    "received": "Du hast ein Lob erhalten!",
+    "approve": "Bestätigen + Lob",
+    "approve_label": "{{title}} von {{name}} bestätigen und loben",
+    "count_one": "{{count}} Lob",
+    "count_other": "{{count}} Lobe"
   }
 }

@@ -1,3 +1,4 @@
+import { PraiseCelebration } from '../components/PraiseCelebration'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
 import StarIcon from '~icons/fluent-emoji-flat/star'
@@ -99,17 +100,36 @@ function ChildProgressHeader({
       className="flex flex-col gap-5 rounded-3xl border-2 bg-white p-5 shadow-sm sm:p-6"
       style={{ borderColor: tokens.main }}
     >
-      <header className="flex flex-wrap items-center gap-4">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <Avatar name={member.name} color={member.color} src={member.avatar_url} size="lg" />
         <div className="min-w-0 flex-1">
           <Heading className="text-4xl font-extrabold text-slate-800">{member.name}</Heading>
           <p className="text-lg font-bold text-slate-500">{t('child_progress.adventure')}</p>
         </div>
-        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-2xl font-extrabold text-slate-800">
-          <StarIcon className="size-10" aria-hidden="true" />
-          {t('child_progress.stars', { count: total })}
-        </p>
+        <div className="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1">
+          <p
+            aria-label={t('child_progress.stars', { count: total })}
+            className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 text-2xl font-extrabold text-slate-800"
+          >
+            <StarIcon className="size-10" aria-hidden="true" />
+            {total}
+          </p>
+          <p
+            aria-label={t('praise.count', { count: data?.praise_count ?? 0 })}
+            className="flex items-center gap-2 rounded-2xl bg-rose-50 px-3 py-2 text-2xl font-extrabold text-slate-800"
+          >
+            <span aria-hidden="true">❤️</span>
+            {data?.praise_count ?? 0}
+          </p>
+        </div>
       </header>
+      {data && (
+        <PraiseCelebration
+          memberId={member.id}
+          latestId={data.latest_praise_id ?? 0}
+          reason={data.latest_praise_reason}
+        />
+      )}
       {data ? (
         <div
           className="flex flex-col gap-3 rounded-2xl p-4"

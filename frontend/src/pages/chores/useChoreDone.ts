@@ -28,6 +28,7 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
     id: number
     requestKey?: string
     completionId?: number | null
+    pending?: boolean
   } | null>(null)
 
   useEffect(() => {
@@ -40,10 +41,14 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
   const inFlight = useRef(false)
   const repeat = (chore: Chore) => {
     if (inFlight.current) return
-    inFlight.current = true
     const requestKey = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
       byte.toString(16).padStart(2, '0'),
     ).join('')
+    if (chore.assignment_mode === 'fixed') {
+      setAsking({ kind: 'chore', id: chore.id, requestKey, pending: true })
+      return
+    }
+    inFlight.current = true
     markDone.mutate(
       { id: chore.id, memberId: null, requestKey },
       {
@@ -85,7 +90,7 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
 
   const chore =
     asking?.kind === 'chore'
-      ? chores.find((item) => item.id === asking.id && item.done_today)
+      ? chores.find((item) => item.id === asking.id && (item.done_today || asking.pending))
       : undefined
   const todo =
     asking?.kind === 'todo' ? todos.find((item) => item.id === asking.id && item.done) : undefined
@@ -99,18 +104,21 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
     asking: chore
       ? {
           title: chore.title,
+          pending: asking?.pending ?? false,
           pick: (memberId: number) => {
             markDone.mutate({ id: chore.id, memberId, requestKey: asking?.requestKey })
             close()
           },
           undo: () => {
-            undoDone.mutate({ id: chore.id, completionId: asking?.completionId })
+            if (!asking?.pending)
+              undoDone.mutate({ id: chore.id, completionId: asking?.completionId })
             close()
           },
         }
       : todo
         ? {
             title: todo.title,
+            pending: false,
             pick: (memberId: number) => {
               todoDone.mutate({ id: todo.id, memberId })
               close()
