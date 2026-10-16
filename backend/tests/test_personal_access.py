@@ -108,6 +108,9 @@ def test_child_progress_and_redemption_history_are_personal_and_purchases_keep_l
         assert child.get(f"/api/members/{two}/progress").status_code == 403
         expected = {
             "praise_count": 0,
+            "latest_deduction_id": 0,
+            "latest_deduction_reason": None,
+            "latest_deduction_amount": 0,
             "latest_praise_id": 0,
             "latest_praise_reason": None,
             "earned_xp": 100,
