@@ -243,7 +243,7 @@ def reverse_penalty(
     entry = db.scalar(
         select(PointTransaction)
         .where(PointTransaction.id == transaction_id, PointTransaction.member_id == member_id)
-        .with_for_update()
+        .with_for_update(of=PointTransaction)
     )
     if entry is None:
         raise ApiError(404, "common.not_found")
