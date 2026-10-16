@@ -525,6 +525,11 @@
     "praise": {
       "child_required": "Bitte ein Kind auswählen.",
       "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
+    },
+    "mcp": {
+      "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
+      "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
+      "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
     }
   },
   "rewards": {

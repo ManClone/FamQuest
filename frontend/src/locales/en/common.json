@@ -525,6 +525,11 @@
     "praise": {
       "child_required": "Please select a child.",
       "request_conflict": "This praise was already saved differently. Please reload."
+    },
+    "mcp": {
+      "operation_forbidden": "This operation is not available through MCP.",
+      "parent_confirmation_required": "This decision requires explicit parent confirmation.",
+      "parent_required": "MCP must be linked to an existing parent account."
     }
   },
   "rewards": {

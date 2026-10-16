@@ -114,6 +114,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         api.include_router(module.router)
     app.include_router(api)
 
+    from app.auth import ParentSession
+    from app.mcp_access import tool_schema
+
+    @app.get("/api/internal/mcp/schema", include_in_schema=False)
+    def mcp_schema(_: ParentSession) -> dict:
+        return tool_schema(app.openapi())
+
     @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     def api_not_found(path: str) -> JSONResponse:
         return JSONResponse({"code": "common.not_found"}, status_code=404)

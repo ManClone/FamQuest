@@ -87,6 +87,31 @@ def end_session(db: Session, response: Response, auth_session: AuthSession) -> N
 
 def current_session(request: Request, db: DbSession) -> AuthSession:
     """Angemeldete Session; bei schreibenden Requests zusätzlich mit CSRF-Prüfung."""
+    authorization = request.headers.get("authorization", "")
+    if authorization.startswith("Bearer "):
+        from app.config import get_settings
+        from app.mcp_access import allowed
+
+        secret = get_settings().mcp_service_token
+        supplied = authorization.removeprefix("Bearer ")
+        if len(secret) < 32 or not hmac.compare_digest(supplied.encode(), secret.encode()):
+            raise ApiError(401, "auth.not_authenticated")
+        if not allowed(request.method, request.url.path):
+            raise ApiError(403, "mcp.operation_forbidden")
+        if (
+            request.method != "GET"
+            and "approvals/" in request.url.path
+            and request.headers.get("x-mcp-parent-confirmed") != "true"
+        ):
+            raise ApiError(409, "mcp.parent_confirmation_required")
+        raw_id = request.headers.get("x-famquest-parent-id", "")
+        user = db.get(User, int(raw_id)) if raw_id.isdecimal() else None
+        if user is None or user.role not in ("admin", "parent"):
+            raise ApiError(403, "mcp.parent_required")
+        logger.info("MCP parent=%s method=%s path=%s", user.id, request.method, request.url.path)
+        # Transient principal: no reusable browser session, cookie or CSRF exemption for cookies.
+        return AuthSession(user_id=user.id, user=user)
+
     token = request.cookies.get(SESSION_COOKIE)
     auth_session = (
         db.scalars(select(AuthSession).where(AuthSession.token_hash == token_hash(token))).first()
