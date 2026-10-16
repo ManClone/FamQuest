@@ -1,42 +1,98 @@
-"""Small ASGI tests for the MCP authentication boundary."""
-import asyncio
-import os
+"""MCP account boundary and persistent retry tests; no live GitHub calls."""
+
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-os.environ.setdefault("FAMQUEST_MCP_TOKEN", "test-only-token-0123456789-abcdef")
-os.environ.setdefault('FAMQUEST_PARENT_TOKEN', 'test-parent-credential-long-enough-12345')
-from server import BearerAuth
+import httpx
+from gateway import GatewayTransport, parent_id
 
 
-class AuthTests(unittest.TestCase):
-    def test_missing_token_rejected(self):
-        called = []
-        messages = []
+class GatewayTests(unittest.IsolatedAsyncioTestCase):
+    async def test_retries_are_parent_scoped_and_conflicts_fail_closed(self):
+        calls = []
 
-        async def inner(scope, receive, send):
-            called.append(True)
+        async def handler(request):
+            calls.append(request)
+            return httpx.Response(201, json={"id": len(calls)})
 
-        async def send(message):
-            messages.append(message)
+        with tempfile.TemporaryDirectory() as folder:
+            transport = GatewayTransport(
+                "s" * 40,
+                {"10": 1},
+                Path(folder) / "audit.db",
+                httpx.MockTransport(handler),
+            )
+            async with httpx.AsyncClient(
+                base_url="http://backend", transport=transport
+            ) as client:
+                with patch("gateway.parent_id", return_value=1):
+                    headers = {"X-MCP-Request-Key": "a" * 32}
+                    first = await client.post(
+                        "/api/tasks", json={"title": "Read"}, headers=headers
+                    )
+                    retry = await client.post(
+                        "/api/tasks", json={"title": "Read"}, headers=headers
+                    )
+                    conflict = await client.post(
+                        "/api/tasks", json={"title": "Run"}, headers=headers
+                    )
+                    self.assertEqual(first.json(), retry.json())
+                    self.assertEqual(conflict.status_code, 409)
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(calls[0].headers["X-FamQuest-Parent-ID"], "1")
+                with patch("gateway.parent_id", return_value=2):
+                    await client.post(
+                        "/api/tasks", json={"title": "Read"}, headers=headers
+                    )
+                self.assertEqual(len(calls), 2)
 
-        scope = {"type": "http", "headers": [], "path": "/mcp"}
-        asyncio.run(BearerAuth(inner)(scope, None, send))
-        self.assertFalse(called)
-        self.assertEqual(messages[0]["status"], 401)
+    async def test_missing_key_and_uncertain_outcome_are_not_replayed(self):
+        calls = []
 
-    def test_valid_token_passes(self):
-        called = []
+        async def handler(request):
+            calls.append(request)
+            raise httpx.ConnectError("offline")
 
-        async def inner(scope, receive, send):
-            called.append(True)
+        with tempfile.TemporaryDirectory() as folder:
+            transport = GatewayTransport(
+                "s" * 40, {}, Path(folder) / "audit.db", httpx.MockTransport(handler)
+            )
+            async with httpx.AsyncClient(
+                base_url="http://backend", transport=transport
+            ) as client:
+                with patch("gateway.parent_id", return_value=1):
+                    response = await client.post("/api/tasks")
+                    self.assertEqual(response.status_code, 422)
+                    headers = {"X-MCP-Request-Key": "b" * 32}
+                    with self.assertRaises(httpx.ConnectError):
+                        await client.post("/api/tasks", headers=headers)
+                    retry = await client.post("/api/tasks", headers=headers)
+                    self.assertEqual(retry.status_code, 409)
+                    self.assertEqual(len(calls), 1)
 
-        async def send(message):
-            pass
+    def test_unknown_and_missing_github_identity_are_denied(self):
+        with (
+            patch("gateway.get_access_token", return_value=None),
+            self.assertRaises(PermissionError),
+        ):
+            parent_id({"10": 1})
+        from types import SimpleNamespace
 
-        token = os.environ["FAMQUEST_MCP_TOKEN"].encode()
-        scope = {"type": "http", "headers": [(b"authorization", b"Bearer " + token)]}
-        asyncio.run(BearerAuth(inner)(scope, None, send))
-        self.assertTrue(called)
+        with (
+            patch(
+                "gateway.get_access_token",
+                return_value=SimpleNamespace(claims={"sub": "11"}),
+            ),
+            self.assertRaises(PermissionError),
+        ):
+            parent_id({"10": 1})
+        with patch(
+            "gateway.get_access_token",
+            return_value=SimpleNamespace(claims={"sub": "10"}),
+        ):
+            self.assertEqual(parent_id({"10": 1}), 1)
 
 
 if __name__ == "__main__":

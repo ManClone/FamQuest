@@ -11,7 +11,8 @@
     "logout": "Sign out",
     "next": "Next",
     "retry": "Try again",
-    "save": "Save"
+    "save": "Save",
+    "close": "Close"
   },
   "languages": {
     "de": "Deutsch",
@@ -366,7 +367,11 @@
     "kind_reward_redeemed": "Reward redeemed",
     "kind_reward_cancelled": "Reward cancelled",
     "kind_chore_completed": "Household task completed",
-    "kind_chore_undone": "Household task undone"
+    "kind_chore_undone": "Household task undone",
+    "kind_penalty_reversed": "Star deduction reversed",
+    "kind_manual_reversed": "Manual booking reversed",
+    "reversed": "Reversed · correction #{{id}}",
+    "compensates": "Compensation for booking #{{id}}"
   },
   "errors": {
     "common": {
@@ -442,13 +447,19 @@
       "not_repeatable": "This task is not repeatable."
     },
     "points": {
-      "insufficient": "There aren't enough points for that."
+      "insufficient": "There aren't enough points for that.",
+      "not_penalty": "This entry is not a manual star deduction.",
+      "not_manual": "Only manual entries can be reversed here.",
+      "invalid_compensation": "This entry is not a matching unused compensation.",
+      "compensation_in_use": "This entry is already linked as a compensation.",
+      "compensation_review_required": "Review later credits and link any existing compensation first."
     },
     "reward": {
       "not_found": "This reward no longer exists",
       "inactive": "This reward is not available right now",
       "insufficient_points": "Not enough points yet",
-      "child_only": "Rewards are only for children"
+      "child_only": "Rewards are only for children",
+      "own_only": "Adults can only redeem their own rewards."
     },
     "approval": {
       "not_found": "This has already been checked or undone."
@@ -506,7 +517,8 @@
       "not_completed": "This chore has not been completed yet.",
       "parent_required": "An adult account is required for this action.",
       "request_conflict": "This execution was already saved elsewhere. Please reload.",
-      "not_repeatable": "This task is already completed today or awaiting approval."
+      "not_repeatable": "This task is already completed today or awaiting approval.",
+      "fixed_assignee_only": "This task is fixed to another person. Change its assignment in Settings > Household first."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
@@ -520,6 +532,15 @@
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
       "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family."
+    },
+    "praise": {
+      "child_required": "Please select a child.",
+      "request_conflict": "This praise was already saved differently. Please reload."
+    },
+    "mcp": {
+      "operation_forbidden": "This operation is not available through MCP.",
+      "parent_confirmation_required": "This decision requires explicit parent confirmation.",
+      "parent_required": "MCP must be linked to an existing parent account."
     }
   },
   "rewards": {
@@ -578,7 +599,9 @@
     "audience_parent": "Parents",
     "audience_child": "Children",
     "need_parents": "Add a parent family member first.",
-    "choose_parent": "Choose a parent"
+    "choose_parent": "Choose a parent",
+    "own_only": "Only this person can redeem their rewards. Progress and history remain visible.",
+    "choose_member": "Choose a family member"
   },
   "care": {
     "title": "Who did it?",
@@ -1023,7 +1046,9 @@
     "child_hint": "Assigned household tasks automatically appear for children. Parents confirm their completions.",
     "future_money": "Money (coming later)",
     "awaiting": "{{count}} completions awaiting approval",
-    "child_complete": "Done!"
+    "child_complete": "Done!",
+    "who_before_completion": "Who completed {{title}}?",
+    "confirm_undo": "Really undo “{{title}}”?"
   },
   "todos": {
     "title": "To do",
@@ -1109,9 +1134,53 @@
     "level_progress": "Progress to the next level",
     "earned_one": "{{count}} experience XP earned",
     "earned_other": "{{count}} experience XP earned",
-    "level_hint": "{{count}} XP per level. Redeeming rewards keeps your experience.",
+    "level_hint": "Spending stars and criticism do not change your level XP.",
     "reward_history": "Your redeemed rewards",
     "today_progress": "Your day",
-    "back_tasks": "Back to my tasks"
+    "back_tasks": "Back to my tasks",
+    "praise_remaining": "{{count}} more praise to level {{level}}",
+    "praise_progress": "Praise to the next level",
+    "xp_ready": "XP reached – the remaining praise is still needed."
+  },
+  "praise": {
+    "section": "Praise & discipline",
+    "count": "{{count}} praises",
+    "give": "Give praise",
+    "deduct": "Deduct stars",
+    "amount": "Stars to deduct",
+    "reason": "Reason",
+    "saved": "Saved.",
+    "received": "You received praise!",
+    "approve": "Approve + praise",
+    "approve_label": "Approve {{title}} by {{name}} and give praise",
+    "count_one": "{{count}} praise",
+    "count_other": "{{count}} praises",
+    "deducted": "Stars deducted",
+    "history": "Praise history",
+    "revoke": "Revoke praise",
+    "revoked": "Revoked",
+    "revoke_reason": "Reason for correction",
+    "empty": "No praise yet."
+  },
+  "chore_history": {
+    "title": "Confirmed household tasks",
+    "intro": "Each execution is separate. Undo removes it and reverses the points originally credited.",
+    "empty": "No confirmed executions yet.",
+    "undo": "Undo",
+    "confirm": "Undo this execution?",
+    "yes": "Yes, undo",
+    "cancel": "Cancel",
+    "more": "Load older",
+    "loading": "Loading …"
+  },
+  "penalty": {
+    "history": "Star deduction history",
+    "empty": "No star deductions yet.",
+    "reverse": "Reverse deduction",
+    "reversed": "Reversed · stars refunded",
+    "reason": "Reason for reversal",
+    "compensation_review": "Later credits may already compensate this deduction. Review before refunding.",
+    "compensation_unrelated": "I checked: these credits are unrelated to this deduction.",
+    "existing_compensation": "Link an existing compensation (optional)"
   }
 }

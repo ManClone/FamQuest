@@ -100,6 +100,7 @@ class FamilyMember(Base):
     __tablename__ = "family_members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    highest_level: Mapped[int] = mapped_column(default=1, server_default="1")
     name: Mapped[str] = mapped_column(String(50))
     # Erweiterbare Werte (siehe schemas.MEMBER_ROLES), bewusst kein Datenbank-Enum.
     role: Mapped[str] = mapped_column(String(20))
@@ -858,4 +859,43 @@ class ConsequenceEntry(Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     reversal_note: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Praise(Base):
+    """Original praise is retained, including any later parent correction."""
+
+    __tablename__ = "praises"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reason: Mapped[str] = mapped_column(String(200))
+    source_key: Mapped[str] = mapped_column(String(160), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    revocation_reason: Mapped[str | None] = mapped_column(String(200))
+
+
+class PenaltyReversal(Base):
+    """Shared once-only correction audit for manual entries (legacy table name retained)."""
+
+    __tablename__ = "penalty_reversals"
+    transaction_id: Mapped[int] = mapped_column(
+        ForeignKey("point_transactions.id", ondelete="CASCADE"), primary_key=True
+    )
+    refund_transaction_id: Mapped[int] = mapped_column(
+        ForeignKey("point_transactions.id", ondelete="CASCADE"), unique=True
+    )
+    reason: Mapped[str] = mapped_column(String(200))
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -417,9 +417,10 @@ class Demo:
         ]
         self.ids: dict[str, int] = {}
         for key, name, role, color in people:
-            member = self.call(
-                "POST", "/members", 201, json={"name": name, "role": role, "color": color}
-            )
+            data = {"name": name, "role": role, "color": color}
+            if role == "child":
+                data["login"] = {"email": f"{key}@famquest.example", "password": PASSWORD}
+            member = self.call("POST", "/members", 201, json=data)
             self.ids[key] = member["id"]
             image = (DEMO_DIR / "avatars" / f"{key}.png").read_bytes()
             self.call("PUT", f"/members/{member['id']}/avatar", content=image)
@@ -590,7 +591,26 @@ class Demo:
                 )
                 ids.append(reward["id"])
             # Eine Einlösung für die Historie: 15 Minuten Tablet.
-            self.call("POST", f"/rewards/{ids[1]}/redeem", 201)
+            # Sample children redeem through their own login, like real profiles.
+            child = TestClient(self.client.app)
+            try:
+                login = child.post(
+                    "/api/auth/login",
+                    json={
+                        "email": f"{member}@famquest.example",
+                        "password": PASSWORD,
+                    },
+                )
+                if login.status_code != 200:
+                    raise RuntimeError("Demo child login failed")
+                result = child.post(
+                    f"/api/rewards/{ids[1]}/redeem",
+                    headers={"X-CSRF-Token": login.json()["csrf_token"]},
+                )
+                if result.status_code != 201:
+                    raise RuntimeError(f"Demo reward redemption failed: {result.status_code}")
+            finally:
+                child.close()
 
     def meals(self) -> None:
         monday = self.today - dt.timedelta(days=self.today.weekday())

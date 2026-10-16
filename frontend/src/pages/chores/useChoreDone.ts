@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import {
   type Chore,
@@ -18,6 +19,7 @@ export const WHO_TIMEOUT_MS = 12 * 1000
  * Gemeinsam für die Ansicht „Haushalt“, die Kachel auf „Heute“ und die Spalte unter „Aufgaben“.
  */
 export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
+  const { t } = useTranslation()
   const markDone = useMarkDone()
   const undoDone = useUndoDone()
   const todoDone = useTodoDone()
@@ -28,6 +30,7 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
     id: number
     requestKey?: string
     completionId?: number | null
+    pending?: boolean
   } | null>(null)
 
   useEffect(() => {
@@ -40,10 +43,14 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
   const inFlight = useRef(false)
   const repeat = (chore: Chore) => {
     if (inFlight.current) return
-    inFlight.current = true
     const requestKey = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
       byte.toString(16).padStart(2, '0'),
     ).join('')
+    if (chore.assignment_mode === 'fixed') {
+      setAsking({ kind: 'chore', id: chore.id, requestKey, pending: true })
+      return
+    }
+    inFlight.current = true
     markDone.mutate(
       { id: chore.id, memberId: null, requestKey },
       {
@@ -61,11 +68,24 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
     )
   }
 
+  const undoChore = (chore: Chore, completionId = chore.last_completion_id) => {
+    if (inFlight.current || undoDone.isPending) return
+    if (!window.confirm(t('chores.confirm_undo', { title: chore.title }))) return
+    inFlight.current = true
+    close()
+    undoDone.mutate(
+      { id: chore.id, completionId },
+      {
+        onSettled: () => {
+          inFlight.current = false
+        },
+      },
+    )
+  }
+
   const toggle = (chore: Chore) => {
     if (chore.done_today) {
-      close()
-      if (undoDone.isPending) return
-      undoDone.mutate({ id: chore.id, completionId: chore.last_completion_id })
+      undoChore(chore)
     } else {
       repeat(chore)
     }
@@ -73,8 +93,15 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
 
   const toggleTodo = (todo: Todo) => {
     if (todo.done) {
+      if (inFlight.current || todoUndo.isPending) return
+      if (!window.confirm(t('chores.confirm_undo', { title: todo.title }))) return
+      inFlight.current = true
       close()
-      todoUndo.mutate(todo.id)
+      todoUndo.mutate(todo.id, {
+        onSettled: () => {
+          inFlight.current = false
+        },
+      })
     } else {
       todoDone.mutate(
         { id: todo.id, memberId: null },
@@ -85,7 +112,7 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
 
   const chore =
     asking?.kind === 'chore'
-      ? chores.find((item) => item.id === asking.id && item.done_today)
+      ? chores.find((item) => item.id === asking.id && (item.done_today || asking.pending))
       : undefined
   const todo =
     asking?.kind === 'todo' ? todos.find((item) => item.id === asking.id && item.done) : undefined
@@ -99,18 +126,20 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
     asking: chore
       ? {
           title: chore.title,
+          pending: asking?.pending ?? false,
           pick: (memberId: number) => {
             markDone.mutate({ id: chore.id, memberId, requestKey: asking?.requestKey })
             close()
           },
           undo: () => {
-            undoDone.mutate({ id: chore.id, completionId: asking?.completionId })
-            close()
+            if (asking?.pending) close()
+            else undoChore(chore, asking?.completionId)
           },
         }
       : todo
         ? {
             title: todo.title,
+            pending: false,
             pick: (memberId: number) => {
               todoDone.mutate({ id: todo.id, memberId })
               close()

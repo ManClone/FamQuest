@@ -17,10 +17,12 @@ import {
 
 beforeEach(async () => {
   await i18n.changeLanguage('de')
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 const mama = makeMember({ id: 3, name: 'Mama', role: 'parent', color: 'blue' })
@@ -208,6 +210,17 @@ describe('Haushalt', () => {
     await user.click(await screen.findByRole('button', { name: /Staubsaugen/, pressed: true }))
 
     expect(calls.map((call) => call.key)).toContain('DELETE /api/chores/4/done')
+  })
+
+  it('asks before undoing and leaves all executions untouched when cancelled', async () => {
+    const user = userEvent.setup()
+    const calls = mockChores()
+    vi.mocked(window.confirm).mockReturnValue(false)
+    renderApp('/household')
+    await user.click(await screen.findByRole('button', { name: /Staubsaugen/, pressed: true }))
+    expect(window.confirm).toHaveBeenCalledWith('„Staubsaugen“ wirklich zurücknehmen?')
+    expect(calls.some((call) => call.key.startsWith('DELETE'))).toBe(false)
+    expect(screen.getByRole('button', { name: /Staubsaugen/, pressed: true })).toBeVisible()
   })
 
   it('zeigt die faire Verteilung aus „Wer war’s?“', async () => {
@@ -464,4 +477,17 @@ it('haelt erledigte Aufgaben mit einer eigenen weiteren Ausfuehrung verfuegbar',
   expect(sent).toHaveLength(2)
   expect(sent[0].request_key).not.toBe(sent[1].request_key)
   expect(await screen.findByRole('region', { name: 'Wer war\u2019s?' })).toBeVisible()
+})
+
+it('asks for the person before booking a fixed chore', async () => {
+  const user = userEvent.setup()
+  const fixed = { ...toilet, assignment_mode: 'fixed' as const, fixed_member_id: mama.id }
+  const calls = mockChores(makeChorePlan({ ...PLAN, chores: [fixed] }))
+  renderApp('/household')
+  await user.click(await screen.findByRole('button', { name: /Toilette/ }))
+  const who = await screen.findByRole('region', { name: /Wer war/ })
+  expect(bodiesOf(calls, 'PUT /api/chores/1/done')).toHaveLength(0)
+  await user.click(within(who).getByRole('button', { name: mama.name }))
+  await waitFor(() => expect(bodiesOf(calls, 'PUT /api/chores/1/done')).toHaveLength(1))
+  expect(bodiesOf(calls, 'PUT /api/chores/1/done')[0]).toMatchObject({ member_id: mama.id })
 })

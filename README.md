@@ -2,6 +2,10 @@
 
 # FamQuest
 
+The first stable family release covers issues #16–#23: audited corrections, shared
+reward visibility with owner-only redemption, and persistent milestone levels.
+See [the release scope and deployment checks](docs/STABLE-1.md). Banking remains deferred.
+
 > **Family fork / first live test:** See [docs/LIVE-TEST.md](docs/LIVE-TEST.md) for current behavior and release branches. Older sections and screenshots still describe parts of the original PIN and navigation flow.
 
 **English** · [Deutsch](README.de.md)

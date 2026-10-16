@@ -21,22 +21,30 @@ def book(
     task_date: dt.date | None = None,
     user_id: int | None = None,
     redemption: RewardRedemption | None = None,
-) -> None:
+) -> PointTransaction | None:
     """Legt eine Buchung an; Aufgaben mit 0 Punkten erzeugen keine."""
     if amount == 0:
         return
-    db.add(
-        PointTransaction(
-            member_id=member_id,
-            amount=amount,
-            kind=kind,
-            reason=reason,
-            task_id=task_id,
-            task_date=task_date,
-            created_by_user_id=user_id,
-            redemption=redemption,
-        )
+    if kind in LEVEL_EARNING_KINDS:
+        from app.levels import advance
+
+        lock_member(db, member_id)
+        advance(db, member_id)
+    entry = PointTransaction(
+        member_id=member_id,
+        amount=amount,
+        kind=kind,
+        reason=reason,
+        task_id=task_id,
+        task_date=task_date,
+        created_by_user_id=user_id,
+        redemption=redemption,
     )
+    db.add(entry)
+    if kind in LEVEL_EARNING_KINDS:
+        db.flush()
+        advance(db, member_id)
+    return entry
 
 
 def lock_member(db: Session, member_id: int) -> None:

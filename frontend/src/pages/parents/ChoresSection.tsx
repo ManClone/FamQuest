@@ -1,3 +1,4 @@
+import { ConfirmedChores } from './ConfirmedChores'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -77,6 +78,8 @@ export function ChoresSection({
           </Button>
         </div>
       </Section>
+
+      <ConfirmedChores members={members} />
 
       <Section title="Wochenverteilung">
         <p className="text-base text-slate-600">

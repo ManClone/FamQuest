@@ -40,6 +40,14 @@ export function useMembers() {
   return useQuery({ queryKey: MEMBERS_KEY, queryFn: () => apiGet<Member[]>('/members') })
 }
 
+export function useRewardMembers(enabled = true) {
+  return useQuery({
+    queryKey: ['reward-members'],
+    enabled,
+    queryFn: () => apiGet<Member[]>('/rewards/members'),
+  })
+}
+
 export const createMember = (data: MemberData) => api<Member>('POST', '/members', data)
 export const updateMember = (id: number, data: MemberData) =>
   api<Member>('PUT', `/members/${id}`, data)

@@ -11,7 +11,8 @@
     "logout": "Abmelden",
     "next": "Weiter",
     "retry": "Nochmal versuchen",
-    "save": "Speichern"
+    "save": "Speichern",
+    "close": "Schließen"
   },
   "languages": {
     "de": "Deutsch",
@@ -366,7 +367,11 @@
     "kind_reward_redeemed": "Belohnung eingelöst",
     "kind_reward_cancelled": "Belohnung storniert",
     "kind_chore_completed": "Hausarbeit erledigt",
-    "kind_chore_undone": "Hausarbeit zurückgenommen"
+    "kind_chore_undone": "Hausarbeit zurückgenommen",
+    "kind_penalty_reversed": "Strafpunkte storniert",
+    "kind_manual_reversed": "Manuelle Buchung storniert",
+    "reversed": "Storniert · Gegenbuchung #{{id}}",
+    "compensates": "Ausgleich für Buchung #{{id}}"
   },
   "errors": {
     "common": {
@@ -442,13 +447,19 @@
       "not_repeatable": "Diese Aufgabe ist nicht mehrfach ausführbar."
     },
     "points": {
-      "insufficient": "So viele Punkte sind nicht vorhanden."
+      "insufficient": "So viele Punkte sind nicht vorhanden.",
+      "not_penalty": "Diese Buchung ist kein Strafpunkte-Abzug.",
+      "not_manual": "Nur manuelle Buchungen können hier storniert werden.",
+      "invalid_compensation": "Diese Buchung ist kein passender, unverwendeter Ausgleich.",
+      "compensation_in_use": "Diese Buchung ist bereits als Ausgleich verknüpft.",
+      "compensation_review_required": "Bitte zuerst spätere Gutschriften prüfen und einen vorhandenen Ausgleich verknüpfen."
     },
     "reward": {
       "not_found": "Diese Belohnung gibt es nicht mehr",
       "inactive": "Diese Belohnung ist gerade nicht verfügbar",
       "insufficient_points": "Dafür reichen die Punkte noch nicht",
-      "child_only": "Belohnungen gibt es nur für Kinder"
+      "child_only": "Belohnungen gibt es nur für Kinder",
+      "own_only": "Erwachsene können nur ihre eigenen Belohnungen einlösen."
     },
     "approval": {
       "not_found": "Diese Erledigung wurde schon geprüft oder zurückgenommen."
@@ -506,7 +517,8 @@
       "not_completed": "Diese Hausarbeit ist noch nicht erledigt.",
       "parent_required": "Für diese Aktion ist ein Erwachsenenkonto erforderlich.",
       "request_conflict": "Diese Ausführung wurde bereits anderweitig gespeichert. Bitte neu laden.",
-      "not_repeatable": "Diese Aufgabe ist heute bereits erledigt oder wartet auf Bestätigung."
+      "not_repeatable": "Diese Aufgabe ist heute bereits erledigt oder wartet auf Bestätigung.",
+      "fixed_assignee_only": "Diese Aufgabe ist fest zugeteilt und kann nur für diese Person erledigt werden. Die Zuteilung lässt sich in den Einstellungen unter Haushalt ändern."
     },
     "todo": {
       "not_found": "Diesen Eintrag gibt es nicht mehr.",
@@ -520,6 +532,15 @@
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
       "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen."
+    },
+    "praise": {
+      "child_required": "Bitte ein Kind auswählen.",
+      "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
+    },
+    "mcp": {
+      "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
+      "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
+      "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
     }
   },
   "rewards": {
@@ -578,7 +599,9 @@
     "audience_parent": "Eltern",
     "audience_child": "Kinder",
     "need_parents": "Legt zuerst ein Elternteil als Familienmitglied an.",
-    "choose_parent": "Elternteil wählen"
+    "choose_parent": "Elternteil wählen",
+    "own_only": "Einlösen kann hier nur die Person selbst. Fortschritt und Verlauf bleiben sichtbar.",
+    "choose_member": "Familienmitglied wählen"
   },
   "care": {
     "title": "Wer hat’s gemacht?",
@@ -1023,7 +1046,9 @@
     "child_hint": "Zugewiesene Haushaltsaufgaben erscheinen automatisch bei den Kindern. Erledigungen bestätigen die Eltern.",
     "future_money": "Geld (später verfügbar)",
     "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
-    "child_complete": "Erledigt!"
+    "child_complete": "Erledigt!",
+    "who_before_completion": "Wer hat {{title}} erledigt?",
+    "confirm_undo": "„{{title}}“ wirklich zurücknehmen?"
   },
   "todos": {
     "title": "Zu erledigen",
@@ -1109,9 +1134,53 @@
     "level_progress": "Fortschritt zum nächsten Level",
     "earned_one": "{{count}} Erfahrungs-XP gesammelt",
     "earned_other": "{{count}} Erfahrungs-XP gesammelt",
-    "level_hint": "{{count}} XP je Level. Einlösen kostet keine Erfahrung.",
+    "level_hint": "Sterne ausgeben und Kritik ändern deine Level-XP nicht.",
     "reward_history": "Deine eingelösten Belohnungen",
     "today_progress": "Dein Tag",
-    "back_tasks": "Zurück zu meinen Aufgaben"
+    "back_tasks": "Zurück zu meinen Aufgaben",
+    "praise_remaining": "Noch {{count}} Lob bis Level {{level}}",
+    "praise_progress": "Lob bis zum nächsten Level",
+    "xp_ready": "XP geschafft – das fehlende Lob wird noch benötigt."
+  },
+  "praise": {
+    "section": "Lob & Kritik",
+    "count": "{{count}} Lobe",
+    "give": "Lob vergeben",
+    "deduct": "Strafpunkte",
+    "amount": "Sterne abziehen",
+    "reason": "Begründung",
+    "saved": "Gespeichert.",
+    "received": "Du hast ein Lob erhalten!",
+    "approve": "Bestätigen + Lob",
+    "approve_label": "{{title}} von {{name}} bestätigen und loben",
+    "count_one": "{{count}} Lob",
+    "count_other": "{{count}} Lobe",
+    "deducted": "Sterne abgezogen",
+    "history": "Lob-Verlauf",
+    "revoke": "Lob zurücknehmen",
+    "revoked": "Zurückgenommen",
+    "revoke_reason": "Grund der Korrektur",
+    "empty": "Noch kein Lob vergeben."
+  },
+  "chore_history": {
+    "title": "Bestätigte Erledigungen",
+    "intro": "Jede Erledigung einzeln. Rückgängig entfernt sie und zieht die dafür gutgeschriebenen Punkte wieder ab.",
+    "empty": "Noch keine bestätigten Erledigungen.",
+    "undo": "Rückgängig",
+    "confirm": "Diese Erledigung wirklich rückgängig machen?",
+    "yes": "Ja, rückgängig machen",
+    "cancel": "Abbrechen",
+    "more": "Ältere laden",
+    "loading": "Wird geladen …"
+  },
+  "penalty": {
+    "history": "Strafpunkte-Verlauf",
+    "empty": "Noch keine Strafpunkte abgezogen.",
+    "reverse": "Abzug zurücknehmen",
+    "reversed": "Storniert · Sterne erstattet",
+    "reason": "Grund der Rücknahme",
+    "compensation_review": "Spätere Gutschriften könnten diesen Abzug bereits ausgeglichen haben. Vor einer Erstattung prüfen.",
+    "compensation_unrelated": "Ich habe geprüft: Diese Gutschriften gehören nicht zu diesem Abzug.",
+    "existing_compensation": "Bestehende Ausgleichsbuchung verknüpfen (optional)"
   }
 }

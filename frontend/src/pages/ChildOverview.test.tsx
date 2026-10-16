@@ -19,7 +19,7 @@ beforeEach(async () => {
 afterEach(() => {
   vi.unstubAllGlobals()
 })
-function setup(path = '/tasks') {
+function setup(path = '/tasks', progress: Record<string, number> = {}) {
   let redeemed = false
   let pendingChore = false
   const member = makeMember({ name: 'Tim' })
@@ -33,6 +33,7 @@ function setup(path = '/tasks') {
       }),
     ),
     'GET /api/members': Response.json([member]),
+    'GET /api/rewards/members': Response.json([member]),
     'GET /api/chores/mine': () =>
       Response.json([
         {
@@ -76,6 +77,7 @@ function setup(path = '/tasks') {
       level_progress: 32,
       level_size: 100,
       remaining_xp: 68,
+      ...progress,
     }),
     'GET /api/tasks/week': Response.json({
       start: '2026-09-28',
@@ -142,7 +144,7 @@ it('keeps the same personal progress above day/week and removes the duplicate ta
   expect(screen.getByRole('region', { name: 'My adventure' })).toBe(overview)
   expect(within(overview).getByRole('progressbar')).toBe(level)
   expect(screen.getByRole('heading', { name: 'Tim', level: 1 })).toBeVisible()
-  expect(within(overview).getByText('32 stars')).toBeVisible()
+  expect(within(overview).getByLabelText('32 stars')).toBeVisible()
 })
 
 it('shows own redemption history without a redundant back control for children', async () => {
@@ -164,7 +166,28 @@ it('shows own redemption history without a redundant back control for children',
   )
   expect(await screen.findByRole('heading', { name: 'Tim', level: 1 })).toBeVisible()
   expect(await screen.findByText('Level 2')).toBeVisible()
-  expect(screen.getByText('22 stars')).toBeVisible()
+  expect(screen.getByLabelText('22 stars')).toBeVisible()
+})
+
+it('shows separate XP and praise progress while waiting at a milestone', async () => {
+  setup('/tasks', {
+    earned_xp: 200,
+    level: 3,
+    level_progress: 65,
+    level_size: 65,
+    remaining_xp: 0,
+    required_praise: 1,
+    remaining_praise: 1,
+    praise_progress: 0,
+  })
+  const overview = await screen.findByRole('region', { name: 'My adventure' })
+  expect(
+    within(overview).getByRole('progressbar', { name: 'Progress to the next level' }),
+  ).toHaveAttribute('aria-valuenow', '65')
+  expect(
+    within(overview).getByRole('progressbar', { name: 'Praise to the next level' }),
+  ).toHaveAttribute('aria-valuenow', '0')
+  expect(within(overview).getByText(/XP reached/)).toBeVisible()
 })
 
 it('zeigt automatisch zugeteilte Hausarbeit separat und wartet auf die Eltern', async () => {
@@ -174,6 +197,6 @@ it('zeigt automatisch zugeteilte Hausarbeit separat und wartet auf die Eltern', 
   expect(await within(household).findByText('Clean litter box')).toBeVisible()
   await user.click(within(household).getByRole('button', { name: 'Done!' }))
   expect(await within(household).findByText('1 completions awaiting approval')).toBeVisible()
-  expect(screen.getByText('32 stars')).toBeVisible()
+  expect(screen.getByLabelText('32 stars')).toBeVisible()
   expect(calls.some((call) => call.key === 'GET /api/chores')).toBe(false)
 })

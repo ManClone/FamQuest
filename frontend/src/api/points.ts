@@ -13,6 +13,8 @@ export type PointKind =
   | 'reward_cancelled'
   | 'chore_completed'
   | 'chore_undone'
+  | 'penalty_reversed'
+  | 'manual_reversed'
 
 export interface PointTransaction {
   id: number
@@ -24,6 +26,10 @@ export interface PointTransaction {
   icon: string | null
   task_date: string | null
   created_at: string
+  reversed_at?: string | null
+  reversal_transaction_id?: number | null
+  reversal_reason?: string | null
+  compensates_transaction_id?: number | null
 }
 
 export interface PointHistory {
@@ -69,11 +75,21 @@ export function useBookPoints(memberId: number) {
 
 export const PROGRESS_KEY = ['member-progress'] as const
 export interface MemberProgress {
+  latest_deduction_id?: number
+  latest_deduction_reason?: string | null
+  latest_deduction_amount?: number
+  praise_count?: number
+  latest_praise_id?: number
+  latest_praise_reason?: string | null
   earned_xp: number
   level: number
   level_progress: number
   level_size: number
   remaining_xp: number
+  next_level_xp?: number
+  required_praise?: number
+  remaining_praise?: number
+  praise_progress?: number
 }
 export function useMemberProgress(memberId: number) {
   return useQuery({

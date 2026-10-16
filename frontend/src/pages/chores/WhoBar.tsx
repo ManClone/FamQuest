@@ -21,7 +21,9 @@ export function WhoBar({ done }: { done: ChoreDone }) {
       className="fixed inset-x-2 bottom-30 z-20 mx-auto flex max-w-3xl flex-wrap items-center gap-3 rounded-3xl bg-slate-800 p-3 text-white shadow-xl sm:bottom-4 sm:left-32"
     >
       <p role="status" className="min-w-0 flex-1 basis-48 text-lg font-bold break-words">
-        {t('chores.done_notice', { title: asking.title })}{' '}
+        {t(asking.pending ? 'chores.who_before_completion' : 'chores.done_notice', {
+          title: asking.title,
+        })}{' '}
         {sorted.length > 0 && <span className="font-normal">{t('chores.who')}</span>}
       </p>
       <div className="flex flex-wrap items-center gap-2">

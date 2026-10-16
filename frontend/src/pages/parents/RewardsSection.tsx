@@ -159,16 +159,28 @@ export function RewardsSection({
   )
 }
 
-export function RedemptionHistory({ member, timeZone }: { member: Member; timeZone: string }) {
+export function RedemptionHistory({
+  member,
+  timeZone,
+  readOnly = false,
+  showTitle = true,
+}: {
+  member: Member
+  timeZone: string
+  readOnly?: boolean
+  showTitle?: boolean
+}) {
   const { t } = useTranslation()
   const history = useRedemptions(member.id)
   const redemptions = history.data?.pages.flatMap((page) => page.redemptions) ?? []
 
   return (
     <div className="flex flex-col gap-3 border-t-2 border-slate-100 pt-4">
-      <h3 className="text-xl font-extrabold text-slate-800">
-        {t('rewards.history', { name: member.name })}
-      </h3>
+      {showTitle && (
+        <h3 className="text-xl font-extrabold text-slate-800">
+          {t('rewards.history', { name: member.name })}
+        </h3>
+      )}
       {history.isError && <Alert>{errorMessage(t, history.error)}</Alert>}
       {history.isSuccess && redemptions.length === 0 && (
         <p className="text-lg text-slate-600">{t('rewards.history_empty')}</p>
@@ -176,7 +188,12 @@ export function RedemptionHistory({ member, timeZone }: { member: Member; timeZo
       {redemptions.length > 0 && (
         <ul className="@container flex flex-col divide-y divide-slate-100">
           {redemptions.map((redemption) => (
-            <RedemptionRow key={redemption.id} redemption={redemption} timeZone={timeZone} />
+            <RedemptionRow
+              key={redemption.id}
+              redemption={redemption}
+              timeZone={timeZone}
+              readOnly={readOnly}
+            />
           ))}
         </ul>
       )}
@@ -194,10 +211,18 @@ export function RedemptionHistory({ member, timeZone }: { member: Member; timeZo
   )
 }
 
-function RedemptionRow({ redemption, timeZone }: { redemption: Redemption; timeZone: string }) {
+function RedemptionRow({
+  redemption,
+  timeZone,
+  readOnly,
+}: {
+  redemption: Redemption
+  timeZone: string
+  readOnly: boolean
+}) {
   const { t, i18n } = useTranslation()
   const role = useMe().data?.user.role
-  const canCancel = role === 'admin' || role === 'parent'
+  const canCancel = !readOnly && (role === 'admin' || role === 'parent')
   const cancel = useCancelRedemption()
   const [editing, setEditing] = useState(false)
   const [reason, setReason] = useState('')

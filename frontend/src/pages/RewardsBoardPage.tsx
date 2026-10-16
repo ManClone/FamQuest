@@ -17,7 +17,7 @@ export function RewardsBoardPage() {
   const me = useMe().data
   const family = useFamilyToday()
   const [selected, setSelected] = useState<number | null>(null)
-  const children = (family.members ?? []).filter((person) => person.role === 'parent')
+  const children = family.members ?? []
   const member =
     children.find((child) => child.id === selected) ??
     children.find((person) => person.id === me?.member_id) ??
@@ -47,14 +47,28 @@ export function RewardsBoardPage() {
       ) : (
         <>
           <ChildPicker
-            label={t('rewards.choose_parent')}
+            label={t('rewards.choose_member')}
             childMembers={children}
             selected={member}
             onSelect={setSelected}
           />
-          <RewardGrid member={member} balance={total} />
-          <Section title={t('child_progress.reward_history')}>
-            <RedemptionHistory member={member} timeZone={me?.family.timezone ?? 'Europe/Berlin'} />
+          {member.id !== me?.member_id && (
+            <p className="rounded-2xl bg-white p-3 text-slate-600">{t('rewards.own_only')}</p>
+          )}
+          <RewardGrid member={member} balance={total} canRedeem={member.id === me?.member_id} />
+          <Section
+            title={
+              member.id === me?.member_id
+                ? t('child_progress.reward_history')
+                : t('rewards.history', { name: member.name })
+            }
+          >
+            <RedemptionHistory
+              showTitle={false}
+              member={member}
+              timeZone={me?.family.timezone ?? 'Europe/Berlin'}
+              readOnly={member.id !== me?.member_id}
+            />
           </Section>
         </>
       )}
