@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -67,7 +67,7 @@ describe('Login', () => {
     await user.click(screen.getByRole('button', { name: 'Anmelden' }))
 
     expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeVisible()
-    expect(document.documentElement.lang).toBe('en')
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'))
   })
 
   it('meldet in der Demo per Knopf an und zeigt die PIN', async () => {
