@@ -97,7 +97,7 @@ describe('Wochenansicht im Aufgabenbereich', () => {
     const views = await screen.findByRole('navigation', { name: 'Ansicht' })
     await user.click(within(views).getByRole('link', { name: 'Woche' }))
 
-    expect(await screen.findByRole('heading', { name: /^28\. September.*4\. Oktober$/, level: 1 }))
+    expect(await screen.findByRole('heading', { name: /^28\. September.*4\. Oktober$/, level: 2 }))
     expect(
       within(screen.getByRole('navigation', { name: 'Hauptnavigation' })).getByRole('link', {
         name: 'Aufgaben',

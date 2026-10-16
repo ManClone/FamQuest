@@ -125,7 +125,8 @@
     "connections": "Calendar & weather",
     "settings": "Settings",
     "more": "More",
-    "household": "Household"
+    "household": "Household",
+    "profile": "Profile"
   },
   "pinpad": {
     "delete": "Delete digit",
@@ -1063,6 +1064,23 @@
     "all_tasks": "All my tasks",
     "edit_schedule": "Set the schedule directly on this task",
     "schedule_hint": "The existing schedule is preserved. If you replace it here, the selected days and time apply to all selected children. Tasks, assignments and previously earned points are preserved.",
-    "schedule_preserved": "The existing schedule is preserved until you replace it here."
+    "schedule_preserved": "The existing schedule is preserved until you replace it here.",
+    "manage_area": "Manage {{area}}"
+  },
+  "child_progress": {
+    "overview": "My adventure",
+    "adventure": "Every task takes you further!",
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars",
+    "level": "Level {{level}}",
+    "remaining_one": "{{count}} XP to level {{level}}",
+    "remaining_other": "{{count}} XP to level {{level}}",
+    "level_progress": "Progress to the next level",
+    "earned_one": "{{count}} experience XP earned",
+    "earned_other": "{{count}} experience XP earned",
+    "level_hint": "{{count}} XP per level. Redeeming rewards keeps your experience.",
+    "reward_history": "Your redeemed rewards",
+    "today_progress": "Your day",
+    "back_tasks": "Back to my tasks"
   }
 }

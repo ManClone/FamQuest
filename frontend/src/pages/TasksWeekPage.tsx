@@ -31,7 +31,9 @@ function parseDate(isoDate: string) {
  * Aufgaben der Woche (Montag bis Sonntag): je Tag und Person die Aufgaben als Symbole, erledigte
  * in der Personenfarbe mit Haken, verpasste blass. Nur zum Anschauen; erledigt wird heute.
  */
-export function TasksWeekPage() {
+export function TasksWeekPage({ embedded = false }: { embedded?: boolean }) {
+  const Container = embedded ? 'section' : 'main'
+  const Heading = embedded ? 'h2' : 'h1'
   const { t, i18n } = useTranslation()
   const language = i18n.resolvedLanguage ?? i18n.language
   const [offset, setOffset] = useState(0)
@@ -48,9 +50,9 @@ export function TasksWeekPage() {
     : t('task_week.week')
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
+    <Container className={`flex flex-1 flex-col gap-4 ${embedded ? '' : 'p-4 sm:p-6'}`}>
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-extrabold text-orange-600">{title}</h1>
+        <Heading className="text-3xl font-extrabold text-orange-600">{title}</Heading>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -76,9 +78,7 @@ export function TasksWeekPage() {
             <RightIcon className="size-8" aria-hidden="true" />
           </Button>
         </div>
-        <div className="ml-auto">
-          <ViewToggle current="week" />
-        </div>
+        <div className="ml-auto">{!embedded && <ViewToggle current="week" />}</div>
       </header>
       {week.isPending || members.isPending ? (
         <p role="status" className="text-xl text-slate-600">
@@ -92,7 +92,7 @@ export function TasksWeekPage() {
       ) : (
         <Days week={data} members={members.data} />
       )}
-    </main>
+    </Container>
   )
 }
 

@@ -17,7 +17,7 @@ describe('Elternbereich ohne PIN', () => {
     renderApp('/')
 
     await user.click(await screen.findByRole('link', { name: 'Einstellungen' }))
-    expect(await screen.findByRole('heading', { name: 'Einstellungen' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Profil', level: 1 })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'Eltern-PIN eingeben' })).not.toBeInTheDocument()
   })
 
@@ -28,7 +28,7 @@ describe('Elternbereich ohne PIN', () => {
     })
     renderApp('/parents')
 
-    expect(await screen.findByRole('heading', { name: 'Elternbereich' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Profil', level: 1 })).toBeVisible()
     expect(calls.some((call) => call.key === 'POST /api/parent/unlock')).toBe(false)
   })
 

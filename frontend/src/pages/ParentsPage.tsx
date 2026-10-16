@@ -3,25 +3,22 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
 
-import {
-  type Me,
-  useLogout,
-  useMe,
-} from '../api/auth'
+import { type Me, useMe } from '../api/auth'
 import { type Chore, type ChoreRoom, useChores } from '../api/chores'
 import { type Member, childrenOf, useMembers } from '../api/members'
 import { type Reward, useRewards } from '../api/rewards'
 import { type Routine, useRoutines } from '../api/routines'
 import { type Task, useTasks } from '../api/tasks'
 import { useToday } from '../api/today'
-import { Button, Section } from '../components/ui'
+import { Button } from '../components/ui'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { ApprovalsSection } from './parents/ApprovalsSection'
 import { ChoreEditor } from './parents/ChoreEditor'
 import { ChoreRoomEditor } from './parents/ChoreRoomEditor'
 import { ChoreWizard } from './parents/ChoreWizard'
 import { ChoresSection } from './parents/ChoresSection'
-import { DeviceSection } from './parents/DeviceSection'
+import { PersonalSettings } from './SettingsPage'
+import { ParentsNav } from './parents/ParentsNav'
 import { FamilySection } from './parents/FamilySection'
 import { MemberEditor } from './parents/MemberEditor'
 import { MembersSection } from './parents/MembersSection'
@@ -35,7 +32,6 @@ import { RoutinesSection } from './parents/RoutinesSection'
 import { TaskEditor } from './parents/TaskEditor'
 import { TasksSection } from './parents/TasksSection'
 import { WeatherSection } from './parents/WeatherSection'
-import { ParentsNav } from './parents/ParentsNav'
 import { PhotosSection } from './parents/PhotosSection'
 import { FrameSettingsSection } from './parents/FrameSettingsSection'
 import { DEFAULT_AREA, type ParentArea, isParentArea } from './parents/areas'
@@ -50,10 +46,21 @@ export function ParentsPage() {
   useIdleTimeout(PARENT_IDLE_TIMEOUT_MS, leave)
 
   const { area } = useParams()
-  if (area !== undefined && !isParentArea(area)) return <Navigate to="/parents" replace />
+  if (area !== undefined && !isParentArea(area)) return <Navigate to="/parents/profile" replace />
+  if (area === 'settings') return <Navigate to="/parents/family" replace />
   if (!me) return null
   if (me.user.role !== 'admin' && me.user.role !== 'parent') return <Navigate to="/" replace />
-  return <ParentSettings me={me} area={area ?? DEFAULT_AREA} onLeave={leave} />
+  return (
+    <div className="flex min-h-dvh">
+      <ParentsNav area={area ?? DEFAULT_AREA} />
+      <div className="min-w-0 flex-1 pb-28 md:pb-0">
+        <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 sm:pt-6">
+          <BackButton onClick={leave} />
+        </div>
+        <ParentSettings key={area ?? DEFAULT_AREA} me={me} area={area ?? DEFAULT_AREA} />
+      </div>
+    </div>
+  )
 }
 
 function BackButton({ onClick }: { onClick: () => void }) {
@@ -66,10 +73,8 @@ function BackButton({ onClick }: { onClick: () => void }) {
   )
 }
 
-function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLeave: () => void }) {
+function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const logout = useLogout()
   const members = useMembers()
   const tasks = useTasks()
   const routines = useRoutines()
@@ -295,10 +300,14 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
 
   return (
     <div className="flex min-h-dvh">
-      <ParentsNav area={area} pending={today.data?.pending_approvals ?? 0} />
       <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 p-4 pb-32 sm:p-6 md:pb-6">
-        <BackButton onClick={onLeave} />
-        <h1 className="text-3xl font-extrabold text-orange-600">{t('parents.title')}</h1>
+        <h1 className="text-3xl font-extrabold text-orange-600">
+          {area === 'review'
+            ? t('parents.title')
+            : area === 'profile'
+              ? t('parents_nav.profile')
+              : t('personal.manage_area', { area: t(`parents_nav.${area}`) })}
+        </h1>
         {notice && (
           <p
             role="status"
@@ -322,9 +331,10 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
             />
           </>
         )}
+        {area === 'profile' && <PersonalSettings />}
         {area === 'family' && (
           <>
-            <PocketMoneySection children={childMembers} />
+            <FamilySection me={me} onSaved={setNotice} />
             <MembersSection
               members={members.data}
               error={members.error}
@@ -337,6 +347,8 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
                 setEditingMember('new')
               }}
             />
+            <WeatherSection onSaved={setNotice} />
+            <PocketMoneySection children={childMembers} />
           </>
         )}
         {area === 'tasks' && (
@@ -445,26 +457,6 @@ function ParentSettings({ me, area, onLeave }: { me: Me; area: ParentArea; onLea
           <>
             <FrameSettingsSection />
             <PhotosSection onMessage={setNotice} />
-          </>
-        )}
-        {area === 'settings' && (
-          <>
-            <FamilySection me={me} onSaved={setNotice} />
-            <WeatherSection onSaved={setNotice} />
-            <DeviceSection />
-            <Section title={t('parents.account_section')}>
-              <p className="text-lg text-slate-600">
-                {t('parents.signed_in_as', { email: me.user.email })}
-              </p>
-              <Button
-                variant="secondary"
-                className="self-start"
-                disabled={logout.isPending}
-                onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}
-              >
-                {t('actions.logout')}
-              </Button>
-            </Section>
           </>
         )}
       </main>

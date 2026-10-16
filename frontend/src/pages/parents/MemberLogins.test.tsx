@@ -83,7 +83,7 @@ it('offers existing unassigned accounts for explicit assignment', async () => {
 
 it('no longer offers separate account creation in settings', async () => {
   mockApi(routes())
-  renderApp('/parents/settings')
+  renderApp('/parents/profile')
   await screen.findByText(/mama@example.org/)
   expect(screen.queryByText('Benutzerkonten')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Konto anlegen' })).not.toBeInTheDocument()

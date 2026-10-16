@@ -125,13 +125,20 @@ def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> Redemp
 
 @router.get("/redemptions")
 def list_redemptions(
-    _: ParentSession,
+    auth: CurrentSession,
     db: DbSession,
     member_id: Annotated[int | None, Query()] = None,
     before: Annotated[int | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=HISTORY_PAGE_SIZE)] = HISTORY_PAGE_SIZE,
 ) -> RedemptionHistoryOut:
     """Einlösungen aller Kinder oder eines Kindes, neueste zuerst."""
+    own = child_member_id(db, auth)
+    if own is not None:
+        if own == 0:
+            raise ApiError(status.HTTP_403_FORBIDDEN, "profile.not_linked")
+        if member_id is not None:
+            ensure_member_access(db, auth, member_id)
+        member_id = own
     query = select(RewardRedemption)
     if member_id is not None:
         query = query.where(RewardRedemption.member_id == member_id)

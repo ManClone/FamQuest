@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 
-import { useLogout } from '../api/auth'
+import { useLogout, useMe } from '../api/auth'
 import { api, apiGet } from '../api/client'
 import type { Member } from '../api/members'
 import { Avatar } from '../components/Avatar'
@@ -13,7 +13,6 @@ import { errorMessage } from '../errors'
 
 export function ProfileSection() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const profile = useQuery({
     queryKey: ['profile'],
@@ -26,7 +25,6 @@ export function ProfileSection() {
   const [repeatPassword, setRepeatPassword] = useState('')
   const [notice, setNotice] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
-  const logout = useLogout()
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ['profile'] })
     void queryClient.invalidateQueries({ queryKey: ['members'] })
@@ -171,15 +169,28 @@ export function ProfileSection() {
             {t('personal.change_password')}
           </Button>
         </form>
-        <Button
-          variant="secondary"
-          disabled={logout.isPending}
-          onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}
-        >
-          {t('actions.logout')}
-        </Button>
       </Section>
       {notice && <p role="status">{notice}</p>}
     </>
+  )
+}
+
+export function AccountSection() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const logout = useLogout()
+  const me = useMe().data
+  return (
+    <Section title={t('parents.account_section')}>
+      <p>{t('parents.signed_in_as', { email: me?.user.email })}</p>
+      {logout.isError && <Alert>{errorMessage(t, logout.error)}</Alert>}
+      <Button
+        variant="secondary"
+        disabled={logout.isPending}
+        onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}
+      >
+        {t('actions.logout')}
+      </Button>
+    </Section>
   )
 }

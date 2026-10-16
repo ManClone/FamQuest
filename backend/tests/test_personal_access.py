@@ -86,3 +86,47 @@ def test_unlinked_child_is_never_shown_other_children(client, parent, lena, now)
         assert child.get("/api/tasks/week").json()["tasks"] == []
     finally:
         child.close()
+
+
+def test_child_progress_and_redemption_history_are_personal_and_purchases_keep_levels(
+    client, parent, now
+):
+    from tests.test_rewards import add_reward, redeem
+    from tests.test_today import complete
+
+    one, credentials = add_person(client, parent, "Lena", "purple")
+    two, _ = add_person(client, parent, "Tom", "green")
+    for member in (one, two):
+        task = add_task(client, parent, [member], points=100)
+        assert complete(client, parent, task, member).status_code == 204
+    own_reward = add_reward(client, parent, one, cost=10)
+    other_reward = add_reward(client, parent, two, cost=10)
+    assert redeem(client, parent, other_reward).status_code == 201
+    child = TestClient(client.app)
+    try:
+        me = child.post("/api/auth/login", json=credentials).json()
+        assert child.get(f"/api/members/{two}/progress").status_code == 403
+        expected = {
+            "earned_xp": 100,
+            "level": 2,
+            "level_progress": 0,
+            "level_size": 100,
+            "remaining_xp": 100,
+        }
+        assert child.get(f"/api/members/{one}/progress").json() == expected
+        assert child.get("/api/redemptions").json()["redemptions"] == []
+        assert child.get(f"/api/redemptions?member_id={two}").status_code == 403
+        for _ in range(2):
+            assert redeem(child, me, own_reward).status_code == 201
+        first = child.get("/api/redemptions?limit=1").json()
+        assert first["has_more"] is True
+        assert first["redemptions"][0]["member_id"] == one
+        cursor = first["redemptions"][0]["id"]
+        second = child.get(f"/api/redemptions?limit=1&before={cursor}").json()
+        assert second["has_more"] is False
+        assert second["redemptions"][0]["member_id"] == one
+        assert second["redemptions"][0]["id"] < cursor
+        assert child.get(f"/api/members/{one}/points").json()["total"] == 80
+        assert child.get(f"/api/members/{one}/progress").json() == expected
+    finally:
+        child.close()

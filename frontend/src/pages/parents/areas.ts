@@ -3,6 +3,7 @@ import BroomIcon from '~icons/fluent-emoji-flat/broom'
 import CheckIcon from '~icons/fluent-emoji-flat/check-mark-button'
 import StarIcon from '~icons/fluent-emoji-flat/glowing-star'
 import GearIcon from '~icons/fluent-emoji-flat/gear'
+import ProfileIcon from '~icons/fluent-emoji-flat/bust-in-silhouette'
 import FamilyIcon from '~icons/fluent-emoji-flat/people-hugging'
 import PhotoIcon from '~icons/fluent-emoji-flat/framed-picture'
 import SunriseIcon from '~icons/fluent-emoji-flat/sunrise'
@@ -12,6 +13,7 @@ type Icon = ComponentType<SVGProps<SVGSVGElement>>
 
 /** Bereiche des Elternbereichs; die Id ist zugleich der Pfad (`/parents/<id>`). */
 export const PARENT_AREAS = [
+  'profile',
   'review',
   'family',
   'tasks',
@@ -23,13 +25,20 @@ export const PARENT_AREAS = [
 ] as const
 export type ParentArea = (typeof PARENT_AREAS)[number]
 
-/** Ohne Bereich in der Adresse: Kontrolle und Punkte, das braucht man im Alltag am häufigsten. */
-export const DEFAULT_AREA: ParentArea = 'review'
+/** Entry point for personal settings in the management area. */
+export const DEFAULT_AREA: ParentArea = 'profile'
 
-/** Am Handy direkt in der unteren Leiste, der Rest steckt hinter „Mehr“. */
-export const PRIMARY_AREAS: readonly ParentArea[] = ['family', 'tasks', 'household', 'rewards']
+/** The five management tabs replace the everyday navigation. */
+export const PRIMARY_AREAS: readonly ParentArea[] = [
+  'profile',
+  'family',
+  'tasks',
+  'household',
+  'rewards',
+]
 
 export const AREA_ICONS: Record<ParentArea, Icon> = {
+  profile: ProfileIcon,
   review: CheckIcon,
   family: FamilyIcon,
   tasks: StarIcon,

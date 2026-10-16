@@ -176,7 +176,11 @@ export function useSetDone(taskId: number, memberId: number) {
       // Erst neu laden, wenn keine weiteren Tipps unterwegs sind, sonst flackern Karten zurück.
       const dayChanged = error instanceof ApiError && error.code === 'completion.day_changed'
       if (dayChanged || queryClient.isMutating({ mutationKey: SET_DONE_KEY }) === 1) {
-        return queryClient.invalidateQueries({ queryKey: TODAY_KEY })
+        return Promise.all(
+          [TODAY_KEY, ['member-progress']].map((queryKey) =>
+            queryClient.invalidateQueries({ queryKey }),
+          ),
+        )
       }
     },
   })
