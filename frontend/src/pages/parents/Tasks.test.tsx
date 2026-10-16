@@ -116,7 +116,7 @@ describe('Aufgaben im Elternbereich', () => {
     await user.click(screen.getByRole('radio', { name: 'An bestimmten Tagen' }))
     await user.click(screen.getByRole('button', { name: 'Wochenende' }))
     await user.click(screen.getByRole('checkbox', { name: 'Montag' }))
-    await user.click(screen.getByRole('radio', { name: 'Abends' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Abends' }))
     await user.click(screen.getByRole('button', { name: 'Speichern' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('„Zähne putzen“ ist gespeichert.')
@@ -348,7 +348,7 @@ describe('Aufgaben im Elternbereich', () => {
     await user.click(await screen.findByRole('button', { name: 'Aufgabe hinzufügen' }))
     await user.type(screen.getByLabelText('Titel'), 'Tisch abräumen')
     await user.click(screen.getByRole('checkbox', { name: /Lena/ }))
-    await user.click(screen.getByRole('radio', { name: 'Morgens' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Morgens' }))
     await user.click(screen.getByRole('radio', { name: 'Extra' }))
     expect(screen.getByText(/zählt aber nicht zum Tagesfortschritt/)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Speichern' }))
@@ -376,5 +376,26 @@ describe('Aufgaben im Elternbereich', () => {
     const row = await screen.findByRole('button', { name: 'Edit Zähne putzen' })
     expect(within(row).getByText('At the weekend')).toBeVisible()
     expect(within(row).getByText('Morning')).toBeVisible()
+  })
+})
+
+it('erstellt unabhaengige Durchgaenge fuer mehrere Tageszeiten', async () => {
+  const user = userEvent.setup()
+  const calls = api([], {
+    'POST /api/tasks/schedule': Response.json(makeTask({ id: 99, title: 'Zahnpflege' })),
+  })
+  renderApp('/parents/tasks')
+  await user.click(await screen.findByRole('button', { name: 'Aufgabe hinzuf\u00fcgen' }))
+  await user.type(screen.getByLabelText('Titel'), 'Zahnpflege')
+  await user.click(screen.getByRole('checkbox', { name: /Lena/ }))
+  await user.click(screen.getByRole('checkbox', { name: 'Morgens' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Abends' }))
+  expect(screen.getByRole('checkbox', { name: 'Morgens' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Abends' })).toBeChecked()
+  await user.click(screen.getByRole('button', { name: 'Speichern' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('gespeichert')
+  expect(calls.find((call) => call.key === 'POST /api/tasks/schedule')?.body).toMatchObject({
+    times: ['morning', 'evening'],
+    task: { title: 'Zahnpflege', member_ids: [1] },
   })
 })

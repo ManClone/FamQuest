@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
+import GearIcon from '~icons/fluent-emoji-flat/gear'
+import { NAV_CONTENT_SPACING } from '../components/navigationStyles'
 
 import { type Me, useMe } from '../api/auth'
 import { type Chore, type ChoreRoom, useChores } from '../api/chores'
@@ -10,7 +12,6 @@ import { type Reward, useRewards } from '../api/rewards'
 import { type Routine, useRoutines } from '../api/routines'
 import { type Task, useTasks } from '../api/tasks'
 import { useToday } from '../api/today'
-import { Button } from '../components/ui'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { ApprovalsSection } from './parents/ApprovalsSection'
 import { ChoreEditor } from './parents/ChoreEditor'
@@ -41,6 +42,7 @@ export const PARENT_IDLE_TIMEOUT_MS = 2 * 60 * 1000
 
 export function ParentsPage() {
   const { data: me } = useMe()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const leave = () => navigate('/')
   useIdleTimeout(PARENT_IDLE_TIMEOUT_MS, leave)
@@ -53,10 +55,19 @@ export function ParentsPage() {
   return (
     <div className="flex min-h-dvh">
       <ParentsNav area={area ?? DEFAULT_AREA} />
-      <div className="min-w-0 flex-1 pb-28 md:pb-0">
-        <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 sm:pt-6">
-          <BackButton onClick={leave} />
-        </div>
+      <div className={`min-w-0 flex-1 ${NAV_CONTENT_SPACING}`}>
+        <header
+          data-testid="settings-header"
+          className="sticky top-0 z-10 border-b border-orange-100 bg-orange-50/95 shadow-sm backdrop-blur"
+        >
+          <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2 sm:px-6">
+            <BackButton onClick={leave} />
+            <p className="flex shrink-0 items-center gap-1 text-sm font-extrabold text-orange-800 sm:gap-2 sm:text-xl">
+              <GearIcon className="size-5 sm:size-7" aria-hidden="true" />
+              {t('nav.settings')}
+            </p>
+          </div>
+        </header>
         <ParentSettings key={area ?? DEFAULT_AREA} me={me} area={area ?? DEFAULT_AREA} />
       </div>
     </div>
@@ -66,10 +77,16 @@ export function ParentsPage() {
 function BackButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation()
   return (
-    <Button variant="secondary" onClick={onClick} className="self-start">
-      <BackIcon className="size-8" aria-hidden="true" />
-      {t('parents.back')}
-    </Button>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t('parents.back')}
+      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 focus-visible:outline-4 focus-visible:outline-orange-400 sm:text-base"
+    >
+      <BackIcon className="size-6" aria-hidden="true" />
+      <span className="sm:hidden">{t('parents.back_short')}</span>
+      <span className="hidden sm:inline">{t('parents.back')}</span>
+    </button>
   )
 }
 
@@ -88,6 +105,7 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   // Neuer Schritt einer Routine (Editor ohne Personen, Tageszeit und Wiederholung).
   const [newStep, setNewStep] = useState<{ routine: Routine; label: string } | null>(null)
   const [routinesChildId, setRoutinesChildId] = useState<number | null>(null)
+  const [rewardAudience, setRewardAudience] = useState<'child' | 'parent'>('child')
   const [rewardsChildId, setRewardsChildId] = useState<number | null>(null)
   const [editingReward, setEditingReward] = useState<{ reward?: Reward; member: Member } | null>(
     null,
@@ -184,8 +202,9 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   }
 
   const childMembers = childrenOf(members.data ?? [])
+  const rewardMembers = (members.data ?? []).filter((member) => member.role === rewardAudience)
   const rewardsChild =
-    childMembers.find((member) => member.id === rewardsChildId) ?? childMembers[0]
+    rewardMembers.find((member) => member.id === rewardsChildId) ?? rewardMembers[0]
   const routinesChild =
     childMembers.find((member) => member.id === routinesChildId) ?? childMembers[0]
 
@@ -430,13 +449,15 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
         {area === 'rewards' && (
           <>
             <RewardsSection
-              childMembers={childMembers}
+              audience={rewardAudience}
+              onAudience={setRewardAudience}
+              childMembers={rewardMembers}
               rewards={rewards.data}
               error={rewards.error}
               member={rewardsChild}
               onSelect={setRewardsChildId}
               onEdit={(reward) => {
-                const member = childMembers.find((child) => child.id === reward.member_id)
+                const member = rewardMembers.find((child) => child.id === reward.member_id)
                 if (!member) return
                 setNotice(undefined)
                 setEditingReward({ reward, member })

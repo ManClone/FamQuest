@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import FamilyMember, PointTransaction, RewardRedemption
 
-TASK_KINDS = ("task_completed", "task_undone")
+TASK_KINDS = ("task_completed", "task_undone", "chore_completed", "chore_undone")
 
 
 def book(

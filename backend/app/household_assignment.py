@@ -15,6 +15,7 @@ class HouseholdChore:
     minutes: int
     mode: Mode = "flexible"
     fixed_member_id: int | None = None
+    eligible_member_ids: tuple[int, ...] | None = None
 
     def __post_init__(self) -> None:
         if self.minutes <= 0:
@@ -48,7 +49,10 @@ def suggest_week(
     for chore in sorted(chores, key=lambda c: c.id):
         if chore.mode != "fixed":
             continue
-        if chore.fixed_member_id not in load:
+        if chore.fixed_member_id not in load or (
+            chore.eligible_member_ids is not None
+            and chore.fixed_member_id not in chore.eligible_member_ids
+        ):
             raise ValueError("fixed member must be an adult in this plan")
         assignments[chore.id] = chore.fixed_member_id
         load[chore.fixed_member_id] += chore.minutes
@@ -58,9 +62,15 @@ def suggest_week(
         key=lambda c: (-c.minutes, c.id),
     )
     for chore in remaining:
-        candidates = members
-        if chore.mode == "rotate" and len(members) > 1:
-            alternatives = [m for m in members if m != previous_assignees.get(chore.id)]
+        candidates = [
+            m
+            for m in members
+            if chore.eligible_member_ids is None or m in chore.eligible_member_ids
+        ]
+        if not candidates:
+            raise ValueError("no eligible member for chore")
+        if chore.mode == "rotate" and len(candidates) > 1:
+            alternatives = [m for m in candidates if m != previous_assignees.get(chore.id)]
             if alternatives:
                 candidates = alternatives
         chosen = min(candidates, key=lambda member: (load[member], member))

@@ -12,6 +12,7 @@ import { errorMessage } from '../../errors'
 import { normalize } from '../../icons/catalog'
 import {
   REWARD_POOL,
+  PARENT_REWARD_POOL,
   REWARD_TIERS,
   rewardTemplateIcon,
   rewardTemplateName,
@@ -31,10 +32,12 @@ export function RewardPoolPicker({ member, existing, onDone, onCancel }: RewardP
   const [selected, setSelected] = useState<string[]>([])
   const add = useRewardsMutation(createRewards)
   const existingNames = new Set(existing.map((reward) => normalize(reward.name.trim())))
-  const templates = REWARD_POOL.map((template) => {
-    const name = rewardTemplateName(t, template)
-    return { ...template, name, present: existingNames.has(normalize(name)) }
-  })
+  const templates = (member.role === 'parent' ? PARENT_REWARD_POOL : REWARD_POOL).map(
+    (template) => {
+      const name = rewardTemplateName(t, template)
+      return { ...template, name, present: existingNames.has(normalize(name)) }
+    },
+  )
 
   const toggle = (id: string) =>
     setSelected((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]))

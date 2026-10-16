@@ -175,3 +175,58 @@ describe('Belohnungen im Elternbereich', () => {
     ).toBeVisible()
   })
 })
+
+it('storniert mit Vermerk und zeigt die Rueckbuchung im Verlauf', async () => {
+  const user = userEvent.setup()
+  let cancelled = false
+  const request = vi.fn((body: unknown) => {
+    expect(body).toEqual({ reason: 'Doch nicht gewollt' })
+    cancelled = true
+    return Response.json({ ...redemption, status: 'cancelled' })
+  })
+  api({
+    'GET /api/redemptions': () =>
+      Response.json({
+        redemptions: [
+          {
+            ...redemption,
+            ...(cancelled
+              ? {
+                  status: 'cancelled',
+                  cancellation_reason: 'Doch nicht gewollt',
+                  cancelled_at: '2026-10-16T08:00:00Z',
+                }
+              : {}),
+          },
+        ],
+        has_more: false,
+      }),
+    'POST /api/redemptions/5/cancel': request,
+  })
+  renderApp('/parents/rewards')
+  await user.click(await screen.findByRole('button', { name: 'Stornieren' }))
+  const confirm = screen.getByRole('button', { name: 'Stornieren und Sterne zur\u00fcckgeben' })
+  expect(confirm).toBeDisabled()
+  await user.type(screen.getByLabelText('Grund der Stornierung'), 'Doch nicht gewollt')
+  await user.click(confirm)
+  expect(await screen.findByText('Doch nicht gewollt', { exact: false })).toBeVisible()
+  expect(screen.getByText('10 Sterne zur\u00fcck')).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Stornieren' })).toBeNull()
+  expect(request).toHaveBeenCalledTimes(1)
+})
+
+it('trennt Eltern- und Kinderbelohnungen einschliesslich der Vorschlaege', async () => {
+  const user = userEvent.setup()
+  const parentReward = makeReward({ id: 9, member_id: mama.id, name: 'Eine Pause', cost: 20 })
+  api({ 'GET /api/rewards': Response.json([iceCream, zoo, parentReward]) })
+  renderApp('/parents/rewards')
+  await user.click(await screen.findByRole('button', { name: 'Eltern', pressed: false }))
+  expect(screen.getByRole('button', { name: 'Mama' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Eine Pause bearbeiten' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Eis essen gehen bearbeiten' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Aus Vorschl\u00e4gen w\u00e4hlen' }))
+  expect(await screen.findByRole('checkbox', { name: /Kaffeepause in Ruhe/ })).toBeVisible()
+  expect(
+    screen.queryByRole('checkbox', { name: /Besonderer Fr\u00fchst\u00fcckswunsch/ }),
+  ).toBeNull()
+})

@@ -14,7 +14,12 @@
     "sleepover": "Übernachtungsparty",
     "day_out": "Ausflug nach Wahl",
     "theme_park": "Freizeitpark",
-    "big_wish": "Großer Wunsch"
+    "big_wish": "Großer Wunsch",
+    "parent_break": "Kaffeepause in Ruhe",
+    "parent_read": "Eine Stunde Zeit zum Lesen",
+    "parent_movie": "Ein freier Filmabend",
+    "parent_meal": "Lieblingsessen bestellen",
+    "parent_day": "Ein freier Nachmittag"
   },
   "tasks": {
     "teeth_morning": "Zähne putzen",

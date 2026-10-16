@@ -111,7 +111,8 @@
     "pin_saved": "The new PIN has been saved.",
     "pin_disabled": "The PIN is turned off.",
     "account_section": "Account",
-    "signed_in_as": "Signed in as {{email}}"
+    "signed_in_as": "Signed in as {{email}}",
+    "back_short": "Home"
   },
   "parents_nav": {
     "label": "Parents' area sections",
@@ -265,7 +266,8 @@
     "kids_only": "Tasks are for the children. Household chores live in the cleaning plan:",
     "kids_only_link": "go to “Household”",
     "repeatable": "Repeat during the day",
-    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately."
+    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately.",
+    "multiple_times": "Choose multiple times. Each selected period gets its own execution."
   },
   "routines": {
     "section": "Routines",
@@ -361,7 +363,10 @@
     "kind_task_completed": "Task done",
     "kind_task_undone": "Task undone",
     "kind_manual": "Booked by parents",
-    "kind_reward_redeemed": "Reward redeemed"
+    "kind_reward_redeemed": "Reward redeemed",
+    "kind_reward_cancelled": "Reward cancelled",
+    "kind_chore_completed": "Household task completed",
+    "kind_chore_undone": "Household task undone"
   },
   "errors": {
     "common": {
@@ -499,7 +504,9 @@
       "weekly_invalid": "The weekly assignment is invalid. Please reload the suggestion.",
       "credit_requires_parent": "Only adults can receive chore XP.",
       "not_completed": "This chore has not been completed yet.",
-      "parent_required": "An adult account is required for this action."
+      "parent_required": "An adult account is required for this action.",
+      "request_conflict": "This execution was already saved elsewhere. Please reload.",
+      "not_repeatable": "This task is already completed today or awaiting approval."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
@@ -560,7 +567,18 @@
     "pool_add_one": "Add {{count}} reward",
     "pool_add_other": "Add {{count}} rewards",
     "pool_added_one": "{{name}} has {{count}} new reward.",
-    "pool_added_other": "{{name}} has {{count}} new rewards."
+    "pool_added_other": "{{name}} has {{count}} new rewards.",
+    "cancel": "Cancel redemption",
+    "cancel_reason": "Reason for cancellation",
+    "cancel_hint": "The reward stays in the history. {{count}} stars will be refunded.",
+    "cancel_confirm": "Cancel and refund stars",
+    "cancelled": "Cancelled on",
+    "refunded": "{{count}} stars refunded",
+    "audience": "Manage rewards for",
+    "audience_parent": "Parents",
+    "audience_child": "Children",
+    "need_parents": "Add a parent family member first.",
+    "choose_parent": "Choose a parent"
   },
   "care": {
     "title": "Who did it?",
@@ -992,7 +1010,20 @@
     "wizard_add_one": "Add {{count}} chore",
     "wizard_add_other": "Add {{count}} chores",
     "wizard_added_one": "{{count}} chore is in the cleaning plan.",
-    "wizard_added_other": "{{count}} chores are in the cleaning plan."
+    "wizard_added_other": "{{count}} chores are in the cleaning plan.",
+    "repeat": "Complete again",
+    "repeat_title": "Complete {{title}} again",
+    "today_count": "Completed {{count}} times today",
+    "repeatable": "Can be completed several times a day",
+    "task_settings": "Task",
+    "adult_xp": "Adult XP",
+    "child_enabled": "Available to children",
+    "child_xp": "Child XP",
+    "eligible_children": "Which children may help?",
+    "child_hint": "Assigned household tasks automatically appear for children. Parents confirm their completions.",
+    "future_money": "Money (coming later)",
+    "awaiting": "{{count}} completions awaiting approval",
+    "child_complete": "Done!"
   },
   "todos": {
     "title": "To do",

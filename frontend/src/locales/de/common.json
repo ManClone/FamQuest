@@ -111,7 +111,8 @@
     "pin_saved": "Die neue PIN ist gespeichert.",
     "pin_disabled": "Die PIN ist abgeschaltet.",
     "account_section": "Konto",
-    "signed_in_as": "Angemeldet als {{email}}"
+    "signed_in_as": "Angemeldet als {{email}}",
+    "back_short": "Startseite"
   },
   "parents_nav": {
     "label": "Bereiche des Elternbereichs",
@@ -265,7 +266,8 @@
     "kids_only": "Aufgaben sind für die Kinder. Was im Haushalt anfällt, steht im Putzplan:",
     "kids_only_link": "zum Bereich „Haushalt“",
     "repeatable": "Mehrmals täglich",
-    "repeatable_hint": "Nach jeder Elternbestätigung wieder verfügbar. Jede Ausführung wird einzeln geprüft und vergütet."
+    "repeatable_hint": "Nach jeder Elternbestätigung wieder verfügbar. Jede Ausführung wird einzeln geprüft und vergütet.",
+    "multiple_times": "Mehrere Tageszeiten möglich. Jeder gewählte Abschnitt bekommt einen eigenen Durchgang."
   },
   "routines": {
     "section": "Routinen",
@@ -361,7 +363,10 @@
     "kind_task_completed": "Aufgabe erledigt",
     "kind_task_undone": "Erledigung zurückgenommen",
     "kind_manual": "Von Eltern gebucht",
-    "kind_reward_redeemed": "Belohnung eingelöst"
+    "kind_reward_redeemed": "Belohnung eingelöst",
+    "kind_reward_cancelled": "Belohnung storniert",
+    "kind_chore_completed": "Hausarbeit erledigt",
+    "kind_chore_undone": "Hausarbeit zurückgenommen"
   },
   "errors": {
     "common": {
@@ -499,7 +504,9 @@
       "weekly_invalid": "Die Wochenverteilung ist ungültig. Bitte Vorschlag neu laden.",
       "credit_requires_parent": "XP für Hausarbeiten können nur Erwachsene erhalten.",
       "not_completed": "Diese Hausarbeit ist noch nicht erledigt.",
-      "parent_required": "Für diese Aktion ist ein Erwachsenenkonto erforderlich."
+      "parent_required": "Für diese Aktion ist ein Erwachsenenkonto erforderlich.",
+      "request_conflict": "Diese Ausführung wurde bereits anderweitig gespeichert. Bitte neu laden.",
+      "not_repeatable": "Diese Aufgabe ist heute bereits erledigt oder wartet auf Bestätigung."
     },
     "todo": {
       "not_found": "Diesen Eintrag gibt es nicht mehr.",
@@ -560,7 +567,18 @@
     "pool_add_one": "{{count}} Belohnung hinzufügen",
     "pool_add_other": "{{count}} Belohnungen hinzufügen",
     "pool_added_one": "{{name}} hat {{count}} neue Belohnung.",
-    "pool_added_other": "{{name}} hat {{count}} neue Belohnungen."
+    "pool_added_other": "{{name}} hat {{count}} neue Belohnungen.",
+    "cancel": "Stornieren",
+    "cancel_reason": "Grund der Stornierung",
+    "cancel_hint": "Die Belohnung bleibt im Verlauf. {{count}} Sterne werden zurückgebucht.",
+    "cancel_confirm": "Stornieren und Sterne zurückgeben",
+    "cancelled": "Storniert am",
+    "refunded": "{{count}} Sterne zurück",
+    "audience": "Belohnungen verwalten für",
+    "audience_parent": "Eltern",
+    "audience_child": "Kinder",
+    "need_parents": "Legt zuerst ein Elternteil als Familienmitglied an.",
+    "choose_parent": "Elternteil wählen"
   },
   "care": {
     "title": "Wer hat’s gemacht?",
@@ -992,7 +1010,20 @@
     "wizard_add_one": "{{count}} Aufgabe übernehmen",
     "wizard_add_other": "{{count}} Aufgaben übernehmen",
     "wizard_added_one": "{{count}} Aufgabe ist im Putzplan.",
-    "wizard_added_other": "{{count}} Aufgaben sind im Putzplan."
+    "wizard_added_other": "{{count}} Aufgaben sind im Putzplan.",
+    "repeat": "Noch einmal erledigen",
+    "repeat_title": "{{title}} noch einmal erledigen",
+    "today_count": "Heute {{count}}-mal erledigt",
+    "repeatable": "Mehrmals am Tag ausführbar",
+    "task_settings": "Aufgabe",
+    "adult_xp": "Erwachsenen-XP",
+    "child_enabled": "Für Kinder verfügbar",
+    "child_xp": "Kinder-XP",
+    "eligible_children": "Welche Kinder dürfen mithelfen?",
+    "child_hint": "Zugewiesene Haushaltsaufgaben erscheinen automatisch bei den Kindern. Erledigungen bestätigen die Eltern.",
+    "future_money": "Geld (später verfügbar)",
+    "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
+    "child_complete": "Erledigt!"
   },
   "todos": {
     "title": "Zu erledigen",

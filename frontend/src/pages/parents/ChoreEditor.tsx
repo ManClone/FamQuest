@@ -74,8 +74,15 @@ export function ChoreEditor({
   const [countedFrom, setCountedFrom] = useState(chore?.counted_from ?? '')
   const [active, setActive] = useState(chore?.active ?? true)
   const [minutes, setMinutes] = useState(chore?.estimated_minutes ?? 15)
+  const [repeatable, setRepeatable] = useState(chore?.repeatable ?? false)
+  const [childEnabled, setChildEnabled] = useState(chore?.child_enabled ?? false)
+  const [childXp, setChildXp] = useState(chore?.child_xp ?? 0)
+  const [childIds, setChildIds] = useState<number[]>(chore?.child_member_ids ?? [])
+  const children = (members.data ?? []).filter((member) => member.role === 'child')
   const [adultXp, setAdultXp] = useState(chore?.adult_xp ?? 0)
-  const [assignmentMode, setAssignmentMode] = useState<'fixed' | 'rotate' | 'flexible'>(chore?.assignment_mode ?? 'flexible')
+  const [assignmentMode, setAssignmentMode] = useState<'fixed' | 'rotate' | 'flexible'>(
+    chore?.assignment_mode ?? 'flexible',
+  )
   const [fixedMemberId, setFixedMemberId] = useState<number | null>(chore?.fixed_member_id ?? null)
   const [pickingIcon, setPickingIcon] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -85,8 +92,18 @@ export function ChoreEditor({
   const days = intervalDays(every.count, every.unit)
   const save = useChoresMutation(() => {
     const data = {
-      room_id: roomId, title: title.trim(), icon, interval_days: days, active,
-      estimated_minutes: minutes, adult_xp: adultXp, assignment_mode: assignmentMode,
+      room_id: roomId,
+      title: title.trim(),
+      icon,
+      interval_days: days,
+      active,
+      repeatable,
+      child_enabled: childEnabled,
+      child_xp: childXp,
+      child_member_ids: childEnabled ? childIds : [],
+      estimated_minutes: minutes,
+      adult_xp: adultXp,
+      assignment_mode: assignmentMode,
       fixed_member_id: assignmentMode === 'fixed' ? fixedMemberId : null,
     }
     if (state !== 'date') return createChore({ ...data, state, todo_id: todo?.id })
@@ -130,8 +147,13 @@ export function ChoreEditor({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
-    if (!title.trim() || dateError || (state === 'date' && !chore && !countedFrom) ||
-      (assignmentMode === 'fixed' && fixedMemberId === null)) return
+    if (
+      !title.trim() ||
+      dateError ||
+      (state === 'date' && !chore && !countedFrom) ||
+      (assignmentMode === 'fixed' && fixedMemberId === null)
+    )
+      return
     save.mutate(undefined, { onSuccess: (saved) => onSaved(saved.title) })
   }
 
@@ -218,25 +240,90 @@ export function ChoreEditor({
           </p>
         </Field>
 
+        <Switch
+          checked={repeatable}
+          onChange={setRepeatable}
+          label={t('chores.repeatable')}
+          showLabel
+        />
         <section className="flex flex-col gap-4 rounded-2xl bg-orange-50 p-4">
-          <h2 className="text-xl font-bold text-slate-800">Erwachsenen-Aufgabe</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t('chores.task_settings')}</h2>
           <label className="flex flex-col gap-2 font-semibold text-slate-700">
             Geschätzte Minuten
-            <input type="number" min={1} max={1440} required value={minutes}
+            <input
+              type="number"
+              min={1}
+              max={1440}
+              required
+              value={minutes}
               onChange={(event) => setMinutes(Number(event.target.value))}
-              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3" />
+              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3"
+            />
           </label>
           <label className="flex flex-col gap-2 font-semibold text-slate-700">
-            Erwachsenen-XP (noch ohne automatische Gutschrift)
-            <input type="number" min={0} max={1000} required value={adultXp}
+            {t('chores.adult_xp')}
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              required
+              value={adultXp}
               onChange={(event) => setAdultXp(Number(event.target.value))}
-              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3" />
+              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3"
+            />
           </label>
+          <Switch
+            checked={childEnabled}
+            onChange={(enabled) => {
+              setChildEnabled(enabled)
+              if (!enabled && children.some((child) => child.id === fixedMemberId))
+                setFixedMemberId(null)
+            }}
+            label={t('chores.child_enabled')}
+            showLabel
+          />
+          {childEnabled && (
+            <>
+              <TextField
+                type="number"
+                min={0}
+                max={1000}
+                label={t('chores.child_xp')}
+                value={childXp}
+                onChange={(event) => setChildXp(Number(event.target.value))}
+              />
+              <Field label={t('chores.eligible_children')}>
+                <div className="flex flex-wrap gap-2">
+                  {children.map((child) => (
+                    <FilterChip
+                      key={child.id}
+                      pressed={childIds.includes(child.id)}
+                      onClick={() =>
+                        setChildIds((ids) =>
+                          ids.includes(child.id)
+                            ? ids.filter((id) => id !== child.id)
+                            : [...ids, child.id],
+                        )
+                      }
+                    >
+                      {child.name}
+                    </FilterChip>
+                  ))}
+                </div>
+              </Field>
+              <p className="text-sm text-slate-500">{t('chores.child_hint')}</p>
+              <TextField label={t('chores.future_money')} disabled value="" />
+            </>
+          )}
           <label className="flex flex-col gap-2 font-semibold text-slate-700">
             Verteilung
-            <select value={assignmentMode}
-              onChange={(event) => setAssignmentMode(event.target.value as 'fixed' | 'rotate' | 'flexible')}
-              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3">
+            <select
+              value={assignmentMode}
+              onChange={(event) =>
+                setAssignmentMode(event.target.value as 'fixed' | 'rotate' | 'flexible')
+              }
+              className="min-h-12 rounded-xl border border-slate-300 bg-white p-3"
+            >
               <option value="flexible">Flexibel</option>
               <option value="rotate">Wechselnd</option>
               <option value="fixed">Fest zugeordnet</option>
@@ -245,12 +332,22 @@ export function ChoreEditor({
           {assignmentMode === 'fixed' && (
             <label className="flex flex-col gap-2 font-semibold text-slate-700">
               Zuständige Person
-              <select required value={fixedMemberId ?? ''}
-                onChange={(event) => setFixedMemberId(event.target.value ? Number(event.target.value) : null)}
-                className="min-h-12 rounded-xl border border-slate-300 bg-white p-3">
+              <select
+                required
+                value={fixedMemberId ?? ''}
+                onChange={(event) =>
+                  setFixedMemberId(event.target.value ? Number(event.target.value) : null)
+                }
+                className="min-h-12 rounded-xl border border-slate-300 bg-white p-3"
+              >
                 <option value="">Bitte auswählen</option>
-                {adults.map((member) => (
-                  <option key={member.id} value={member.id}>{member.name}</option>
+                {[
+                  ...adults,
+                  ...(childEnabled ? children.filter((child) => childIds.includes(child.id)) : []),
+                ].map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
                 ))}
               </select>
             </label>

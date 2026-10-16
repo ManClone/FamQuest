@@ -685,6 +685,11 @@ class Chore(Base):
     __tablename__ = "chores"
     __table_args__ = (CheckConstraint("interval_days > 0", name="interval_positive"),)
 
+    repeatable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    child_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    child_xp: Mapped[int] = mapped_column(default=0, server_default="0")
+    child_member_ids: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     room_id: Mapped[int] = mapped_column(
         ForeignKey("chore_rooms.id", ondelete="CASCADE"), index=True
@@ -694,7 +699,7 @@ class Chore(Base):
     icon: Mapped[str] = mapped_column(String(100))
     # So viele Tage nach der letzten Erledigung ist sie wieder fällig.
     interval_days: Mapped[int] = mapped_column(SmallInteger)
-    # Metadaten für Erwachsenen-Aufgaben; XP werden noch nicht automatisch gebucht.
+    # Effort and adult XP for each approved household execution.
     estimated_minutes: Mapped[int] = mapped_column(SmallInteger, default=15, server_default="15")
     adult_xp: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
     assignment_mode: Mapped[str] = mapped_column(
@@ -713,12 +718,23 @@ class Chore(Base):
 class ChoreCompletion(Base):
     """Erledigung einer Hausarbeit an einem Kalendertag der Familie; wer es war, ist freiwillig.
 
-    Rückgängig machen löscht die Zeile. Höchstens eine Erledigung je Tag, auch bei Doppel-Tipps.
+    Separate request keys allow repeated executions; retries reuse the same key.
     """
 
     __tablename__ = "chore_completions"
-    # Der Unique-Constraint (chore_id, date) dient zugleich als Index für chore_id.
-    __table_args__ = (UniqueConstraint("chore_id", "date"),)
+    __table_args__ = (
+        UniqueConstraint("request_key"),
+        Index(
+            "uq_chore_completions_single",
+            "chore_id",
+            "date",
+            unique=True,
+            postgresql_where=text("request_key IS NULL"),
+        ),
+    )
+
+    approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    points: Mapped[int] = mapped_column(default=0, server_default="0")
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))
@@ -726,6 +742,7 @@ class ChoreCompletion(Base):
     member_id: Mapped[int | None] = mapped_column(
         ForeignKey("family_members.id", ondelete="SET NULL"), index=True
     )
+    request_key: Mapped[str | None] = mapped_column(String(32))
     # Kalendertag in der Zeitzone der Familie, nicht in UTC.
     date: Mapped[dt.date] = mapped_column(Date)
     completed_at: Mapped[datetime] = mapped_column(

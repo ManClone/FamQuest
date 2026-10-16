@@ -6,9 +6,9 @@ from sqlalchemy import select
 from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, child_member_id, ensure_member_access
 from app.errors import ApiError
-from app.models import FamilyMember, Reward, RewardRedemption
+from app.models import PointTransaction, Reward, RewardRedemption
 from app.points import balance, book, lock_member
-from app.schemas import RedemptionHistoryOut, RedemptionOut, RewardIn, RewardOut
+from app.schemas import CancelRedemptionIn, RedemptionHistoryOut, RedemptionOut, RewardIn, RewardOut
 
 router = APIRouter(tags=["rewards"])
 
@@ -27,7 +27,9 @@ def reward_out(reward: Reward) -> RewardOut:
     )
 
 
-def redemption_out(redemption: RewardRedemption) -> RedemptionOut:
+def redemption_out(
+    redemption: RewardRedemption, cancellation: PointTransaction | None = None
+) -> RedemptionOut:
     return RedemptionOut(
         id=redemption.id,
         reward_id=redemption.reward_id,
@@ -37,6 +39,8 @@ def redemption_out(redemption: RewardRedemption) -> RedemptionOut:
         reward_icon=redemption.reward_icon,
         cost=redemption.cost,
         created_at=redemption.created_at,
+        cancellation_reason=cancellation.reason if cancellation else None,
+        cancelled_at=cancellation.created_at if cancellation else None,
     )
 
 
@@ -47,14 +51,8 @@ def get_reward(db: DbSession, reward_id: int) -> Reward:
     return reward
 
 
-def check_child(member: FamilyMember) -> None:
-    """Belohnungen gibt es nur für Kinder; Erwachsene sehen stattdessen ihren Anteil."""
-    if member.role != "child":
-        raise ApiError(status.HTTP_409_CONFLICT, "reward.child_only")
-
-
 def apply_reward(db: DbSession, reward: Reward, body: RewardIn) -> None:
-    check_child(get_member(db, body.member_id))
+    get_member(db, body.member_id)
     reward.member_id, reward.name, reward.icon = body.member_id, body.name, body.icon
     reward.description = body.description or None
     reward.cost, reward.active = body.cost, body.active
@@ -101,7 +99,6 @@ def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> Redemp
     reward = get_reward(db, reward_id)
     ensure_member_access(db, auth, reward.member_id)
     member = get_member(db, reward.member_id)
-    check_child(member)
     if not reward.active:
         raise ApiError(status.HTTP_409_CONFLICT, "reward.inactive")
     lock_member(db, member.id)
@@ -121,6 +118,37 @@ def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> Redemp
     book(db, member.id, -reward.cost, "reward_redeemed", reason=reward.name, redemption=redemption)
     db.commit()
     return redemption_out(redemption)
+
+
+@router.post("/redemptions/{redemption_id}/cancel")
+def cancel_redemption(
+    redemption_id: int, body: CancelRedemptionIn, auth: ParentSession, db: DbSession
+) -> RedemptionOut:
+    redemption = db.get(RewardRedemption, redemption_id)
+    if redemption is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "reward.not_found")
+    lock_member(db, redemption.member_id)
+    # Re-read after acquiring the member lock: simultaneous requests refund only once.
+    db.refresh(redemption)
+    if redemption.status != "cancelled":
+        book(
+            db,
+            redemption.member_id,
+            redemption.cost,
+            "reward_cancelled",
+            reason=body.reason,
+            user_id=auth.user_id,
+            redemption=redemption,
+        )
+        redemption.status = "cancelled"
+        db.commit()
+    cancellation = db.scalar(
+        select(PointTransaction).where(
+            PointTransaction.redemption_id == redemption.id,
+            PointTransaction.kind == "reward_cancelled",
+        )
+    )
+    return redemption_out(redemption, cancellation)
 
 
 @router.get("/redemptions")
@@ -145,7 +173,16 @@ def list_redemptions(
     if before is not None:
         query = query.where(RewardRedemption.id < before)
     redemptions = list(db.scalars(query.order_by(RewardRedemption.id.desc()).limit(limit + 1)))
+    cancellations = {
+        entry.redemption_id: entry
+        for entry in db.scalars(
+            select(PointTransaction).where(
+                PointTransaction.redemption_id.in_([r.id for r in redemptions[:limit]]),
+                PointTransaction.kind == "reward_cancelled",
+            )
+        )
+    }
     return RedemptionHistoryOut(
-        redemptions=[redemption_out(r) for r in redemptions[:limit]],
+        redemptions=[redemption_out(r, cancellations.get(r.id)) for r in redemptions[:limit]],
         has_more=len(redemptions) > limit,
     )

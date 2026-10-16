@@ -62,3 +62,33 @@ def test_migrations_have_single_head():
     """Verhindert versehentlich parallele Alembic-Migrationszweige."""
     heads = ScriptDirectory.from_config(alembic_config()).get_heads()
     assert len(heads) == 1, f"Expected one migration head, got: {heads}"
+
+
+def test_household_upgrade_preserves_completions_and_xp():
+    config = alembic_config()
+    command.downgrade(config, "d20261015repeat")
+    with SessionLocal() as db:
+        for statement in [
+            "INSERT INTO family_members (id,name,role,color) VALUES (1,'Flo','parent','blue')",
+            "INSERT INTO chore_rooms (id,name,icon) VALUES (1,'Kitchen','x')",
+            "INSERT INTO chores (id,room_id,title,icon,interval_days,anchor_date) "
+            "VALUES (1,1,'Cook','x',1,'2026-10-16')",
+            "INSERT INTO chore_completions (id,chore_id,member_id,date) "
+            "VALUES (1,1,1,'2026-10-16')",
+            "INSERT INTO chore_credits (completion_id,member_id,amount) VALUES (1,1,7)",
+        ]:
+            db.execute(sa.text(statement))
+        db.commit()
+    command.upgrade(config, "head")
+    with SessionLocal() as db:
+        assert tuple(
+            db.execute(
+                sa.text("SELECT approved, request_key FROM chore_completions WHERE id=1")
+            ).one()
+        ) == (True, None)
+        assert db.scalar(sa.text("SELECT amount FROM chore_credits WHERE completion_id=1")) == 7
+        assert tuple(
+            db.execute(
+                sa.text("SELECT repeatable, child_enabled, child_member_ids FROM chores WHERE id=1")
+            ).one()
+        ) == (False, False, [])

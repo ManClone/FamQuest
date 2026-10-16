@@ -13,6 +13,7 @@ import { ViewToggle } from './family/ViewToggle'
 import { DayProgress } from './family/DayProgress'
 import { TaskGroups } from './family/TaskGroups'
 import { currentTasks, tasksFor, useFamilyToday } from './family/useFamilyToday'
+import { ChildHouseholdTasks } from './ChildHouseholdTasks'
 import { TasksWeekPage } from './TasksWeekPage'
 
 export function ChildTasksPage({ currentOnly = false }: { currentOnly?: boolean }) {
@@ -70,9 +71,10 @@ export function ChildTasksPage({ currentOnly = false }: { currentOnly?: boolean 
           tasks={tasks}
           date={today.date}
           currentTimeOfDay={today.time_of_day}
-          size="lg"
+          size="compact"
         />
       )}
+      <ChildHouseholdTasks currentOnly={currentOnly} />
     </main>
   )
 }

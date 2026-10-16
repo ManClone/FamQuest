@@ -28,11 +28,13 @@ export function Field({
 /** Große Auswahlkachel (Radio-Button) mit Symbol und Text. */
 export function ChoiceTile({
   name,
+  multiple = false,
   checked,
   onChange,
   children,
 }: {
   name: string
+  multiple?: boolean
   checked: boolean
   onChange: () => void
   children: ReactNode
@@ -40,7 +42,7 @@ export function ChoiceTile({
   return (
     <label className="cursor-pointer">
       <input
-        type="radio"
+        type={multiple ? 'checkbox' : 'radio'}
         name={name}
         checked={checked}
         onChange={onChange}

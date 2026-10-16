@@ -19,11 +19,19 @@ TIMES_OF_DAY = ("morning", "midday", "afternoon", "evening")
 TASK_MAX_POINTS = 1000
 MAX_INTERVAL_DAYS = 365
 # Arten von Punktebuchungen.
-POINT_KINDS = ("task_completed", "task_undone", "manual", "reward_redeemed")
+POINT_KINDS = (
+    "task_completed",
+    "task_undone",
+    "manual",
+    "reward_redeemed",
+    "reward_cancelled",
+    "chore_completed",
+    "chore_undone",
+)
 MANUAL_MAX_POINTS = 1000
 REWARD_MAX_COST = 1000
 # Status von Einlösungen; ein Freigabeprozess (requested, approved, rejected) kann folgen.
-REDEMPTION_STATUSES = ("redeemed",)
+REDEMPTION_STATUSES = ("redeemed", "cancelled")
 # Mahlzeiten des Essensplans in zeitlicher Reihenfolge.
 MEALS = ("breakfast", "lunch", "dinner", "snack")
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+$")
@@ -374,6 +382,10 @@ class RewardOut(BaseModel):
     active: bool
 
 
+class CancelRedemptionIn(BaseModel):
+    reason: PointReason
+
+
 class RedemptionOut(BaseModel):
     id: int
     reward_id: int | None
@@ -383,6 +395,8 @@ class RedemptionOut(BaseModel):
     reward_icon: str
     cost: int
     created_at: dt.datetime
+    cancellation_reason: str | None = None
+    cancelled_at: dt.datetime | None = None
 
 
 class RedemptionHistoryOut(BaseModel):
@@ -392,6 +406,7 @@ class RedemptionHistoryOut(BaseModel):
 
 
 class ApprovalOut(BaseModel):
+    source: str = "task"
     """Erledigung, die auf die Kontrolle der Eltern wartet."""
 
     id: int
