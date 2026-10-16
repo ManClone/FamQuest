@@ -145,7 +145,7 @@ it('keeps the same personal progress above day/week and removes the duplicate ta
   expect(within(overview).getByText('32 stars')).toBeVisible()
 })
 
-it('shows own redemption history and a working back destination for children', async () => {
+it('shows own redemption history without a redundant back control for children', async () => {
   const user = userEvent.setup()
   setup('/rewards/1')
   expect(await screen.findByRole('heading', { name: 'Your redeemed rewards' })).toBeVisible()
@@ -156,9 +156,12 @@ it('shows own redemption history and a working back destination for children', a
   expect(within(history).getByText(/12:15/)).toBeVisible()
   expect(within(history).queryByRole('button', { name: 'Cancel redemption' })).toBeNull()
   await user.keyboard('{Escape}')
-  const back = screen.getByRole('link', { name: /Back/ })
-  expect(back).toHaveAttribute('href', '/tasks')
-  await user.click(back)
+  expect(screen.queryByRole('link', { name: /Back/ })).toBeNull()
+  await user.click(
+    within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('link', {
+      name: 'Tasks',
+    }),
+  )
   expect(await screen.findByRole('heading', { name: 'Tim', level: 1 })).toBeVisible()
   expect(await screen.findByText('Level 2')).toBeVisible()
   expect(screen.getByText('22 stars')).toBeVisible()
