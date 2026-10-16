@@ -32,6 +32,7 @@ const KIND_ICONS: Record<PointKind, typeof ManualIcon> = {
   reward_cancelled: UndoIcon,
   chore_completed: CheckIcon,
   chore_undone: UndoIcon,
+  penalty_reversed: UndoIcon,
 }
 
 type Direction = 'credit' | 'deduct'

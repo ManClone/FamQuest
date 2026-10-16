@@ -27,6 +27,7 @@ POINT_KINDS = (
     "reward_cancelled",
     "chore_completed",
     "chore_undone",
+    "penalty_reversed",
 )
 MANUAL_MAX_POINTS = 1000
 REWARD_MAX_COST = 1000

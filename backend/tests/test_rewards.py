@@ -79,6 +79,16 @@ def test_adults_have_their_own_rewards(client, parent):
 
     assert response.status_code == 201
     assert response.json()["member_id"] == mama
+    # Adults without a linked account cannot spend another profile's stars.
+    assert redeem(client, parent, response.json()["id"]).status_code == 403
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import FamilyMember, User
+
+    with SessionLocal() as db:
+        db.get(FamilyMember, mama).user_id = db.scalar(select(User.id).where(User.role == "admin"))
+        db.commit()
     book_manually(client, parent, mama, 10)
     assert redeem(client, parent, response.json()["id"]).status_code == 201
     assert history(client, mama)["total"] == 5
@@ -292,3 +302,44 @@ def test_simultaneous_cancellations_refund_only_once(client, parent, lena):
         )
         == 1
     )
+
+
+def test_adults_can_edit_each_others_rewards_but_only_spend_their_own_points(client, parent):
+    from fastapi.testclient import TestClient
+
+    mama = add_parent_member(client, parent)
+    credentials = {"email": "viola@example.org", "password": "test-password-123"}
+    response = client.post(
+        "/api/members",
+        json={"name": "Viola", "role": "parent", "color": "purple", "login": credentials},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 201, response.text
+    viola = response.json()["id"]
+    reward = add_reward(client, parent, viola)
+    own_reward = add_reward(client, parent, mama)
+    book_manually(client, parent, viola, 10)
+    assert redeem(client, parent, reward).status_code == 403
+    assert history(client, viola)["total"] == 10
+    assert client.get(f"/api/redemptions?member_id={viola}").status_code == 200
+    with TestClient(client.app) as partner:
+        me = partner.post("/api/auth/login", json=credentials).json()
+        assert (
+            partner.put(
+                f"/api/rewards/{own_reward}",
+                json=reward_data(mama, name="Edited by Viola"),
+                headers=csrf(me),
+            ).status_code
+            == 200
+        )
+        assert redeem(partner, me, own_reward).status_code == 403
+        assert redeem(partner, me, reward).status_code == 201
+    assert (
+        client.put(
+            f"/api/rewards/{reward}",
+            json=reward_data(viola, name="Edited by Flo"),
+            headers=csrf(parent),
+        ).status_code
+        == 200
+    )
+    assert history(client, viola)["total"] == 5

@@ -99,6 +99,8 @@ def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> Redemp
     reward = get_reward(db, reward_id)
     ensure_member_access(db, auth, reward.member_id)
     member = get_member(db, reward.member_id)
+    if member.role == "parent" and member.user_id != auth.user_id:
+        raise ApiError(status.HTTP_403_FORBIDDEN, "reward.own_only")
     if not reward.active:
         raise ApiError(status.HTTP_409_CONFLICT, "reward.inactive")
     lock_member(db, member.id)

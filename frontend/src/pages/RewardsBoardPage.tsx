@@ -52,9 +52,16 @@ export function RewardsBoardPage() {
             selected={member}
             onSelect={setSelected}
           />
-          <RewardGrid member={member} balance={total} />
+          {member.id !== me?.member_id && (
+            <p className="rounded-2xl bg-white p-3 text-slate-600">{t('rewards.own_only')}</p>
+          )}
+          <RewardGrid member={member} balance={total} canRedeem={member.id === me?.member_id} />
           <Section title={t('child_progress.reward_history')}>
-            <RedemptionHistory member={member} timeZone={me?.family.timezone ?? 'Europe/Berlin'} />
+            <RedemptionHistory
+              member={member}
+              timeZone={me?.family.timezone ?? 'Europe/Berlin'}
+              readOnly={member.id !== me?.member_id}
+            />
           </Section>
         </>
       )}

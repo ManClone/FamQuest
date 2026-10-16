@@ -14,10 +14,12 @@ export function RewardGrid({
   member,
   balance,
   compact = false,
+  canRedeem = true,
 }: {
   member: Member
   balance: number
   compact?: boolean
+  canRedeem?: boolean
 }) {
   const { t } = useTranslation()
   const rewards = useRewards()
@@ -52,14 +54,17 @@ export function RewardGrid({
           <RewardCard
             key={reward.id}
             compact={compact}
+            canRedeem={canRedeem}
             reward={reward}
             member={member}
             balance={balance}
-            onRedeem={() => setSelected(reward)}
+            onRedeem={() => canRedeem && setSelected(reward)}
           />
         ))}
       </ul>
-      {selected && <RedeemDialog reward={selected} member={member} onClose={close} />}
+      {selected && canRedeem && selected.member_id === member.id && (
+        <RedeemDialog reward={selected} member={member} onClose={close} />
+      )}
     </>
   )
 }

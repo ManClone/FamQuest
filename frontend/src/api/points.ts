@@ -13,6 +13,7 @@ export type PointKind =
   | 'reward_cancelled'
   | 'chore_completed'
   | 'chore_undone'
+  | 'penalty_reversed'
 
 export interface PointTransaction {
   id: number

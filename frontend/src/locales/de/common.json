@@ -367,7 +367,8 @@
     "kind_reward_redeemed": "Belohnung eingelöst",
     "kind_reward_cancelled": "Belohnung storniert",
     "kind_chore_completed": "Hausarbeit erledigt",
-    "kind_chore_undone": "Hausarbeit zurückgenommen"
+    "kind_chore_undone": "Hausarbeit zurückgenommen",
+    "kind_penalty_reversed": "Strafpunkte storniert"
   },
   "errors": {
     "common": {
@@ -443,13 +444,15 @@
       "not_repeatable": "Diese Aufgabe ist nicht mehrfach ausführbar."
     },
     "points": {
-      "insufficient": "So viele Punkte sind nicht vorhanden."
+      "insufficient": "So viele Punkte sind nicht vorhanden.",
+      "not_penalty": "Diese Buchung ist kein Strafpunkte-Abzug."
     },
     "reward": {
       "not_found": "Diese Belohnung gibt es nicht mehr",
       "inactive": "Diese Belohnung ist gerade nicht verfügbar",
       "insufficient_points": "Dafür reichen die Punkte noch nicht",
-      "child_only": "Belohnungen gibt es nur für Kinder"
+      "child_only": "Belohnungen gibt es nur für Kinder",
+      "own_only": "Erwachsene können nur ihre eigenen Belohnungen einlösen."
     },
     "approval": {
       "not_found": "Diese Erledigung wurde schon geprüft oder zurückgenommen."
@@ -589,7 +592,8 @@
     "audience_parent": "Eltern",
     "audience_child": "Kinder",
     "need_parents": "Legt zuerst ein Elternteil als Familienmitglied an.",
-    "choose_parent": "Elternteil wählen"
+    "choose_parent": "Elternteil wählen",
+    "own_only": "Einlösen kann hier nur die Person selbst. Fortschritt und Verlauf bleiben sichtbar."
   },
   "care": {
     "title": "Wer hat’s gemacht?",
@@ -1156,5 +1160,12 @@
     "cancel": "Abbrechen",
     "more": "Ältere laden",
     "loading": "Wird geladen …"
+  },
+  "penalty": {
+    "history": "Strafpunkte-Verlauf",
+    "empty": "Noch keine Strafpunkte abgezogen.",
+    "reverse": "Abzug zurücknehmen",
+    "reversed": "Storniert · Sterne erstattet",
+    "reason": "Grund der Rücknahme"
   }
 }

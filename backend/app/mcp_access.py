@@ -5,7 +5,7 @@ from copy import deepcopy
 
 READ = (
     r"/api/(members|profile|today|tasks|tasks/week|approvals|chore-approvals/confirmed)",
-    r"/api/members/[0-9]+/(points|progress|praise)",
+    r"/api/members/[0-9]+/(points|progress|praise|penalties)",
     r"/api/(chores|chores/weekly-preview|chores/weekly-confirmed)",
     r"/api/(routines|todos|rewards|redemptions)",
     r"/api/(calendar/week|calendar/upcoming|meals/week|meals/settings|dishes)",
@@ -16,6 +16,7 @@ WRITE = (
     r"/api/chore-approvals/[0-9]+/confirmed",
     r"/api/members/[0-9]+/(?:praise|points)",
     r"/api/members/[0-9]+/praise/[0-9]+/revoke",
+    r"/api/members/[0-9]+/penalties/[0-9]+/reverse",
     r"/api/redemptions/[0-9]+/cancel",
     r"/api/tasks(?:/[0-9]+|/schedule)?",
     r"/api/routines(?:/[0-9]+(?:/days|/steps)?)?",
@@ -58,7 +59,7 @@ def tool_schema(spec: dict) -> dict:
                         "schema": {"type": "string", "minLength": 16, "maxLength": 128},
                     }
                 )
-            if method != "get" and ("approvals/" in path or path.endswith("/revoke")):
+            if method != "get" and ("approvals/" in path or path.endswith(("/revoke", "/reverse"))):
                 operation.setdefault("parameters", []).append(
                     {
                         "name": "X-MCP-Parent-Confirmed",
