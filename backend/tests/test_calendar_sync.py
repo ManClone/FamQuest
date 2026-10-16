@@ -130,14 +130,30 @@ def test_unknown_calendar(client, parent, configured):
     assert response.json() == {"code": "calendar.calendar_not_found"}
 
 
-def test_choosing_calendars_needs_unlocked_parent_area(client, parent, connected):
+def test_choosing_calendars_requires_parent_role(client, parent, connected):
     calendar_id = calendars(client)[MAMA]["id"]
-    client.post("/api/parent/lock", headers=csrf(parent))
-
-    response = client.put(
-        f"/api/calendar/calendars/{calendar_id}", json={"selected": True}, headers=csrf(parent)
+    account = client.post(
+        "/api/auth/accounts",
+        json={
+            "email": "child-calendar-sync@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
+        headers=csrf(parent),
     )
-
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-calendar-sync@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    response = client.put(
+        f"/api/calendar/calendars/{calendar_id}",
+        json={"selected": True},
+        headers=csrf(login.json()),
+    )
+    assert response.status_code == 403
     assert response.json() == {"code": "parent.locked"}
 
 

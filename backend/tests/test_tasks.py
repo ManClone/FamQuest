@@ -52,6 +52,7 @@ def test_create_and_list_task(client, parent, lena):
         "color": None,
         "active": True,
         "needs_approval": False,
+        "repeatable": False,
         "shared": False,
         "extra": False,
         "recurrence": {"kind": "daily"},
@@ -165,6 +166,7 @@ def test_update_task(client, parent, lena):
         "color": "teal",
         "active": False,
         "needs_approval": False,
+        "repeatable": False,
         "shared": False,
         "extra": False,
         "recurrence": {"kind": "weekly", "weekdays": [1, 2, 3, 4, 5]},
@@ -223,9 +225,23 @@ def test_deleting_member_removes_assignment_but_keeps_task(client, parent, lena)
     assert task["member_ids"] == [tom]
 
 
-def test_tasks_need_unlocked_parent_area(client, admin):
+def test_tasks_require_parent_role(client, admin):
+    assert client.get("/api/tasks").status_code == 200
+    response = client.post(
+        "/api/auth/accounts",
+        json={"email": "child@example.org", "password": "sehr-geheim-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert response.status_code == 201, response.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child@example.org", "password": "sehr-geheim-456"},
+    )
+    assert login.status_code == 200, login.text
+    child = login.json()
     assert client.get("/api/tasks").status_code == 403
-    response = client.post("/api/tasks", json={}, headers=csrf(admin))
+    response = client.post("/api/tasks", json={}, headers=csrf(child))
     assert response.status_code == 403
     assert response.json() == {"code": "parent.locked"}
 
@@ -314,3 +330,16 @@ def test_tasks_are_only_for_children(client, parent, lena):
 
     assert (response.status_code, response.json()["code"]) == (409, "task.child_only")
     assert client.get("/api/tasks").json() == []
+
+
+def test_multiple_periods_are_saved_atomically_as_independent_executions(client, parent, lena):
+    response = client.post(
+        "/api/tasks/schedule",
+        json={"task": task_data([lena]), "times": ["morning", "evening"]},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    tasks = client.get("/api/tasks").json()
+    assert len(tasks) == 2
+    assert {task["time_of_day"] for task in tasks} == {"morning", "evening"}
+    assert len({task["id"] for task in tasks}) == 2

@@ -21,7 +21,10 @@ export interface Member {
   event_symbols: boolean
 }
 
+export type MemberLogin = { email: string; password?: string } | { account_id: number }
+
 export interface MemberData {
+  login?: MemberLogin
   name: string
   role: MemberRole
   color: MemberColor
@@ -52,6 +55,8 @@ export function useMembersMutation<TVariables, TResult>(
   // Kalender, weil Symbole für Termine an der Person hängen.
   return useParentMutation(request, [
     MEMBERS_KEY,
+    ['accounts'],
+    ['me'],
     TASKS_KEY,
     TODAY_KEY,
     CALENDAR_WEEK_KEY,

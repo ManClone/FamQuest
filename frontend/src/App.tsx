@@ -16,9 +16,12 @@ import { LoginPage } from './pages/LoginPage'
 import { ParentsPage } from './pages/ParentsPage'
 import { PersonPage } from './pages/PersonPage'
 import { RewardsPage } from './pages/RewardsPage'
+import { RewardsBoardPage } from './pages/RewardsBoardPage'
 import { SetupPage } from './pages/SetupPage'
 import { TasksWeekPage } from './pages/TasksWeekPage'
-import { TodayPage } from './pages/TodayPage'
+import { ChildTasksPage } from './pages/ChildTasksPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 function Loading() {
   const { t } = useTranslation()
@@ -91,6 +94,23 @@ function LoginRoute() {
   )
 }
 
+function RoleHome() {
+  return useMe().data?.user.role === 'child' ? <ChildTasksPage currentOnly /> : <DashboardPage />
+}
+function RoleTasks() {
+  const week = useLocation().pathname === '/tasks/week'
+  return useMe().data?.user.role === 'child' ? (
+    <ChildTasksPage />
+  ) : week ? (
+    <TasksWeekPage />
+  ) : (
+    <FamilyPage />
+  )
+}
+function ParentOnly() {
+  return useMe().data?.user.role === 'child' ? <Navigate to="/" replace /> : <Outlet />
+}
+
 export default function App() {
   return (
     <Routes>
@@ -99,20 +119,26 @@ export default function App() {
         <Route path="/login" element={<LoginRoute />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
-            <Route index element={<TodayPage />} />
-            <Route path="/tasks" element={<FamilyPage />} />
-            <Route path="/tasks/week" element={<TasksWeekPage />} />
+            <Route index element={<RoleHome />} />
+            <Route path="/tasks" element={<RoleTasks />} />
+            <Route path="/tasks/week" element={<RoleTasks />} />
             <Route path="/member/:memberId" element={<PersonPage />} />
             <Route path="/rewards" element={<RewardsPage />} />
             <Route path="/rewards/:memberId" element={<RewardsPage />} />
             <Route path="/calendar" element={<Navigate to="/" replace />} />
             <Route path="/meals" element={<Navigate to="/" replace />} />
             <Route path="/shopping" element={<Navigate to="/" replace />} />
-            <Route path="/household" element={<ChoresPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route element={<ParentOnly />}>
+              <Route path="/household" element={<ChoresPage />} />
+              <Route path="/rewards/board" element={<RewardsBoardPage />} />
+            </Route>
+          </Route>
+          <Route element={<ParentOnly />}>
+            <Route path="/parents/:area?" element={<ParentsPage />} />
           </Route>
           <Route path="/frame" element={<FramePage />} />
           <Route path={KITCHEN_PATH} element={<KitchenPage />} />
-          <Route path="/parents/:area?" element={<ParentsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

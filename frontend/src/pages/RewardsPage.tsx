@@ -4,6 +4,7 @@ import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
 import TrophyIcon from '~icons/fluent-emoji-flat/trophy'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 
+import { useMe } from '../api/auth'
 import { childrenOf } from '../api/members'
 import { pointsFor } from '../api/today'
 import { Avatar } from '../components/Avatar'
@@ -13,6 +14,8 @@ import { useIdleTimeout } from '../useIdleTimeout'
 import { PERSON_IDLE_TIMEOUT_MS } from './PersonPage'
 import { useFamilyToday } from './family/useFamilyToday'
 import { RewardGrid } from './rewards/RewardGrid'
+import { RedemptionHistory } from './parents/RewardsSection'
+import { Section } from '../components/ui'
 
 function Balance({ total, size }: { total: number; size: 'md' | 'lg' }) {
   const { t } = useTranslation()
@@ -35,6 +38,7 @@ export function RewardsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { memberId } = useParams()
+  const me = useMe().data
   const { members, today, isPending, error, refetch } = useFamilyToday()
   useIdleTimeout(PERSON_IDLE_TIMEOUT_MS, () => navigate('/'))
 
@@ -55,29 +59,48 @@ export function RewardsPage() {
   }
 
   const children = childrenOf(members)
+  if (me?.user.role === 'child' && me.member_id && memberId === undefined)
+    return <Navigate to={`/rewards/${me.member_id}`} replace />
 
   if (memberId !== undefined) {
     const member = children.find((candidate) => String(candidate.id) === memberId)
     if (!member) return <Navigate to="/rewards" replace />
     const total = pointsFor(today, member.id).total
+    const childView = me?.user.role === 'child'
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
+      <main
+        className={`mx-auto flex w-full max-w-5xl flex-col ${childView ? 'gap-4' : 'gap-6'} p-4 sm:p-6`}
+      >
         <header className="flex flex-wrap items-center gap-4">
-          <Link
-            to="/rewards"
-            aria-label={t('rewards.back')}
-            className="flex size-20 shrink-0 items-center justify-center rounded-3xl bg-white shadow-sm hover:bg-orange-100 focus-visible:outline-4 focus-visible:outline-orange-400"
+          {!childView && (
+            <Link
+              to={me?.user.role === 'child' ? '/tasks' : '/rewards'}
+              aria-label={t(
+                me?.user.role === 'child' ? 'child_progress.back_tasks' : 'rewards.back',
+              )}
+              className="flex size-20 shrink-0 items-center justify-center rounded-3xl bg-white shadow-sm hover:bg-orange-100 focus-visible:outline-4 focus-visible:outline-orange-400"
+            >
+              <BackIcon className="size-12" aria-hidden="true" />
+            </Link>
+          )}
+          <Avatar
+            name={member.name}
+            color={member.color}
+            src={member.avatar_url}
+            size={childView ? 'md' : 'lg'}
+          />
+          <h1
+            className={`min-w-0 flex-1 ${childView ? 'text-3xl' : 'text-4xl'} font-extrabold break-words text-slate-800`}
           >
-            <BackIcon className="size-12" aria-hidden="true" />
-          </Link>
-          <Avatar name={member.name} color={member.color} src={member.avatar_url} size="lg" />
-          <h1 className="min-w-0 flex-1 text-4xl font-extrabold break-words text-slate-800">
             <span className="sr-only">{t('rewards.of', { name: member.name })}</span>
             <span aria-hidden="true">{member.name}</span>
           </h1>
-          <Balance total={total} size="lg" />
+          <Balance total={total} size={childView ? 'md' : 'lg'} />
         </header>
-        <RewardGrid member={member} balance={total} />
+        <RewardGrid member={member} balance={total} compact={childView} />
+        <Section title={t('child_progress.reward_history')}>
+          <RedemptionHistory member={member} timeZone={me?.family.timezone ?? 'Europe/Berlin'} />
+        </Section>
       </main>
     )
   }

@@ -14,7 +14,12 @@
     "sleepover": "Sleepover party",
     "day_out": "A day out of your choice",
     "theme_park": "Theme park",
-    "big_wish": "A big wish"
+    "big_wish": "A big wish",
+    "parent_break": "A quiet coffee break",
+    "parent_read": "An hour to read",
+    "parent_movie": "An evening for a film",
+    "parent_meal": "Order a favourite meal",
+    "parent_day": "An afternoon off"
   },
   "tasks": {
     "teeth_morning": "Brush teeth",

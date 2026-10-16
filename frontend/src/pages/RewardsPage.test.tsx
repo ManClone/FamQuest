@@ -43,6 +43,7 @@ function routes(extra: Record<string, Response | ((body: unknown) => Response)> 
     'GET /api/auth/me': Response.json(makeMe()),
     'GET /api/members': Response.json([lena, tom, mama]),
     'GET /api/today': () => Response.json(today),
+    'GET /api/redemptions': Response.json({ redemptions: [], has_more: false }),
     'GET /api/rewards': Response.json([iceCream, cinema, hidden, tomsReward]),
     'POST /api/rewards/1/redeem': () => {
       today = {
@@ -81,10 +82,8 @@ describe('Belohnungen am Display', () => {
   it('führt über das Geschenk zu den Kindern und ihren Belohnungen', async () => {
     const user = userEvent.setup()
     mockApi(routes())
-    renderApp('/')
-
+    renderApp('/rewards')
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' })
-    await user.click(within(nav).getByRole('link', { name: 'Belohnungen' }))
 
     // Nur Kinder, Erwachsene bekommen keine Belohnungen.
     expect(await screen.findByRole('link', { name: 'Belohnungen von Lena' })).toBeVisible()

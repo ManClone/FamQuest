@@ -396,7 +396,6 @@ class Demo:
             },
         )
         self.csrf = me["csrf_token"]
-        self.call("POST", "/parent/unlock", json={"pin": PIN})
 
         self.members()
         self.tasks()

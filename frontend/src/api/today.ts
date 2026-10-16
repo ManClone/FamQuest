@@ -13,6 +13,7 @@ export interface TodayTask {
   /** null = Farbe der jeweiligen Person */
   color: MemberColor | null
   member_ids: number[]
+  repeatable?: boolean
   needs_approval: boolean
   /** „Einer für alle“: erledigt für alle, sobald jemand in `done_member_ids` steht. */
   shared: boolean
@@ -67,11 +68,13 @@ export interface SetDoneVariables {
   taskId: number
   memberId: number
   done: boolean
+  requestKey?: string
 }
 
-function setDone({ date, taskId, memberId, done }: SetDoneVariables) {
+function setDone({ date, taskId, memberId, done, requestKey }: SetDoneVariables) {
   const path = `/today/tasks/${taskId}/members/${memberId}?date=${encodeURIComponent(date)}`
-  return api<void>(done ? 'PUT' : 'DELETE', path)
+  const key = requestKey ? `&request_key=${encodeURIComponent(requestKey)}` : ''
+  return api<void>(done ? 'PUT' : 'DELETE', path + key)
 }
 
 /** Setzt den Status und schätzt die Punkte; die Antwort des Servers ersetzt die Schätzung. */
@@ -173,7 +176,11 @@ export function useSetDone(taskId: number, memberId: number) {
       // Erst neu laden, wenn keine weiteren Tipps unterwegs sind, sonst flackern Karten zurück.
       const dayChanged = error instanceof ApiError && error.code === 'completion.day_changed'
       if (dayChanged || queryClient.isMutating({ mutationKey: SET_DONE_KEY }) === 1) {
-        return queryClient.invalidateQueries({ queryKey: TODAY_KEY })
+        return Promise.all(
+          [TODAY_KEY, ['member-progress']].map((queryKey) =>
+            queryClient.invalidateQueries({ queryKey }),
+          ),
+        )
       }
     },
   })

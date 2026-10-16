@@ -21,11 +21,12 @@ from app.api import (
     health,
     home,
     meals,
-    money,
     members,
+    money,
     parent,
     photos,
     points,
+    profile,
     quest_import,
     rewards,
     routines,
@@ -36,6 +37,7 @@ from app.api import (
     today,
     todos,
     weather,
+    weekly_consequences,
 )
 from app.calendar_sync import run_periodically
 from app.config import Settings, get_settings
@@ -89,7 +91,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         tasks,
         today,
         points,
+        profile,
         money,
+        weekly_consequences,
         quest_import,
         rewards,
         approvals,

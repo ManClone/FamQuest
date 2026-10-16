@@ -1,11 +1,18 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 import { api, apiGet } from './client'
 import { useParentMutation } from './mutations'
 import { TODAY_KEY } from './today'
 
 // Muss zu POINT_KINDS im Backend passen (backend/app/schemas.py).
-export type PointKind = 'task_completed' | 'task_undone' | 'manual' | 'reward_redeemed'
+export type PointKind =
+  | 'task_completed'
+  | 'task_undone'
+  | 'manual'
+  | 'reward_redeemed'
+  | 'reward_cancelled'
+  | 'chore_completed'
+  | 'chore_undone'
 
 export interface PointTransaction {
   id: number
@@ -56,6 +63,22 @@ export const bookPoints = (memberId: number, booking: PointBooking) =>
 export function useBookPoints(memberId: number) {
   return useParentMutation(
     (booking: PointBooking) => bookPoints(memberId, booking),
-    [POINTS_KEY, TODAY_KEY],
+    [POINTS_KEY, TODAY_KEY, PROGRESS_KEY],
   )
+}
+
+export const PROGRESS_KEY = ['member-progress'] as const
+export interface MemberProgress {
+  earned_xp: number
+  level: number
+  level_progress: number
+  level_size: number
+  remaining_xp: number
+}
+export function useMemberProgress(memberId: number) {
+  return useQuery({
+    queryKey: [...PROGRESS_KEY, memberId],
+    queryFn: () => apiGet<MemberProgress>(`/members/${memberId}/progress`),
+    refetchInterval: 60_000,
+  })
 }

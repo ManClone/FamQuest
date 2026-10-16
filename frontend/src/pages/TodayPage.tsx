@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GearIcon from '~icons/fluent-emoji-flat/gear'
 
-import { useLockParent, useMe } from '../api/auth'
+import { useMe } from '../api/auth'
 import {
   DEFAULT_LAYOUT,
   type HomeLayout,
@@ -12,12 +12,14 @@ import {
   visibleTiles,
 } from '../api/home'
 import { useToday } from '../api/today'
+import { useMembers } from '../api/members'
+import { ApprovalsSection } from './parents/ApprovalsSection'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { useNow } from '../useNow'
 import { formatLongDate } from '../weekdays'
 import { PARENT_IDLE_TIMEOUT_MS } from './ParentsPage'
 import { ChoresWidget } from './home/ChoresWidget'
-import { HomeEditor, PinDialog } from './home/HomeEditor'
+import { HomeEditor } from './home/HomeEditor'
 import { RoutineWidget } from './home/RoutineWidget'
 import { WeatherBadge } from './home/WeatherBadge'
 
@@ -25,10 +27,11 @@ import { WeatherBadge } from './home/WeatherBadge'
  * Startseite „Heute“ als Wochen-Dashboard: im Kopf Datum, Wetter und Uhr; darunter die aktuelle
  * Routine der Kinder und der Haushalt. Welche Bereiche sichtbar sind, legen die Eltern über das Zahnrad fest.
  */
-export function TodayPage() {
+export function TodayPage({ parentDashboard = false }: { parentDashboard?: boolean }) {
   const { t, i18n } = useTranslation()
   const { data: me } = useMe()
   const today = useToday().data
+  const members = useMembers().data ?? []
   const layout = useHomeLayout()
   const now = useNow()
   const language = i18n.resolvedLanguage ?? i18n.language
@@ -37,9 +40,8 @@ export function TodayPage() {
     minute: '2-digit',
     timeZone: me?.family.timezone,
   }).format(now)
-  // null: normale Ansicht; 'pin': PIN-Abfrage; sonst der Entwurf im Bearbeitungsmodus.
-  const [editing, setEditing] = useState<HomeLayout | 'pin' | null>(null)
-  const draft = typeof editing === 'object' && editing !== null ? editing : null
+  const [editing, setEditing] = useState<HomeLayout | null>(null)
+  const draft = editing
   const current = draft ?? layout.data ?? DEFAULT_LAYOUT
   const shown = visibleTiles(current.tiles)
 
@@ -53,7 +55,12 @@ export function TodayPage() {
       className={`flex flex-1 flex-col gap-4 p-4 sm:p-6 ${draft ? '' : 'lg:max-h-dvh lg:overflow-y-auto'}`}
     >
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <h1 className="text-3xl font-extrabold text-orange-600">{me?.family.name}</h1>
+        <h1 className="text-3xl font-extrabold text-orange-600">
+          {parentDashboard ? t('personal.dashboard') : me?.family.name}
+        </h1>
+        {parentDashboard && (
+          <p className="text-3xl font-extrabold text-orange-600">{me?.family.name}</p>
+        )}
         {today && (
           <p className="text-xl font-bold text-slate-600">{formatLongDate(language, today.date)}</p>
         )}
@@ -62,23 +69,34 @@ export function TodayPage() {
           <span className="sr-only">{t('home.time')}: </span>
           <time>{time}</time>
         </p>
-        {editing === null && layout.data && (
+        {!parentDashboard && editing === null && layout.data && (
           <button
             type="button"
             aria-label={t('home.customize')}
             title={t('home.customize')}
-            onClick={() => (me?.parent_unlocked ? startEditing() : setEditing('pin'))}
+            onClick={startEditing}
             className="flex size-14 shrink-0 items-center justify-center rounded-2xl opacity-60 hover:bg-white/80 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-4 focus-visible:outline-orange-400"
           >
             <GearIcon className="size-8" aria-hidden="true" />
           </button>
         )}
       </header>
-      {editing === 'pin' && (
-        <PinDialog onUnlocked={startEditing} onCancel={() => setEditing(null)} />
+      {draft && (
+        <EditMode
+          draft={draft}
+          onChange={setEditing}
+          onClose={() => setEditing(null)}
+          parentDashboard={parentDashboard}
+        />
       )}
-      {draft && <EditMode draft={draft} onChange={setEditing} onClose={() => setEditing(null)} />}
-      <Sections shown={shown} />
+      {parentDashboard ? (
+        <>
+          <ApprovalsSection members={members} today={today?.date} />
+          {shown.has('chores') && <ChoresWidget expanded />}
+        </>
+      ) : (
+        <Sections shown={shown} />
+      )}
     </main>
   )
 }
@@ -88,24 +106,22 @@ function EditMode({
   draft,
   onChange,
   onClose,
+  parentDashboard,
 }: {
   draft: HomeLayout
   onChange: (layout: HomeLayout) => void
   onClose: () => void
+  parentDashboard: boolean
 }) {
   const save = useSaveHomeLayout()
-  const lock = useLockParent()
-
-  const close = () => {
-    lock.mutate()
-    onClose()
-  }
+  const close = onClose
   useIdleTimeout(PARENT_IDLE_TIMEOUT_MS, close)
 
   return (
     <>
       <HomeEditor
         layout={draft}
+        parentDashboard={parentDashboard}
         onChange={onChange}
         onSave={() => save.mutate(draft, { onSuccess: close })}
         onReset={() => onChange(DEFAULT_LAYOUT)}

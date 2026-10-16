@@ -2,8 +2,8 @@ import datetime as dt
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean,
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
     true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -137,6 +138,7 @@ class Task(Base):
     color: Mapped[str | None] = mapped_column(String(20))
     active: Mapped[bool] = mapped_column(default=True, server_default="true")
     # Punkte erst, nachdem Eltern die Erledigung geprüft haben (z. B. „Zimmer aufgeräumt“).
+    repeatable: Mapped[bool] = mapped_column(default=False, server_default="false")
     needs_approval: Mapped[bool] = mapped_column(default=False, server_default="false")
     # „Einer für alle“: Eine Erledigung durch eine zugeordnete Person gilt für alle.
     shared: Mapped[bool] = mapped_column(default=False, server_default="false")
@@ -233,16 +235,24 @@ class RoutineStep(Base):
 
 
 class TaskCompletion(Base):
-    """Erledigung einer Aufgabe durch eine Person an einem Kalendertag der Familie.
+    """One execution, with a stable request key for repeatable tasks.
 
-    Rückgängig machen löscht die Zeile; der Unique-Constraint verhindert doppelte Erledigungen
-    am selben Tag, auch bei gleichzeitigen Doppel-Tipps. Die Punkte stehen als Buchungen in
-    PointTransaction. Bei Aufgaben mit Elternkontrolle ist `approved_at` leer, bis Eltern die
-    Erledigung bestätigen; erst dann werden die Punkte gebucht.
+    Normal tasks retain one completion per person/day via a partial unique index.
+    Repeatable tasks preserve each approved execution and its reward snapshot.
     """
 
     __tablename__ = "task_completions"
-    __table_args__ = (UniqueConstraint("task_id", "member_id", "date"),)
+    __table_args__ = (
+        Index(
+            "uq_task_completions_single",
+            "task_id",
+            "member_id",
+            "date",
+            unique=True,
+            postgresql_where=text("request_key IS NULL"),
+        ),
+    )
+    request_key: Mapped[str | None] = mapped_column(String(32), unique=True)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
@@ -267,14 +277,15 @@ class TaskCompletion(Base):
     task: Mapped[Task] = relationship(lazy="joined")
 
 
-
 class MemberBankAccount(Base):
     """Read-only external account metadata; never store banking credentials."""
 
     __tablename__ = "member_bank_accounts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), index=True
+    )
     provider: Mapped[str] = mapped_column(String(60))
     display_name: Mapped[str] = mapped_column(String(100))
     external_reference: Mapped[str | None] = mapped_column(String(200))
@@ -293,7 +304,9 @@ class BankTransaction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"))
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("member_bank_accounts.id", ondelete="CASCADE")
+    )
     external_id: Mapped[str] = mapped_column(String(200))
     booked_on: Mapped[dt.date] = mapped_column(Date)
     value_on: Mapped[dt.date | None] = mapped_column(Date)
@@ -316,7 +329,9 @@ class MoneyPaymentMatch(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"))
-    bank_transaction_id: Mapped[int] = mapped_column(ForeignKey("bank_transactions.id", ondelete="CASCADE"), unique=True)
+    bank_transaction_id: Mapped[int] = mapped_column(
+        ForeignKey("bank_transactions.id", ondelete="CASCADE"), unique=True
+    )
     category: Mapped[str] = mapped_column(String(20))
     week_start: Mapped[dt.date] = mapped_column(Date)
     amount_cents: Mapped[int] = mapped_column(BigInteger)
@@ -333,7 +348,9 @@ class BankBalanceSnapshot(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    account_id: Mapped[int] = mapped_column(ForeignKey("member_bank_accounts.id", ondelete="CASCADE"), index=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("member_bank_accounts.id", ondelete="CASCADE"), index=True
+    )
     balance_cents: Mapped[int] = mapped_column(BigInteger)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -346,7 +363,9 @@ class MoneyTransaction(Base):
     __table_args__ = (CheckConstraint("amount_cents <> 0", name="money_amount_nonzero"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"), index=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), index=True
+    )
     amount_cents: Mapped[int]
     kind: Mapped[str] = mapped_column(String(30))
     reason: Mapped[str] = mapped_column(String(200))
@@ -666,6 +685,11 @@ class Chore(Base):
     __tablename__ = "chores"
     __table_args__ = (CheckConstraint("interval_days > 0", name="interval_positive"),)
 
+    repeatable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    child_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    child_xp: Mapped[int] = mapped_column(default=0, server_default="0")
+    child_member_ids: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     room_id: Mapped[int] = mapped_column(
         ForeignKey("chore_rooms.id", ondelete="CASCADE"), index=True
@@ -675,10 +699,12 @@ class Chore(Base):
     icon: Mapped[str] = mapped_column(String(100))
     # So viele Tage nach der letzten Erledigung ist sie wieder fällig.
     interval_days: Mapped[int] = mapped_column(SmallInteger)
-    # Metadaten für Erwachsenen-Aufgaben; XP werden noch nicht automatisch gebucht.
+    # Effort and adult XP for each approved household execution.
     estimated_minutes: Mapped[int] = mapped_column(SmallInteger, default=15, server_default="15")
     adult_xp: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
-    assignment_mode: Mapped[str] = mapped_column(String(12), default="flexible", server_default="flexible")
+    assignment_mode: Mapped[str] = mapped_column(
+        String(12), default="flexible", server_default="flexible"
+    )
     fixed_member_id: Mapped[int | None] = mapped_column(
         ForeignKey("family_members.id", ondelete="SET NULL"), nullable=True
     )
@@ -692,12 +718,23 @@ class Chore(Base):
 class ChoreCompletion(Base):
     """Erledigung einer Hausarbeit an einem Kalendertag der Familie; wer es war, ist freiwillig.
 
-    Rückgängig machen löscht die Zeile. Höchstens eine Erledigung je Tag, auch bei Doppel-Tipps.
+    Separate request keys allow repeated executions; retries reuse the same key.
     """
 
     __tablename__ = "chore_completions"
-    # Der Unique-Constraint (chore_id, date) dient zugleich als Index für chore_id.
-    __table_args__ = (UniqueConstraint("chore_id", "date"),)
+    __table_args__ = (
+        UniqueConstraint("request_key"),
+        Index(
+            "uq_chore_completions_single",
+            "chore_id",
+            "date",
+            unique=True,
+            postgresql_where=text("request_key IS NULL"),
+        ),
+    )
+
+    approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    points: Mapped[int] = mapped_column(default=0, server_default="0")
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))
@@ -705,6 +742,7 @@ class ChoreCompletion(Base):
     member_id: Mapped[int | None] = mapped_column(
         ForeignKey("family_members.id", ondelete="SET NULL"), index=True
     )
+    request_key: Mapped[str | None] = mapped_column(String(32))
     # Kalendertag in der Zeitzone der Familie, nicht in UTC.
     date: Mapped[dt.date] = mapped_column(Date)
     completed_at: Mapped[datetime] = mapped_column(
@@ -721,9 +759,7 @@ class WeeklyChoreAssignment(Base):
     chore_id: Mapped[int] = mapped_column(
         ForeignKey("chores.id", ondelete="CASCADE"), primary_key=True
     )
-    member_id: Mapped[int] = mapped_column(
-        ForeignKey("family_members.id", ondelete="CASCADE")
-    )
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"))
 
 
 class ChoreCredit(Base):
@@ -735,9 +771,7 @@ class ChoreCredit(Base):
     completion_id: Mapped[int] = mapped_column(
         ForeignKey("chore_completions.id", ondelete="CASCADE"), primary_key=True
     )
-    member_id: Mapped[int] = mapped_column(
-        ForeignKey("family_members.id", ondelete="CASCADE")
-    )
+    member_id: Mapped[int] = mapped_column(ForeignKey("family_members.id", ondelete="CASCADE"))
     amount: Mapped[int]
 
 
@@ -763,7 +797,65 @@ class Todo(Base):
 
 class QuestImport(Base):
     """Idempotent record of an imported parent-approved quest."""
+
     __tablename__ = "quest_imports"
     id: Mapped[int] = mapped_column(primary_key=True)
     external_id: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
-    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), unique=True, nullable=False)
+    task_id: Mapped[int] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+
+
+class ConsequencePreset(Base):
+    """Parent-configurable default amounts; no automatic XP-to-euro conversion."""
+
+    __tablename__ = "consequence_presets"
+    __table_args__ = (
+        CheckConstraint("money_penalty_cents >= 0", name="consequence_preset_money_nonnegative"),
+        CheckConstraint("xp_penalty >= 0", name="consequence_preset_xp_nonnegative"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(100), unique=True)
+    money_penalty_cents: Mapped[int] = mapped_column(default=0, server_default="0")
+    xp_penalty: Mapped[int] = mapped_column(default=0, server_default="0")
+    active: Mapped[bool] = mapped_column(default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConsequenceEntry(Base):
+    """Auditable penalty event. Reversal references the original, never deletes it."""
+
+    __tablename__ = "consequence_entries"
+    __table_args__ = (
+        CheckConstraint("money_penalty_cents >= 0", name="consequence_entry_money_nonnegative"),
+        CheckConstraint("xp_penalty_requested >= 0", name="consequence_entry_xp_nonnegative"),
+        CheckConstraint("xp_penalty_applied >= 0", name="consequence_entry_applied_nonnegative"),
+        CheckConstraint(
+            "xp_penalty_applied <= xp_penalty_requested",
+            name="consequence_entry_applied_lte_requested",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), index=True
+    )
+    preset_id: Mapped[int | None] = mapped_column(
+        ForeignKey("consequence_presets.id", ondelete="SET NULL")
+    )
+    title: Mapped[str] = mapped_column(String(100))
+    note: Mapped[str | None] = mapped_column(String(500))
+    effective_date: Mapped[dt.date] = mapped_column(Date, index=True)
+    money_penalty_cents: Mapped[int]
+    xp_penalty_requested: Mapped[int]
+    xp_penalty_applied: Mapped[int]
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reversed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reversed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reversal_note: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

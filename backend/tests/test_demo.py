@@ -21,9 +21,8 @@ def test_demo_family(client, restore_clock, lang):
     demo.Demo(lang, now).run()
     demo.fixed_weather(now.astimezone(demo.ZoneInfo(demo.TIMEZONE)).date())
 
-    login = client.post(
-        "/api/auth/login", json={"email": demo.EMAIL, "password": demo.PASSWORD}
-    ).json()
+    response = client.post("/api/auth/login", json={"email": demo.EMAIL, "password": demo.PASSWORD})
+    assert response.status_code == 200
     today = client.get("/api/today").json()
     assert today["date"] == now.astimezone(demo.ZoneInfo(demo.TIMEZONE)).date().isoformat()
     assert today["time_of_day"] == "morning"
@@ -43,7 +42,4 @@ def test_demo_family(client, restore_clock, lang):
     assert [todo["done"] for todo in chores["todos"]] == [False, False]
 
     assert client.get("/api/weather").json()["current"]["temperature"] == 14
-    client.post(
-        "/api/parent/unlock", json={"pin": demo.PIN}, headers={"X-CSRF-Token": login["csrf_token"]}
-    )
     assert len(client.get("/api/photos").json()) == 4

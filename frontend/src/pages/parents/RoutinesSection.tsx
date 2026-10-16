@@ -25,7 +25,7 @@ import { TIME_OF_DAY_ICONS } from '../../components/TimeOfDayIcon'
 import { Alert, Button, Section } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { recurrenceSummary } from '../../recurrence'
-import { WEEKEND, weekdayName, weekdayOrder } from '../../weekdays'
+import { weekdayName, weekdayOrder } from '../../weekdays'
 import { ChildPicker, FilterChip } from './formParts'
 
 /** Diese Abschnitte stehen immer da, „Mittags“ nur, wenn das Kind dort eine Routine hat. */
@@ -112,18 +112,17 @@ export function RoutinesSection({
           const variants = own
             .filter((routine) => routine.time_of_day === time)
             .sort((a, b) => (a.weekdays[0] ?? 8) - (b.weekdays[0] ?? 8) || a.id - b.id)
-          const covered = new Set(variants.flatMap((routine) => routine.weekdays))
-          const uncovered = weekdayOrder(language).filter((day) => !covered.has(day))
           const Icon = TIME_OF_DAY_ICONS[time]
           const label = t(`times_of_day.${time}`)
 
-          /** Neue Version: bisher freie Tage, sonst das Wochenende; Schritte als Vorlage. */
+          /** Neue Version: freie Tage nutzen, sonst das Wochenende; Schritte als Vorlage. */
           const addVariant = () => {
-            const free = ALL_DAYS.filter((day) => !covered.has(day))
+            const occupied = new Set(variants.flatMap((routine) => routine.weekdays))
+            const freeDays = ALL_DAYS.filter((day) => !occupied.has(day))
             create.mutate({
               member_id: member.id,
               time_of_day: time,
-              weekdays: free.length > 0 ? free : WEEKEND,
+              weekdays: freeDays.length > 0 ? freeDays : [6, 7],
               copy_from: variants[0]?.id,
             })
           }
@@ -169,15 +168,6 @@ export function RoutinesSection({
                       onMessage={onMessage}
                     />
                   ))}
-                  {uncovered.length > 0 && (
-                    <p className="text-base text-slate-500">
-                      {t('routines.uncovered', {
-                        days: new Intl.ListFormat(language, { type: 'conjunction' }).format(
-                          uncovered.map((day) => weekdayName(language, day, 'short')),
-                        ),
-                      })}
-                    </p>
-                  )}
                   <Button
                     variant="secondary"
                     className="self-start"

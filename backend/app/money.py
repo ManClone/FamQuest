@@ -3,6 +3,7 @@
 A quest bonus is not unconditional pocket money. Callers must use distinct
 transaction kinds so allowance cannot be reduced by a bonus reversal.
 """
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -60,15 +61,22 @@ def weekly_allowance_booked(db: Session, member_id: int, week_start) -> bool:
     """Read-only check for an existing weekly allowance credit."""
     import datetime as dt
 
-    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime) or week_start.weekday() != 0:
+    if (
+        not isinstance(week_start, dt.date)
+        or isinstance(week_start, dt.datetime)
+        or week_start.weekday() != 0
+    ):
         raise ValueError("week_start must be a Monday date")
-    return db.scalar(
-        select(MoneyTransaction.id).where(
-            MoneyTransaction.member_id == member_id,
-            MoneyTransaction.kind == "allowance",
-            MoneyTransaction.reason == f"weekly:{week_start.isoformat()}",
+    return (
+        db.scalar(
+            select(MoneyTransaction.id).where(
+                MoneyTransaction.member_id == member_id,
+                MoneyTransaction.kind == "allowance",
+                MoneyTransaction.reason == f"weekly:{week_start.isoformat()}",
+            )
         )
-    ) is not None
+        is not None
+    )
 
 
 def post_weekly_allowance(
@@ -94,11 +102,7 @@ def post_weekly_allowance(
     if week_start.weekday() != 0:
         raise ValueError("week_start must be Monday")
 
-    member = db.scalar(
-        select(FamilyMember)
-        .where(FamilyMember.id == member_id)
-        .with_for_update()
-    )
+    member = db.scalar(select(FamilyMember).where(FamilyMember.id == member_id).with_for_update())
     if member is None or member.role != "child":
         raise ValueError("Allowance recipient must be a child")
 
@@ -133,9 +137,16 @@ def due_weekly_allowances(
     # Validate the whole batch before writing any ledger entry.
     import datetime as dt
 
-    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime) or week_start.weekday() != 0:
+    if (
+        not isinstance(week_start, dt.date)
+        or isinstance(week_start, dt.datetime)
+        or week_start.weekday() != 0
+    ):
         raise ValueError("week_start must be a Monday date")
-    if any(type(member_id) is not int or type(cents) is not int or not 1 <= cents <= 100_000 for member_id, cents in configured_amounts.items()):
+    if any(
+        type(member_id) is not int or type(cents) is not int or not 1 <= cents <= 100_000
+        for member_id, cents in configured_amounts.items()
+    ):
         raise ValueError("Invalid allowance configuration")
 
     credited: list[int] = []
@@ -158,10 +169,13 @@ def credit_configured_allowances(db: Session, today) -> list[int]:
     if not isinstance(today, dt.date) or isinstance(today, dt.datetime):
         raise ValueError("today must be a date")
     monday = today - dt.timedelta(days=today.weekday())
-    configured = dict(db.execute(
-        select(FamilyMember.id, FamilyMember.weekly_allowance_cents)
-        .where(FamilyMember.role == "child", FamilyMember.weekly_allowance_cents.is_not(None))
-    ).all())
+    configured = dict(
+        db.execute(
+            select(FamilyMember.id, FamilyMember.weekly_allowance_cents).where(
+                FamilyMember.role == "child", FamilyMember.weekly_allowance_cents.is_not(None)
+            )
+        ).all()
+    )
     return due_weekly_allowances(db, configured, monday)
 
 
@@ -193,28 +207,42 @@ async def run_weekly_allowance_scheduler() -> None:
         try:
             credited = await asyncio.to_thread(run_weekly_allowance_check)
             if credited:
-                logger.info("Wöchentliches Grundtaschengeld gebucht für %s Kinder", len(credited))
+                logger.info("Wöchentliches Taschengeld gebucht für %s Kinder", len(credited))
         except Exception:
-            logger.exception("Grundtaschengeld-Wochenbuchung fehlgeschlagen")
+            logger.exception("Taschengeld-Wochenbuchung fehlgeschlagen")
         await asyncio.sleep(3600)
 
 
 def bonus_payment_reference(week_start) -> str:
     """Stable transfer reference for one ISO calendar week."""
     import datetime as dt
-    if not isinstance(week_start, dt.date) or isinstance(week_start, dt.datetime) or week_start.weekday() != 0:
+
+    if (
+        not isinstance(week_start, dt.date)
+        or isinstance(week_start, dt.datetime)
+        or week_start.weekday() != 0
+    ):
         raise ValueError("week_start must be a Monday date")
     year, week, _ = week_start.isocalendar()
     return f"Bonus-{year}-W{week:02d}"
 
 
-def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_cents: int, reference: str, expected_reference: str = "Taschengeld", tolerance_days: int = 5):
+def allowance_payment_candidates(
+    db: Session,
+    member_id: int,
+    booked_on,
+    amount_cents: int,
+    reference: str,
+    expected_reference: str = "Taschengeld",
+    tolerance_days: int = 5,
+):
     """Candidate weeks for a standing-order receipt; never guess across ambiguous weeks.
 
     This read-only helper does not create matches. The caller must verify the
     account belongs to the child and enforce unique bank transaction assignment.
     """
     import datetime as dt
+
     from app.models import MoneyPaymentMatch
 
     if not isinstance(booked_on, dt.date) or isinstance(booked_on, dt.datetime):
@@ -224,7 +252,12 @@ def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_
     # Bank descriptions can include prefixes or surrounding whitespace.
     # Only accept the complete reference as a separate phrase.
     import re
-    if not re.search(r"(?<![\w-])" + re.escape(expected_reference.strip()) + r"(?![\w-])", reference, re.IGNORECASE):
+
+    if not re.search(
+        r"(?<![\w-])" + re.escape(expected_reference.strip()) + r"(?![\w-])",
+        reference,
+        re.IGNORECASE,
+    ):
         return []
     if not 0 <= tolerance_days <= 7:
         raise ValueError("Invalid tolerance")
@@ -234,16 +267,23 @@ def allowance_payment_candidates(db: Session, member_id: int, booked_on, amount_
     for week in weeks:
         if abs((booked_on - week).days) > tolerance_days:
             continue
-        ledger = db.scalar(select(MoneyTransaction).where(
-            MoneyTransaction.member_id == member_id,
-            MoneyTransaction.kind == "allowance",
-            MoneyTransaction.reason == f"weekly:{week.isoformat()}",
-        ))
-        paid_cents = int(db.scalar(select(func.coalesce(func.sum(MoneyPaymentMatch.amount_cents), 0)).where(
-            MoneyPaymentMatch.member_id == member_id,
-            MoneyPaymentMatch.category == "allowance",
-            MoneyPaymentMatch.week_start == week,
-        )) or 0)
+        ledger = db.scalar(
+            select(MoneyTransaction).where(
+                MoneyTransaction.member_id == member_id,
+                MoneyTransaction.kind == "allowance",
+                MoneyTransaction.reason == f"weekly:{week.isoformat()}",
+            )
+        )
+        paid_cents = int(
+            db.scalar(
+                select(func.coalesce(func.sum(MoneyPaymentMatch.amount_cents), 0)).where(
+                    MoneyPaymentMatch.member_id == member_id,
+                    MoneyPaymentMatch.category == "allowance",
+                    MoneyPaymentMatch.week_start == week,
+                )
+            )
+            or 0
+        )
         if ledger is not None and 0 < amount_cents <= ledger.amount_cents - paid_cents:
             candidates.append(week)
     return candidates

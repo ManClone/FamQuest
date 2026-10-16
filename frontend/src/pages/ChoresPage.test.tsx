@@ -30,6 +30,7 @@ const toilet = makeChore({
   id: 1,
   room_id: 1,
   title: 'Toilette putzen',
+  repeatable: true,
   interval_days: 7,
   days_left: -3,
   ratio: 1.43,
@@ -133,7 +134,7 @@ describe('Haushalt', () => {
     expect(titlesIn('Hat noch Zeit')[0]).toContain('In etwa 5 Monaten')
 
     const done = within(screen.getByRole('region', { name: 'Heute erledigt' }))
-    expect(done.getByRole('button', { name: /Staubsaugen/ })).toHaveAttribute(
+    expect(done.getByRole('button', { name: /Staubsaugen/, pressed: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -179,9 +180,11 @@ describe('Haushalt', () => {
     await user.click(who.getByRole('button', { name: 'Mama' }))
 
     expect(bodiesOf(calls, 'PUT /api/chores/1/done')).toEqual([
-      { member_id: null },
-      { member_id: 3 },
+      { member_id: null, request_key: expect.stringMatching(/^[a-f0-9]{32}$/) },
+      { member_id: 3, request_key: expect.any(String) },
     ])
+    const sent = bodiesOf(calls, 'PUT /api/chores/1/done') as { request_key: string }[]
+    expect(sent[1].request_key).toBe(sent[0].request_key)
     expect(screen.queryByRole('region', { name: 'Wer war’s?' })).toBeNull()
   })
 
@@ -202,7 +205,7 @@ describe('Haushalt', () => {
     const calls = mockChores()
     renderApp('/household')
 
-    await user.click(await screen.findByRole('button', { name: /Staubsaugen/ }))
+    await user.click(await screen.findByRole('button', { name: /Staubsaugen/, pressed: true }))
 
     expect(calls.map((call) => call.key)).toContain('DELETE /api/chores/4/done')
   })
@@ -448,4 +451,17 @@ describe('Zu erledigen', () => {
       expect(todos.queryByRole('button', { name: 'Hühnerfutter holen' })).toBeNull(),
     )
   })
+})
+
+it('haelt erledigte Aufgaben mit einer eigenen weiteren Ausfuehrung verfuegbar', async () => {
+  const user = userEvent.setup()
+  const calls = mockChores()
+  renderApp('/household')
+  await user.click(await screen.findByRole('button', { name: /Toilette putzen/ }))
+  await user.click(screen.getByRole('button', { name: 'Schlie\u00dfen' }))
+  await user.click(screen.getByRole('button', { name: 'Toilette putzen noch einmal erledigen' }))
+  const sent = bodiesOf(calls, 'PUT /api/chores/1/done') as { request_key: string }[]
+  expect(sent).toHaveLength(2)
+  expect(sent[0].request_key).not.toBe(sent[1].request_key)
+  expect(await screen.findByRole('region', { name: 'Wer war\u2019s?' })).toBeVisible()
 })

@@ -100,14 +100,14 @@ def test_task_recurrence_still_applies_to_others(client, parent, lena, now):
     assert task["positions"] == [{"member_id": tom, "position": 1000, "optional": False}]
 
 
-def test_days_are_exclusive_per_time_of_day(client, parent, lena):
+def test_days_are_independent_per_routine(client, parent, lena):
     everyday = new_routine(client, parent, lena, [1, 2, 3, 4, 5, 6, 7])
     evening = new_routine(client, parent, lena, [1, 2, 3, 4, 5, 6, 7], time_of_day="evening")
     weekend = new_routine(client, parent, lena, WEEKEND)
 
     days = {r["id"]: r["weekdays"] for r in routines(client)}
     assert days == {
-        everyday["id"]: WEEKDAYS,
+        everyday["id"]: [1, 2, 3, 4, 5, 6, 7],
         evening["id"]: [1, 2, 3, 4, 5, 6, 7],
         weekend["id"]: WEEKEND,
     }
@@ -119,7 +119,7 @@ def test_days_are_exclusive_per_time_of_day(client, parent, lena):
     )
     assert response.status_code == 200, response.text
     days = {r["id"]: r["weekdays"] for r in response.json()}
-    assert (days[everyday["id"]], days[weekend["id"]]) == ([1, 2, 3, 4, 5, 6], [7])
+    assert (days[everyday["id"]], days[weekend["id"]]) == ([1, 2, 3, 4, 5, 6], WEEKEND)
 
 
 def test_copy_to_another_child(client, parent, lena):
@@ -236,7 +236,23 @@ def test_task_editor_keeps_routine_consistent(client, parent, lena):
     assert routines(client)[0]["steps"] == []
 
 
-def test_routines_need_unlocked_parent_area(client, admin):
+def test_routines_require_parent_role(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={
+            "email": "child-routines@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-routines@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
     assert client.get("/api/routines").status_code == 403
 
 
@@ -311,3 +327,38 @@ def test_migration_turns_child_tasks_into_routines():
         (1, "morning", [1, 2, 3, 4, 5], [2, 1]),
         (1, "morning", [6, 7], [1]),
     ]
+
+
+def test_task_editor_can_replace_legacy_schedule_without_losing_completions(
+    client, parent, lena, now
+):
+    task = add_task(client, parent, [lena])
+    routine = new_routine(client, parent, lena, WEEKEND)
+    assert set_steps(client, parent, routine["id"], [{"task_id": task}]).status_code == 200
+    assert complete(client, parent, task, lena).status_code == 204
+
+    # Changing a title alone keeps the existing routine and its weekdays.
+    response = client.put(
+        f"/api/tasks/{task}",
+        json=task_data([lena], title="Updated"),
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    assert routines(client)[0]["steps"] == [{"task_id": task, "optional": False}]
+
+    # Explicitly editing the schedule moves this task out of the legacy routine.
+    response = client.put(
+        f"/api/tasks/{task}",
+        json=task_data(
+            [lena], title="Updated", time_of_day="evening", replace_routine_schedule=True
+        ),
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    assert routines(client)[0]["steps"] == []
+    updated = next(t for t in client.get("/api/tasks").json() if t["id"] == task)
+    assert updated["time_of_day"] == "evening"
+    assert updated["routine_member_ids"] == []
+    assert updated["member_ids"] == [lena]
+    entry = next(t for t in today(client)["tasks"] if t["id"] == task)
+    assert entry["done_member_ids"] == [lena]

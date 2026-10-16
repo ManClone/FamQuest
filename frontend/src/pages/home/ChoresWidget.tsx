@@ -23,7 +23,7 @@ export const WIDGET_MAX_CHORES = 2
  * nimmt den Tipp mit „Rückgängig“ zurück. Erledigtes verschwindet aus der Kachel; durchgestrichen
  * steht es bis zum Tagesende nur in der Ansicht „Haushalt“.
  */
-export function ChoresWidget() {
+export function ChoresWidget({ expanded = false }: { expanded?: boolean }) {
   const { t } = useTranslation()
   const plan = useChores()
   const chores = (plan.data?.chores ?? []).filter((chore) => chore.active)
@@ -35,7 +35,7 @@ export function ChoresWidget() {
     ...todos.filter((todo) => !todo.done).map((todo) => ({ todo })),
     ...urgent.map((chore) => ({ chore })),
   ]
-  const shown = entries.slice(0, WIDGET_MAX_CHORES)
+  const shown = expanded ? entries : entries.slice(0, WIDGET_MAX_CHORES)
   const hidden = entries.length - shown.length
   const roomName = (chore: Chore) =>
     plan.data?.rooms.find((room) => room.id === chore.room_id)?.name
@@ -62,31 +62,68 @@ export function ChoresWidget() {
               {t('home.chores_all_good')}
             </p>
           )}
-          {shown.length > 0 && (
-            <ul aria-label={t('home.chores_due')} className="flex flex-col items-start gap-2">
-              {shown.map(({ chore, todo }) =>
-                chore ? (
-                  <ChoreChip
-                    key={`chore-${chore.id}`}
-                    chore={chore}
-                    room={roomName(chore)}
-                    onToggle={() => done.toggle(chore)}
-                  />
-                ) : todo ? (
-                  <TodoChip
-                    key={`todo-${todo.id}`}
-                    todo={todo}
-                    onToggle={() => done.toggleTodo(todo)}
-                  />
-                ) : null,
-              )}
-              {hidden > 0 && (
-                <li className="px-2 text-lg font-bold text-slate-500">
-                  {t('shopping.more', { count: hidden })}
-                </li>
-              )}
-            </ul>
-          )}
+          {shown.length > 0 &&
+            (expanded ? (
+              <div className="grid items-start gap-6 lg:grid-cols-2">
+                {(['overdue', 'current'] as const).map((kind) => {
+                  const group = shown.filter(({ chore }) =>
+                    kind === 'overdue'
+                      ? chore !== undefined && chore.days_left < 0
+                      : !chore || chore.days_left >= 0,
+                  )
+                  if (group.length === 0) return null
+                  return (
+                    <section key={kind} className="flex min-w-0 flex-col gap-3">
+                      <h3 className="text-xl font-extrabold text-slate-700">
+                        {t(`personal.${kind}`)}
+                      </h3>
+                      <ul className="flex flex-col items-start gap-2">
+                        {group.map(({ chore, todo }) =>
+                          chore ? (
+                            <ChoreChip
+                              key={`chore-${chore.id}`}
+                              chore={chore}
+                              room={roomName(chore)}
+                              onToggle={() => done.toggle(chore)}
+                            />
+                          ) : todo ? (
+                            <TodoChip
+                              key={`todo-${todo.id}`}
+                              todo={todo}
+                              onToggle={() => done.toggleTodo(todo)}
+                            />
+                          ) : null,
+                        )}
+                      </ul>
+                    </section>
+                  )
+                })}
+              </div>
+            ) : (
+              <ul aria-label={t('home.chores_due')} className="flex flex-col items-start gap-2">
+                {shown.map(({ chore, todo }) =>
+                  chore ? (
+                    <ChoreChip
+                      key={`chore-${chore.id}`}
+                      chore={chore}
+                      room={roomName(chore)}
+                      onToggle={() => done.toggle(chore)}
+                    />
+                  ) : todo ? (
+                    <TodoChip
+                      key={`todo-${todo.id}`}
+                      todo={todo}
+                      onToggle={() => done.toggleTodo(todo)}
+                    />
+                  ) : null,
+                )}
+                {hidden > 0 && (
+                  <li className="px-2 text-lg font-bold text-slate-500">
+                    {t('shopping.more', { count: hidden })}
+                  </li>
+                )}
+              </ul>
+            ))}
         </>
       )}
       {done.error ? (

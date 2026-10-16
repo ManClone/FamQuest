@@ -1,0 +1,43 @@
+# QNAP Container Station: build the runtime image first (see docs/qnap-deployment.md).
+# This file is intentionally separate from docker-compose.yml used for local development.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - /share/Container/famquest/.env
+    environment:
+      POSTGRES_USER: famquest
+      POSTGRES_DB: famquest
+    volumes:
+      - /share/Container/famquest/postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: famquest:latest
+    pull_policy: never
+    restart: unless-stopped
+    # TEMPORARY QNAP WORKAROUND: non-root app UID 999 cannot read image files.
+    # Fix permissions and remove this before any public exposure.
+    user: "0:0"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - /share/Container/famquest/.env
+    environment:
+      POSTGRES_HOST: db
+    ports:
+      - "11900:8080"
+    volumes:
+      - /share/Container/famquest/uploads:/data/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

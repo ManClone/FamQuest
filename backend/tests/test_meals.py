@@ -52,8 +52,24 @@ def test_invalid_meal_settings_are_rejected(client, parent, meals):
     assert client.get("/api/meals/settings").json() == {"meals": ["dinner"]}
 
 
-def test_meal_settings_need_the_parent_pin(client, admin):
-    response = set_meals(client, admin, ["lunch"])
+def test_meal_settings_require_parent_role(client, admin):
+    response = client.post(
+        "/api/auth/accounts",
+        json={
+            "email": "child-meals@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
+        headers=csrf(admin),
+    )
+    assert response.status_code == 201, response.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-meals@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    response = set_meals(client, login.json(), ["lunch"])
     assert response.status_code == 403
     assert response.json()["code"] == "parent.locked"
 

@@ -5,6 +5,7 @@ import ChevronLeftIcon from '~icons/lucide/chevron-left'
 import ChevronRightIcon from '~icons/lucide/chevron-right'
 import PlusIcon from '~icons/lucide/plus'
 
+import { useAccounts } from '../../api/accounts'
 import { type Member, useReorderMembers } from '../../api/members'
 import { Avatar } from '../../components/Avatar'
 import { Alert, Button, Section } from '../../components/ui'
@@ -22,6 +23,7 @@ interface MembersSectionProps {
 export function MembersSection({ members, error, onEdit, onAdd }: MembersSectionProps) {
   const { t } = useTranslation()
   const reorder = useReorderMembers()
+  const accounts = useAccounts()
   const [sorting, setSorting] = useState(false)
   const [dragged, setDragged] = useState<number | null>(null)
   const full = members !== undefined && members.length >= MEMBER_COLORS.length
@@ -86,6 +88,16 @@ export function MembersSection({ members, error, onEdit, onAdd }: MembersSection
                     {member.name}
                   </span>
                   <span className="text-base text-slate-500">{t(`roles.${member.role}`)}</span>
+                  <span className="text-sm text-slate-500 break-all">
+                    {accounts.data?.find((account) => account.member_id === member.id)?.email}
+                  </span>
+                  <span className="text-sm font-bold text-orange-700">
+                    {t(
+                      accounts.data?.some((account) => account.member_id === member.id)
+                        ? 'member_login.change'
+                        : 'member_login.add',
+                    )}
+                  </span>
                 </button>
               </li>
             ),

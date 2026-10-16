@@ -159,11 +159,26 @@ def test_manual_booking_validation(client, parent, lena, body, field, code):
     assert response.json()["fields"] == {field: code}
 
 
-def test_points_area_needs_parent_pin(client, parent, lena):
-    client.post("/api/parent/lock", headers=csrf(parent))
-
+def test_points_area_requires_parent_role(client, parent, lena):
+    account = client.post(
+        "/api/auth/accounts",
+        json={
+            "email": "child-points@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
+        headers=csrf(parent),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-points@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    child = login.json()
     assert client.get(f"/api/members/{lena}/points").status_code == 403
-    assert book_manually(client, parent, lena, 5).status_code == 403
+    assert book_manually(client, child, lena, 5).status_code == 403
 
 
 def test_unknown_member(client, parent):

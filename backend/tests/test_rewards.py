@@ -72,13 +72,16 @@ def test_rewards_are_per_child(client, parent, lena):
     assert [(r["member_id"], r["cost"]) for r in rewards] == [(lena, 5), (lena, 20), (tom, 10)]
 
 
-def test_adults_get_no_rewards(client, parent):
+def test_adults_have_their_own_rewards(client, parent):
     mama = add_parent_member(client, parent)
 
     response = client.post("/api/rewards", json=reward_data(mama), headers=csrf(parent))
 
-    assert response.status_code == 409
-    assert response.json() == {"code": "reward.child_only"}
+    assert response.status_code == 201
+    assert response.json()["member_id"] == mama
+    book_manually(client, parent, mama, 10)
+    assert redeem(client, parent, response.json()["id"]).status_code == 201
+    assert history(client, mama)["total"] == 5
 
 
 @pytest.mark.parametrize(
@@ -99,18 +102,39 @@ def test_reward_validation(client, parent, lena, overrides, field, code):
     assert response.json()["fields"] == {field: code}
 
 
-def test_managing_rewards_needs_parent_pin(client, parent, lena):
+def test_managing_rewards_requires_parent_role(client, parent, lena):
     reward = add_reward(client, parent, lena)
-    client.post("/api/parent/lock", headers=csrf(parent))
-
-    assert (
-        client.post("/api/rewards", json=reward_data(lena), headers=csrf(parent)).status_code == 403
+    account = client.post(
+        "/api/auth/accounts",
+        json={
+            "email": "child-rewards@example.org",
+            "password": "test-password-456",
+            "role": "child",
+        },
+        headers=csrf(parent),
     )
-    assert client.delete(f"/api/rewards/{reward}", headers=csrf(parent)).status_code == 403
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(parent)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-rewards@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    child = login.json()
+    assert (
+        client.post("/api/rewards", json=reward_data(lena), headers=csrf(child)).status_code == 403
+    )
+    assert client.delete(f"/api/rewards/{reward}", headers=csrf(child)).status_code == 403
+    assert (
+        client.post(
+            "/api/redemptions/1/cancel", json={"reason": "No longer wanted"}, headers=csrf(child)
+        ).status_code
+        == 403
+    )
     assert client.get("/api/redemptions").status_code == 403
-    # Anzeigen und Einlösen gehen am Display ohne PIN.
-    assert client.get("/api/rewards").status_code == 200
-    assert redeem(client, parent, reward).json() == {"code": "reward.insufficient_points"}
+    # An unlinked child cannot see or redeem another member's rewards.
+    assert client.get("/api/rewards").json() == []
+    assert redeem(client, child, reward).json() == {"code": "profile.own_only"}
 
 
 def test_redeem_books_points_and_stores_redemption(client, parent, lena, now):
@@ -199,3 +223,72 @@ def test_redemptions_filtered_and_paged(client, parent, lena):
     ).json()
     assert [r["cost"] for r in rest["redemptions"]] == [1]
     assert rest["has_more"] is False
+
+
+def test_cancel_redemption_refunds_original_cost_once_with_audit(client, parent, lena):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import PointTransaction
+
+    book_manually(client, parent, lena, 12)
+    reward = add_reward(client, parent, lena, cost=5)
+    redemption = redeem(client, parent, reward).json()
+    # Historical purchases remain refundable after changing or deleting the reward.
+    client.put(f"/api/rewards/{reward}", json=reward_data(lena, cost=50), headers=csrf(parent))
+    client.delete(f"/api/rewards/{reward}", headers=csrf(parent))
+    path = f"/api/redemptions/{redemption['id']}/cancel"
+    assert client.post(path, json={"reason": "   "}, headers=csrf(parent)).status_code == 422
+    assert history(client, lena)["total"] == 7
+    response = client.post(path, json={"reason": "  No longer wanted  "}, headers=csrf(parent))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["status"] == "cancelled"
+    assert result["cancellation_reason"] == "No longer wanted"
+    assert result["cancelled_at"] is not None
+    assert client.post(path, json={"reason": "Retry"}, headers=csrf(parent)).json() == result
+    assert history(client, lena)["total"] == 12
+    assert client.get("/api/redemptions").json()["redemptions"] == [result]
+    with SessionLocal() as db:
+        refunds = list(
+            db.scalars(select(PointTransaction).where(PointTransaction.kind == "reward_cancelled"))
+        )
+        assert len(refunds) == 1
+        assert refunds[0].amount == 5
+        assert refunds[0].created_by_user_id is not None
+    assert (
+        client.post(
+            "/api/redemptions/99999/cancel", json={"reason": "Missing"}, headers=csrf(parent)
+        ).status_code
+        == 404
+    )
+
+
+def test_simultaneous_cancellations_refund_only_once(client, parent, lena):
+    from concurrent.futures import ThreadPoolExecutor
+
+    book_manually(client, parent, lena, 10)
+    reward = add_reward(client, parent, lena, cost=5)
+    redemption = redeem(client, parent, reward).json()
+
+    def cancel(_):
+        return client.post(
+            f"/api/redemptions/{redemption['id']}/cancel",
+            json={"reason": "No longer wanted"},
+            headers=csrf(parent),
+        )
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        responses = list(pool.map(cancel, range(4)))
+    assert [response.status_code for response in responses] == [200] * 4
+    assert history(client, lena)["total"] == 10
+    assert (
+        len(
+            [
+                entry
+                for entry in history(client, lena)["transactions"]
+                if entry["kind"] == "reward_cancelled"
+            ]
+        )
+        == 1
+    )

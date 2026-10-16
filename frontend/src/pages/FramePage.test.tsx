@@ -204,12 +204,10 @@ describe('Start des Bilderrahmens', () => {
     expect(screen.queryByRole('link', { name: 'Fotos' })).not.toBeInTheDocument()
   })
 
-  it('startet per Symbol in der Leiste', async () => {
-    const user = userEvent.setup()
+  it('startet über die Bilderrahmen-Route', async () => {
     mockFrame([makePhoto()])
-    renderApp('/tasks')
+    renderApp('/frame')
 
-    await user.click(await screen.findByRole('link', { name: 'Fotos' }))
     expect(await screen.findByTestId('frame-photo')).toBeInTheDocument()
   })
 
@@ -217,14 +215,14 @@ describe('Start des Bilderrahmens', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     mockFrame([makePhoto()])
     const view = renderApp('/tasks')
-    await screen.findByRole('link', { name: 'Fotos' })
+    await screen.findByRole('navigation', { name: 'Hauptnavigation' })
     await act(() => vi.advanceTimersByTimeAsync(31 * 60 * 1000))
     expect(screen.queryByTestId('frame-photo')).not.toBeInTheDocument()
     view.unmount()
 
     localStorage.setItem(FRAME_IDLE_STORAGE_KEY, '5')
     renderApp('/tasks')
-    await screen.findByRole('link', { name: 'Fotos' })
+    await screen.findByRole('navigation', { name: 'Hauptnavigation' })
     await act(() => vi.advanceTimersByTimeAsync(4 * 60 * 1000))
     expect(screen.queryByTestId('frame-photo')).not.toBeInTheDocument()
     await act(() => vi.advanceTimersByTimeAsync(60 * 1000 + 100))

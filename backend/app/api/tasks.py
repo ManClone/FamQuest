@@ -1,11 +1,12 @@
 from fastapi import APIRouter, status
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from app.api.members import get_member
-from app.auth import DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.errors import ApiError
 from app.models import Routine, RoutineStep, Task, TaskAssignment, TaskRecurrence
-from app.schemas import MemberPositionOut, TaskIn, TaskOut
+from app.schemas import MemberPositionOut, TaskIn, TaskOut, TimeOfDay, WeeklyRecurrence
 
 router = APIRouter(tags=["tasks"])
 
@@ -23,6 +24,7 @@ def task_out(task: Task, routine_members: set[int] | None = None) -> TaskOut:
         color=task.color,
         active=task.active,
         needs_approval=task.needs_approval,
+        repeatable=task.repeatable,
         shared=task.shared,
         extra=task.extra,
         recurrence={
@@ -75,6 +77,10 @@ def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
         if get_member(db, member_id).role != "child":
             # Hausarbeit der Erwachsenen steht im Putzplan (api/chores), nicht bei den Aufgaben.
             raise ApiError(status.HTTP_409_CONFLICT, "task.child_only")
+    if body.replace_routine_schedule and task.id:
+        for step in db.scalars(select(RoutineStep).where(RoutineStep.task_id == task.id)):
+            db.delete(step)
+        db.flush()
     in_routines = routine_members(db, [task.id]).get(task.id, set()) if task.id else set()
     if in_routines and (body.time_of_day != task.time_of_day or body.extra):
         # Routinenschritte haben den Tagesabschnitt ihrer Routine und sind keine Extras.
@@ -90,11 +96,13 @@ def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
             db.delete(step)
 
     task.title, task.icon, task.points = body.title, body.icon, body.points
-    if 'money_cents' in body.model_fields_set or task.id is None:
+    if "money_cents" in body.model_fields_set or task.id is None:
         task.money_cents = body.money_cents
     task.description = body.description or None
     task.time_of_day, task.color, task.active = body.time_of_day, body.color, body.active
-    task.needs_approval, task.shared, task.extra = body.needs_approval, body.shared, body.extra
+    task.repeatable = body.repeatable
+    task.needs_approval = body.needs_approval or body.repeatable
+    task.shared, task.extra = body.shared, body.extra
 
     rule = body.recurrence
     if task.recurrence is None:
@@ -120,11 +128,55 @@ def _next_position(db: DbSession, member_id: int) -> int:
     return 0 if last is None else last + 1
 
 
+class TaskScheduleIn(BaseModel):
+    task_id: int | None = None
+    task: TaskIn
+    times: list[TimeOfDay] = Field(min_length=1, max_length=4)
+
+
+@router.post("/tasks/schedule")
+def save_task_schedule(body: TaskScheduleIn, _: ParentSession, db: DbSession) -> TaskOut:
+    times = list(dict.fromkeys(body.times))
+    first = get_task(db, body.task_id) if body.task_id else Task()
+    for index, period in enumerate(times):
+        task = first if index == 0 else Task()
+        data = body.task.model_copy(update={"time_of_day": period, "extra": False})
+        apply_task(db, task, data)
+        db.add(task)
+    db.commit()
+    return task_out(first)
+
+
 @router.get("/tasks")
-def list_tasks(_: ParentSession, db: DbSession) -> list[TaskOut]:
+def list_tasks(auth: CurrentSession, db: DbSession) -> list[TaskOut]:
     tasks = db.scalars(select(Task).order_by(Task.id))
     members = routine_members(db)
-    return [task_out(task, members.get(task.id)) for task in tasks]
+    own = child_member_id(db, auth)
+    if own == 0:
+        raise ApiError(403, "profile.not_linked")
+    result = []
+    for task in tasks:
+        if own is not None and (
+            not task.active or not any(a.member_id == own for a in task.assignments)
+        ):
+            continue
+        out = task_out(task, members.get(task.id))
+        if own is not None:
+            out.member_ids = [own]
+            out.positions = [entry for entry in out.positions if entry.member_id == own]
+            out.routine_member_ids = [own] if own in out.routine_member_ids else []
+            if out.routine_member_ids:
+                schedules = db.scalars(
+                    select(Routine)
+                    .join(RoutineStep)
+                    .where(Routine.member_id == own, RoutineStep.task_id == task.id)
+                )
+                weekdays = sorted({day for routine in schedules for day in routine.weekdays})
+                if not weekdays:
+                    continue
+                out.recurrence = WeeklyRecurrence(kind="weekly", weekdays=weekdays)
+        result.append(out)
+    return result
 
 
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)

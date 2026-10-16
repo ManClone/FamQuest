@@ -7,6 +7,7 @@ import { TODAY_KEY } from './today'
 
 /** Erledigung, die auf die Kontrolle der Eltern wartet. */
 export interface Approval {
+  source?: 'task' | 'chore'
   id: number
   task_id: number
   title: string
@@ -24,10 +25,29 @@ export function useApprovals() {
   return useQuery({ queryKey: APPROVALS_KEY, queryFn: () => apiGet<Approval[]>('/approvals') })
 }
 
-export const approve = (id: number) => api<void>('POST', `/approvals/${id}`)
-export const reject = (id: number) => api<void>('DELETE', `/approvals/${id}`)
+export const approve = (item: number | Approval) =>
+  api<void>(
+    'POST',
+    typeof item === 'number'
+      ? `/approvals/${item}`
+      : `/${item.source === 'chore' ? 'chore-approvals' : 'approvals'}/${item.id}`,
+  )
+export const reject = (item: number | Approval) =>
+  api<void>(
+    'DELETE',
+    typeof item === 'number'
+      ? `/approvals/${item}`
+      : `/${item.source === 'chore' ? 'chore-approvals' : 'approvals'}/${item.id}`,
+  )
 
 /** Bestätigen oder ablehnen; lädt danach Kontrollen, Familienansicht und Punkte neu. */
 export function useApprovalMutation<TVariables>(request: (variables: TVariables) => Promise<void>) {
-  return useParentMutation(request, [APPROVALS_KEY, TODAY_KEY, POINTS_KEY])
+  return useParentMutation(request, [
+    APPROVALS_KEY,
+    TODAY_KEY,
+    POINTS_KEY,
+    ['member-progress'],
+    ['chores'],
+    ['my-chores'],
+  ])
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   type Chore,
@@ -23,7 +23,12 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
   const todoDone = useTodoDone()
   const todoUndo = useTodoUndo()
   // Gerade Erledigtes, zu dem noch gefragt wird, wer es war.
-  const [asking, setAsking] = useState<{ kind: 'chore' | 'todo'; id: number } | null>(null)
+  const [asking, setAsking] = useState<{
+    kind: 'chore' | 'todo'
+    id: number
+    requestKey?: string
+    completionId?: number | null
+  } | null>(null)
 
   useEffect(() => {
     if (asking === null) return
@@ -32,16 +37,37 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
   }, [asking])
 
   const close = () => setAsking(null)
+  const inFlight = useRef(false)
+  const repeat = (chore: Chore) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    const requestKey = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+      byte.toString(16).padStart(2, '0'),
+    ).join('')
+    markDone.mutate(
+      { id: chore.id, memberId: null, requestKey },
+      {
+        onSuccess: (result) =>
+          setAsking({
+            kind: 'chore',
+            id: chore.id,
+            requestKey,
+            completionId: result.last_completion_id,
+          }),
+        onSettled: () => {
+          inFlight.current = false
+        },
+      },
+    )
+  }
 
   const toggle = (chore: Chore) => {
     if (chore.done_today) {
       close()
-      undoDone.mutate(chore.id)
+      if (undoDone.isPending) return
+      undoDone.mutate({ id: chore.id, completionId: chore.last_completion_id })
     } else {
-      markDone.mutate(
-        { id: chore.id, memberId: null },
-        { onSuccess: () => setAsking({ kind: 'chore', id: chore.id }) },
-      )
+      repeat(chore)
     }
   }
 
@@ -66,16 +92,21 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
 
   return {
     toggle,
+    repeat,
+    busy: markDone.isPending || undoDone.isPending,
     toggleTodo,
     /** Wozu die Leiste „Wer war's?“ gerade fragt. */
     asking: chore
       ? {
           title: chore.title,
           pick: (memberId: number) => {
-            markDone.mutate({ id: chore.id, memberId })
+            markDone.mutate({ id: chore.id, memberId, requestKey: asking?.requestKey })
             close()
           },
-          undo: () => toggle(chore),
+          undo: () => {
+            undoDone.mutate({ id: chore.id, completionId: asking?.completionId })
+            close()
+          },
         }
       : todo
         ? {

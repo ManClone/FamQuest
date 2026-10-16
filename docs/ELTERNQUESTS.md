@@ -18,7 +18,7 @@ Status: Teilimplementierung auf `develop`; noch nicht produktionsreif. Keine bes
 
 ## Rollen und Punktesysteme
 - Tim sammelt Kinder-XP. Erwachsene sammeln Erwachsenen-XP mit geringerer Vergabe je Routineaufgabe.
-- Kein XP-Umtausch zwischen den Rollen. Grundtaschengeld bleibt unabhängig.
+- Kein XP-Umtausch zwischen den Rollen. Taschengeld bleibt unabhängig.
 - Haushaltsaufgaben zählen auch ohne Punkte als gemeinsame Verantwortung.
 
 ## Aufgabenverteilung

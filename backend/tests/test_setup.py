@@ -18,9 +18,9 @@ def test_setup_creates_family_and_admin_and_logs_in(client):
         "name": "Familie Test",
         "default_language": "de",
         "timezone": "Europe/Berlin",
-        "pin_enabled": True,
+        "pin_enabled": False,
     }
-    assert me["parent_unlocked"] is False
+    assert me["parent_unlocked"] is True
     assert client.get("/api/auth/me").json()["user"]["email"] == "mama@example.org"
     assert client.get("/api/setup/status").json() == {"setup_required": False, "demo": None}
 
@@ -63,7 +63,6 @@ def test_setup_validation_returns_field_codes(client):
             "family_name": "   ",
             "email": "keine-mail",
             "password": "kurz",
-            "pin": "12a4",
             "timezone": "Mars/Olympus",
         },
     )
@@ -76,7 +75,6 @@ def test_setup_validation_returns_field_codes(client):
             "family_name": "validation.too_short",
             "email": "validation.invalid_email",
             "password": "validation.too_short",
-            "pin": "validation.invalid_format",
             "timezone": "validation.invalid_timezone",
         },
     }

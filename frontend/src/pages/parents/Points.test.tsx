@@ -60,7 +60,7 @@ function api(extra: Record<string, Response | ((body: unknown) => Response)> = {
 
 async function openLena() {
   const user = userEvent.setup()
-  renderApp('/parents')
+  renderApp('/parents/review')
   await user.click(await screen.findByRole('button', { name: 'Punkte von Lena' }))
   await screen.findByRole('heading', { name: 'Punkte von Lena', level: 1 })
   return user
@@ -77,7 +77,7 @@ afterEach(() => {
 describe('Punkte im Elternbereich', () => {
   it('zeigt die Punktestände aller Personen', async () => {
     api()
-    renderApp('/parents')
+    renderApp('/parents/review')
 
     const section = within(
       (await screen.findByRole('heading', { name: 'Punkte' })).closest('section')!,

@@ -9,18 +9,26 @@ Einrichtungs-Assistenten (`POST /chores/setup`). Zum Haushalt gehört auch die L
 import datetime as dt
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy import and_, delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.members import get_member
 from app.api.todos import TodoOut, todo_out, todo_shares, visible_todos
-from app.auth import CurrentSession, DbSession, ParentSession, get_family, is_parent_unlocked
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id, get_family
 from app.chores import chore_state
 from app.errors import ApiError
 from app.household_assignment import HouseholdChore, suggest_week
-from app.models import Chore, ChoreCompletion, ChoreCredit, ChoreRoom, FamilyMember, Todo, WeeklyChoreAssignment
+from app.models import (
+    Chore,
+    ChoreCompletion,
+    ChoreCredit,
+    ChoreRoom,
+    FamilyMember,
+    Todo,
+    WeeklyChoreAssignment,
+)
 from app.points import book, lock_member
 from app.schemas import IconName, TaskTitle
 from app.today import family_now
@@ -49,6 +57,10 @@ class RoomOut(BaseModel):
 
 
 class ChoreOut(BaseModel):
+    repeatable: bool = False
+    child_enabled: bool = False
+    child_xp: int = 0
+    child_member_ids: list[int] = []
     id: int
     room_id: int
     title: str
@@ -63,6 +75,8 @@ class ChoreOut(BaseModel):
     # Letzte echte Erledigung; None = seit dem Anlegen noch nie.
     last_done: dt.date | None
     done_today: bool
+    completion_count_today: int = 0
+    last_completion_id: int | None = None
     # Wer die letzte Erledigung übernommen hat, falls angegeben.
     done_by: int | None
     # Ab diesem Tag läuft die Uhr: die letzte Erledigung oder der Tag, den die Eltern festgelegt
@@ -101,6 +115,10 @@ class RoomIn(BaseModel):
 
 
 class ChoreIn(BaseModel):
+    repeatable: bool = False
+    child_enabled: bool = False
+    child_xp: int = Field(default=0, ge=0, le=1000)
+    child_member_ids: list[int] = Field(default_factory=list, max_length=100)
     room_id: int
     title: TaskTitle
     icon: IconName
@@ -122,6 +140,7 @@ class ChoreCreateIn(ChoreIn):
 
 
 class DoneIn(BaseModel):
+    request_key: Annotated[str | None, Field(pattern=r"^[a-f0-9]{32}$")] = None
     # None = erledigt, ohne zu sagen von wem.
     member_id: int | None = None
 
@@ -159,16 +178,21 @@ def _get_room(db: DbSession, room_id: int) -> ChoreRoom:
 
 
 def _validate_assignment(db: DbSession, body: ChoreIn) -> None:
+    for member_id in body.child_member_ids:
+        if get_member(db, member_id).role != "child":
+            raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "task.child_only")
     if body.assignment_mode == "fixed" and body.fixed_member_id is None:
         raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.fixed_member_required")
     if body.fixed_member_id is not None:
         member = get_member(db, body.fixed_member_id)
-        if member.role != "parent":
+        if member.role != "parent" and not (
+            body.child_enabled and member.id in body.child_member_ids
+        ):
             raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.parent_required")
 
 
 def _get_chore(db: DbSession, chore_id: int) -> Chore:
-    chore = db.get(Chore, chore_id)
+    chore = db.scalar(select(Chore).where(Chore.id == chore_id).with_for_update())
     if chore is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "chore.not_found")
     return chore
@@ -187,10 +211,20 @@ def _counted_from(chore: Chore, last: ChoreCompletion | None) -> dt.date:
     return max(last.date, chore.anchor_date) if last else chore.anchor_date
 
 
-def _chore_out(chore: Chore, last: ChoreCompletion | None, today: dt.date, weekly_member_id: int | None = None) -> ChoreOut:
+def _chore_out(
+    chore: Chore,
+    last: ChoreCompletion | None,
+    today: dt.date,
+    weekly_member_id: int | None = None,
+    completion_count_today: int = 0,
+) -> ChoreOut:
     counted_from = _counted_from(chore, last)
     state = chore_state(counted_from, chore.interval_days, today)
     return ChoreOut(
+        repeatable=chore.repeatable,
+        child_enabled=chore.child_enabled,
+        child_xp=chore.child_xp,
+        child_member_ids=chore.child_member_ids,
         id=chore.id,
         room_id=chore.room_id,
         title=chore.title,
@@ -205,6 +239,8 @@ def _chore_out(chore: Chore, last: ChoreCompletion | None, today: dt.date, weekl
         last_done=last.date if last else None,
         done_today=last is not None and last.date >= today,
         done_by=last.member_id if last else None,
+        last_completion_id=last.id if last else None,
+        completion_count_today=completion_count_today,
         counted_from=counted_from,
         due_date=state.due_date,
         days_left=state.days_left,
@@ -217,18 +253,21 @@ def _last_completions(db: DbSession, chore_ids: list[int]) -> dict[int, ChoreCom
     """Die jeweils jüngste Erledigung je Aufgabe."""
     latest = (
         select(ChoreCompletion.chore_id, func.max(ChoreCompletion.date).label("date"))
-        .where(ChoreCompletion.chore_id.in_(chore_ids))
+        .where(ChoreCompletion.chore_id.in_(chore_ids), ChoreCompletion.approved.is_(True))
         .group_by(ChoreCompletion.chore_id)
         .subquery()
     )
     completions = db.scalars(
-        select(ChoreCompletion).join(
+        select(ChoreCompletion)
+        .join(
             latest,
             and_(
                 ChoreCompletion.chore_id == latest.c.chore_id,
                 ChoreCompletion.date == latest.c.date,
+                ChoreCompletion.approved.is_(True),
             ),
         )
+        .order_by(ChoreCompletion.id)
     )
     return {completion.chore_id: completion for completion in completions}
 
@@ -239,6 +278,7 @@ def _shares(db: DbSession, today: dt.date) -> list[ShareOut]:
         select(ChoreCompletion.member_id, func.count())
         .where(
             ChoreCompletion.member_id.is_not(None),
+            ChoreCompletion.approved.is_(True),
             ChoreCompletion.date >= since,
             ChoreCompletion.date <= today,
         )
@@ -257,8 +297,14 @@ def _reverse_chore_credits(db: DbSession, completions: list[ChoreCompletion], ti
         lock_member(db, member_id)
     for completion, credit in credits:
         if credit is not None:
-            book(db, credit.member_id, -credit.amount, "chore_undone",
-                 reason=title, task_date=completion.date)
+            book(
+                db,
+                credit.member_id,
+                -credit.amount,
+                "chore_undone",
+                reason=title,
+                task_date=completion.date,
+            )
             db.delete(credit)
     db.flush()
 
@@ -267,8 +313,18 @@ def _one_out(db: DbSession, chore: Chore) -> ChoreOut:
     today = _today(db)
     week_start = today - dt.timedelta(days=today.weekday())
     assignment = db.get(WeeklyChoreAssignment, (week_start, chore.id))
-    return _chore_out(chore, _last_completions(db, [chore.id]).get(chore.id), today,
-                      assignment.member_id if assignment else None)
+    return _chore_out(
+        chore,
+        _last_completions(db, [chore.id]).get(chore.id),
+        today,
+        assignment.member_id if assignment else None,
+        db.scalar(
+            select(func.count())
+            .select_from(ChoreCompletion)
+            .where(ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today)
+        )
+        or 0,
+    )
 
 
 def _anchor(state: StartState, interval_days: int, today: dt.date) -> dt.date:
@@ -290,19 +346,36 @@ def _commit_room(db: DbSession) -> None:
 
 
 @router.get("")
-def list_chores(_: CurrentSession, db: DbSession) -> ChoresOut:
+def list_chores(_: ParentSession, db: DbSession) -> ChoresOut:
     """Alle Räume und Aufgaben mit ihrem Stand; das Display zeigt davon nur die aktiven."""
     today = _today(db)
     rooms = db.scalars(select(ChoreRoom).order_by(ChoreRoom.position, ChoreRoom.id))
     chores = list(db.scalars(select(Chore).order_by(Chore.id)))
     last = _last_completions(db, [chore.id for chore in chores])
+    counts = dict(
+        db.execute(
+            select(ChoreCompletion.chore_id, func.count())
+            .where(ChoreCompletion.date == today)
+            .group_by(ChoreCompletion.chore_id)
+        ).all()
+    )
     week_start = today - dt.timedelta(days=today.weekday())
-    weekly = dict(db.execute(select(WeeklyChoreAssignment.chore_id, WeeklyChoreAssignment.member_id)
-                             .where(WeeklyChoreAssignment.week_start == week_start)).all())
+    weekly = dict(
+        db.execute(
+            select(WeeklyChoreAssignment.chore_id, WeeklyChoreAssignment.member_id).where(
+                WeeklyChoreAssignment.week_start == week_start
+            )
+        ).all()
+    )
     return ChoresOut(
         date=today,
         rooms=[_room_out(room) for room in rooms],
-        chores=[_chore_out(chore, last.get(chore.id), today, weekly.get(chore.id)) for chore in chores],
+        chores=[
+            _chore_out(
+                chore, last.get(chore.id), today, weekly.get(chore.id), counts.get(chore.id, 0)
+            )
+            for chore in chores
+        ],
         todos=[todo_out(todo) for todo in visible_todos(db, today)],
         share_days=SHARE_DAYS,
         shares=_shares(db, today),
@@ -331,20 +404,43 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
     today = _today(db)
     week_start = today - dt.timedelta(days=today.weekday())
     week_end = week_start + dt.timedelta(days=6)
-    adult_ids = list(db.scalars(
-        select(FamilyMember.id).where(FamilyMember.role == "parent").order_by(FamilyMember.id)
-    ))
+    adult_ids = list(
+        db.scalars(
+            select(FamilyMember.id).where(FamilyMember.role == "parent").order_by(FamilyMember.id)
+        )
+    )
     chores = list(db.scalars(select(Chore).where(Chore.active.is_(True)).order_by(Chore.id)))
+    parent_ids = list(adult_ids)
+    child_ids = {
+        member_id for chore in chores if chore.child_enabled for member_id in chore.child_member_ids
+    }
+    adult_ids = sorted(
+        set(adult_ids)
+        | set(
+            db.scalars(
+                select(FamilyMember.id).where(
+                    FamilyMember.role == "child", FamilyMember.id.in_(child_ids)
+                )
+            )
+        )
+    )
     last = _last_completions(db, [chore.id for chore in chores])
     due = [
-        chore for chore in chores
-        if chore_state(_counted_from(chore, last.get(chore.id)),
-                       chore.interval_days, today).due_date <= week_end
+        chore
+        for chore in chores
+        if chore_state(
+            _counted_from(chore, last.get(chore.id)), chore.interval_days, today
+        ).due_date
+        <= week_end
     ]
     # A deleted adult can leave a fixed assignment without an owner (SET NULL).
     # Return a clear validation error rather than raising an unhandled ValueError.
-    if any(chore.assignment_mode == "fixed" and chore.fixed_member_id not in adult_ids
-           for chore in due):
+    if any(
+        chore.assignment_mode == "fixed"
+        and chore.fixed_member_id
+        not in (parent_ids + (chore.child_member_ids if chore.child_enabled else []))
+        for chore in due
+    ):
         raise ApiError(status.HTTP_409_CONFLICT, "chore.fixed_member_required")
     if not adult_ids:
         return WeeklyPreviewOut(week_start=week_start, assignments=[])
@@ -352,27 +448,45 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
     history = db.execute(
         select(ChoreCompletion.member_id, Chore.estimated_minutes)
         .join(Chore, Chore.id == ChoreCompletion.chore_id)
-        .where(ChoreCompletion.date >= since, ChoreCompletion.date <= today,
-               ChoreCompletion.member_id.in_(adult_ids))
+        .where(
+            ChoreCompletion.date >= since,
+            ChoreCompletion.date <= today,
+            ChoreCompletion.member_id.in_(adult_ids),
+            ChoreCompletion.approved.is_(True),
+        )
     )
     previous_minutes = {member_id: 0 for member_id in adult_ids}
     for member_id, minutes in history:
         previous_minutes[member_id] += minutes
     previous_assignees = {
         chore.id: last[chore.id].member_id
-        for chore in due if chore.id in last and last[chore.id].member_id is not None
+        for chore in due
+        if chore.id in last and last[chore.id].member_id is not None
     }
     assignments = suggest_week(
-        [HouseholdChore(chore.id, chore.estimated_minutes,
-                        chore.assignment_mode, chore.fixed_member_id) for chore in due],
-        adult_ids, previous_minutes, previous_assignees,
+        [
+            HouseholdChore(
+                chore.id,
+                chore.estimated_minutes,
+                chore.assignment_mode,
+                chore.fixed_member_id,
+                tuple(parent_ids + (chore.child_member_ids if chore.child_enabled else [])),
+            )
+            for chore in due
+        ],
+        adult_ids,
+        previous_minutes,
+        previous_assignees,
     )
     return WeeklyPreviewOut(
         week_start=week_start,
         assignments=[
-            WeeklyAssignmentOut(chore_id=chore.id, member_id=assignments[chore.id],
-                                estimated_minutes=chore.estimated_minutes,
-                                adult_xp=chore.adult_xp)
+            WeeklyAssignmentOut(
+                chore_id=chore.id,
+                member_id=assignments[chore.id],
+                estimated_minutes=chore.estimated_minutes,
+                adult_xp=chore.adult_xp,
+            )
             for chore in due
         ],
     )
@@ -396,8 +510,10 @@ def weekly_confirmed(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
         week_start=week_start,
         assignments=[
             WeeklyAssignmentOut(
-                chore_id=assignment.chore_id, member_id=assignment.member_id,
-                estimated_minutes=chore.estimated_minutes, adult_xp=chore.adult_xp,
+                chore_id=assignment.chore_id,
+                member_id=assignment.member_id,
+                estimated_minutes=chore.estimated_minutes,
+                adult_xp=chore.adult_xp,
             )
             for assignment, chore in rows
         ],
@@ -413,21 +529,22 @@ def publish_weekly(body: WeeklyPublishIn, _: ParentSession, db: DbSession) -> We
     if len(submitted) != len(body.assignments) or submitted != expected:
         raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.weekly_invalid")
     adults = set(db.scalars(select(FamilyMember.id).where(FamilyMember.role == "parent")))
-    chores = {chore.id: chore for chore in db.scalars(
-        select(Chore).where(Chore.id.in_(expected))
-    )}
+    chores = {chore.id: chore for chore in db.scalars(select(Chore).where(Chore.id.in_(expected)))}
     for entry in body.assignments:
         chore = chores[entry.chore_id]
-        if entry.member_id not in adults or (
-            chore.assignment_mode == "fixed" and chore.fixed_member_id != entry.member_id
+        if (
+            entry.member_id not in adults
+            and not (chore.child_enabled and entry.member_id in chore.child_member_ids)
+            or (chore.assignment_mode == "fixed" and chore.fixed_member_id != entry.member_id)
         ):
             raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.weekly_invalid")
-    db.execute(delete(WeeklyChoreAssignment).where(
-        WeeklyChoreAssignment.week_start == preview.week_start
-    ))
+    db.execute(
+        delete(WeeklyChoreAssignment).where(WeeklyChoreAssignment.week_start == preview.week_start)
+    )
     db.add_all(
         WeeklyChoreAssignment(
-            week_start=preview.week_start, chore_id=entry.chore_id,
+            week_start=preview.week_start,
+            chore_id=entry.chore_id,
             member_id=entry.member_id,
         )
         for entry in body.assignments
@@ -443,6 +560,10 @@ def create_chore(body: ChoreCreateIn, _: ParentSession, db: DbSession) -> ChoreO
     today = _today(db)
     _check_counted_from(body.counted_from, today)
     chore = Chore(
+        repeatable=body.repeatable,
+        child_enabled=body.child_enabled,
+        child_xp=body.child_xp,
+        child_member_ids=body.child_member_ids,
         room_id=body.room_id,
         title=body.title,
         icon=body.icon,
@@ -492,9 +613,15 @@ def delete_room(room_id: int, _: ParentSession, db: DbSession) -> None:
     room = _get_room(db, room_id)
     chores = list(db.scalars(select(Chore).where(Chore.room_id == room.id)))
     for chore in chores:
-        completions = list(db.scalars(select(ChoreCompletion).where(
-            ChoreCompletion.chore_id == chore.id,
-        ).with_for_update()))
+        completions = list(
+            db.scalars(
+                select(ChoreCompletion)
+                .where(
+                    ChoreCompletion.chore_id == chore.id,
+                )
+                .with_for_update()
+            )
+        )
         _reverse_chore_credits(db, completions, chore.title)
         for completion in completions:
             db.delete(completion)
@@ -557,20 +684,40 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
     fields = body.model_fields_set
     effective_mode = body.assignment_mode if "assignment_mode" in fields else chore.assignment_mode
     effective_fixed = (
-        body.fixed_member_id if "fixed_member_id" in fields else chore.fixed_member_id
-    ) if effective_mode == "fixed" else None
-    _validate_assignment(db, body.model_copy(update={
-        "assignment_mode": effective_mode, "fixed_member_id": effective_fixed,
-    }))
+        (body.fixed_member_id if "fixed_member_id" in fields else chore.fixed_member_id)
+        if effective_mode == "fixed"
+        else None
+    )
+    _validate_assignment(
+        db,
+        body.model_copy(
+            update={
+                "assignment_mode": effective_mode,
+                "fixed_member_id": effective_fixed,
+                "child_enabled": body.child_enabled
+                if "child_enabled" in fields
+                else chore.child_enabled,
+                "child_member_ids": body.child_member_ids
+                if "child_member_ids" in fields
+                else chore.child_member_ids,
+            }
+        ),
+    )
     last = _last_completions(db, [chore.id]).get(chore.id)
     # Nur ein geänderter Tag greift ein, damit ein unverändert mitgeschickter nichts löscht.
     if body.counted_from is not None and body.counted_from != _counted_from(chore, last):
         _check_counted_from(body.counted_from, _today(db))
         chore.anchor_date = body.counted_from
-        removed = list(db.scalars(select(ChoreCompletion).where(
-            ChoreCompletion.chore_id == chore.id,
-            ChoreCompletion.date > body.counted_from,
-        ).with_for_update()))
+        removed = list(
+            db.scalars(
+                select(ChoreCompletion)
+                .where(
+                    ChoreCompletion.chore_id == chore.id,
+                    ChoreCompletion.date > body.counted_from,
+                )
+                .with_for_update()
+            )
+        )
         _reverse_chore_credits(db, removed, chore.title)
         for completion in removed:
             db.delete(completion)
@@ -581,6 +728,9 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
         chore.estimated_minutes = body.estimated_minutes
     if "adult_xp" in fields:
         chore.adult_xp = body.adult_xp
+    for key in ("repeatable", "child_enabled", "child_xp", "child_member_ids"):
+        if key in fields:
+            setattr(chore, key, getattr(body, key))
     chore.assignment_mode = effective_mode
     chore.fixed_member_id = effective_fixed
     db.commit()
@@ -590,9 +740,15 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
 @router.delete("/{chore_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chore(chore_id: int, _: ParentSession, db: DbSession) -> None:
     chore = _get_chore(db, chore_id)
-    completions = list(db.scalars(select(ChoreCompletion).where(
-        ChoreCompletion.chore_id == chore.id,
-    ).with_for_update()))
+    completions = list(
+        db.scalars(
+            select(ChoreCompletion)
+            .where(
+                ChoreCompletion.chore_id == chore.id,
+            )
+            .with_for_update()
+        )
+    )
     _reverse_chore_credits(db, completions, chore.title)
     for completion in completions:
         db.delete(completion)
@@ -601,32 +757,85 @@ def delete_chore(chore_id: int, _: ParentSession, db: DbSession) -> None:
     db.commit()
 
 
-@router.put("/{chore_id}/done")
-def mark_done(chore_id: int, body: DoneIn, _: CurrentSession, db: DbSession) -> ChoreOut:
-    """Heute erledigt. Ein zweiter Aufruf am selben Tag trägt nur nach, wer es war."""
-    chore = _get_chore(db, chore_id)
-    if body.member_id is not None:
-        get_member(db, body.member_id)
-    today = _today(db)
-    query = select(ChoreCompletion).where(
-        ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today
+def _credit_completion(
+    db: DbSession, chore: Chore, completion: ChoreCompletion, member: FamilyMember | None
+) -> None:
+    old = db.get(ChoreCredit, completion.id)
+    amount = (
+        (
+            chore.adult_xp
+            if member.role == "parent"
+            else chore.child_xp
+            if chore.child_enabled and member.id in chore.child_member_ids
+            else 0
+        )
+        if member is not None
+        else 0
     )
-    completion = db.scalar(query)
+    if not completion.approved:
+        amount = 0
+    # Retried executions retain the XP booked at completion, even after chore edits.
+    if old is not None and old.member_id == completion.member_id:
+        return
+    for member_id in sorted(
+        ({old.member_id} if old else set()) | ({member.id} if member and amount else set())
+    ):
+        lock_member(db, member_id)
+    if old is not None:
+        book(
+            db,
+            old.member_id,
+            -old.amount,
+            "chore_undone",
+            reason=chore.title,
+            task_date=completion.date,
+        )
+        db.delete(old)
+        db.flush()
+    if amount and member is not None:
+        book(
+            db, member.id, amount, "chore_completed", reason=chore.title, task_date=completion.date
+        )
+        db.add(ChoreCredit(completion_id=completion.id, member_id=member.id, amount=amount))
+
+
+@router.put("/{chore_id}/done")
+def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> ChoreOut:
+    # Serialize all executions and corrections for this chore.
+    db.execute(select(Chore.id).where(Chore.id == chore_id).with_for_update())
+    chore = _get_chore(db, chore_id)
+    member = get_member(db, body.member_id) if body.member_id is not None else None
+    today = _today(db)
+    completion = db.scalar(
+        select(ChoreCompletion).where(
+            ChoreCompletion.chore_id == chore.id,
+            ChoreCompletion.date == today,
+            ChoreCompletion.request_key == body.request_key,
+        )
+    )
     if completion is None:
-        db.add(ChoreCompletion(chore_id=chore.id, date=today, member_id=body.member_id))
+        if not chore.repeatable and db.scalar(
+            select(ChoreCompletion.id)
+            .where(ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today)
+            .limit(1)
+        ):
+            raise ApiError(status.HTTP_409_CONFLICT, "chore.not_repeatable")
+        completion = ChoreCompletion(
+            chore_id=chore.id, date=today, member_id=body.member_id, request_key=body.request_key
+        )
+        db.add(completion)
         try:
-            db.commit()
-        except IntegrityError:
-            # Doppel-Tipp oder gleichzeitig auf einem anderen Gerät erledigt.
+            db.flush()
+        except IntegrityError as error:
             db.rollback()
-            completion = db.scalar(query)
-    if completion is not None:
-        credit = db.get(ChoreCredit, completion.id)
-        if credit is not None and body.member_id != credit.member_id:
-            raise ApiError(status.HTTP_409_CONFLICT, "chore.credit_requires_parent")
+            raise ApiError(status.HTTP_409_CONFLICT, "chore.request_conflict") from error
+    # A retry of the initial unassigned request must not erase the later attribution.
+    if body.member_id is not None or completion.member_id is None:
         completion.member_id = body.member_id
-        db.commit()
-    return _one_out(db, chore)
+        _credit_completion(db, chore, completion, member)
+    result = _one_out(db, chore)
+    db.commit()
+    return result
 
 
 @router.post("/{chore_id}/credit")
@@ -641,26 +850,30 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
     today = _today(db)
     completion = db.scalar(
         select(ChoreCompletion)
-        .where(ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today)
+        .where(
+            ChoreCompletion.chore_id == chore.id,
+            ChoreCompletion.date == today,
+            ChoreCompletion.approved.is_(True),
+        )
+        .order_by(ChoreCompletion.id.desc())
+        .limit(1)
         .with_for_update()
     )
     if completion is None:
         raise ApiError(status.HTTP_409_CONFLICT, "chore.not_completed")
     old = db.get(ChoreCredit, completion.id)
     amount = chore.adult_xp
-    if old is not None and old.member_id == member.id and old.amount == amount:
+    if old is not None and old.member_id == member.id:
         return _one_out(db, chore)
     # Serialize balance-affecting changes; lock in stable order.
     for member_id in sorted({member.id, old.member_id} if old else {member.id}):
         lock_member(db, member_id)
     if old is not None:
-        book(db, old.member_id, -old.amount, "chore_undone",
-             reason=chore.title, task_date=today)
+        book(db, old.member_id, -old.amount, "chore_undone", reason=chore.title, task_date=today)
         db.delete(old)
         db.flush()
     if amount > 0:
-        book(db, member.id, amount, "chore_completed",
-             reason=chore.title, task_date=today)
+        book(db, member.id, amount, "chore_completed", reason=chore.title, task_date=today)
         db.add(ChoreCredit(completion_id=completion.id, member_id=member.id, amount=amount))
     completion.member_id = member.id
     db.commit()
@@ -668,24 +881,126 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
 
 
 @router.delete("/{chore_id}/done")
-def undo_done(chore_id: int, auth_session: CurrentSession, db: DbSession) -> ChoreOut:
+def undo_done(
+    chore_id: int,
+    auth_session: ParentSession,
+    db: DbSession,
+    completion_id: Annotated[int | None, Query()] = None,
+) -> ChoreOut:
     """Nimmt die heutige Erledigung zurück; frühere bleiben stehen."""
+    db.execute(select(Chore.id).where(Chore.id == chore_id).with_for_update())
     chore = _get_chore(db, chore_id)
-    completion = db.scalar(
-        select(ChoreCompletion).where(
-            ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == _today(db)
-        ).with_for_update()
+    query = select(ChoreCompletion).where(
+        ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == _today(db)
     )
+    if completion_id is not None:
+        query = query.where(ChoreCompletion.id == completion_id)
+    completion = db.scalar(query.order_by(ChoreCompletion.id.desc()).limit(1).with_for_update())
     if completion is not None:
         credit = db.get(ChoreCredit, completion.id)
         if credit is not None:
-            # Undoing parent-approved XP requires an unlocked parent session.
-            if not is_parent_unlocked(auth_session, get_family(db)):
+            # Reversing parent-approved XP requires a parent account.
+            if auth_session.user.role not in ("admin", "parent"):
                 raise ApiError(status.HTTP_403_FORBIDDEN, "parent.locked")
             lock_member(db, credit.member_id)
-            book(db, credit.member_id, -credit.amount, "chore_undone",
-                 reason=chore.title, task_date=completion.date)
+            book(
+                db,
+                credit.member_id,
+                -credit.amount,
+                "chore_undone",
+                reason=chore.title,
+                task_date=completion.date,
+            )
             db.delete(credit)
         db.delete(completion)
         db.commit()
     return _one_out(db, chore)
+
+
+def _child_can_do(db: DbSession, chore: Chore, member_id: int) -> bool:
+    if not chore.active or not chore.child_enabled or member_id not in chore.child_member_ids:
+        return False
+    today = _today(db)
+    weekly = db.get(WeeklyChoreAssignment, (today - dt.timedelta(days=today.weekday()), chore.id))
+    owner = (
+        weekly.member_id
+        if weekly
+        else chore.fixed_member_id
+        if chore.assignment_mode == "fixed"
+        else None
+    )
+    return owner is None or owner == member_id
+
+
+@router.get("/mine")
+def my_chores(auth: CurrentSession, db: DbSession) -> list[dict]:
+    own = child_member_id(db, auth)
+    if own is None or own == 0:
+        raise ApiError(status.HTTP_403_FORBIDDEN, "profile.own_only")
+    today = _today(db)
+    result = []
+    for chore in db.scalars(select(Chore).order_by(Chore.id)):
+        if not _child_can_do(db, chore, own):
+            continue
+        state = _one_out(db, chore)
+        executions = list(
+            db.scalars(
+                select(ChoreCompletion)
+                .where(
+                    ChoreCompletion.chore_id == chore.id,
+                    ChoreCompletion.member_id == own,
+                    ChoreCompletion.date == today,
+                )
+                .order_by(ChoreCompletion.id)
+            )
+        )
+        result.append(
+            dict(
+                id=chore.id,
+                title=chore.title,
+                icon=chore.icon,
+                points=chore.child_xp,
+                repeatable=chore.repeatable,
+                days_left=state.days_left,
+                done_today=state.done_today,
+                count=len(executions),
+                pending=sum(not item.approved for item in executions),
+            )
+        )
+    return result
+
+
+@router.put("/mine/{chore_id}/done")
+def child_chore_done(
+    chore_id: int, body: DoneIn, auth: CurrentSession, db: DbSession
+) -> list[dict]:
+    own = child_member_id(db, auth)
+    chore = _get_chore(db, chore_id)
+    if not own or not _child_can_do(db, chore, own) or body.member_id not in (None, own):
+        raise ApiError(status.HTTP_403_FORBIDDEN, "profile.own_only")
+    today = _today(db)
+    if not body.request_key:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "validation.required")
+    old = db.scalar(select(ChoreCompletion).where(ChoreCompletion.request_key == body.request_key))
+    if old:
+        if old.chore_id != chore.id or old.member_id != own:
+            raise ApiError(status.HTTP_409_CONFLICT, "chore.request_conflict")
+        return my_chores(auth, db)
+    if not chore.repeatable and db.scalar(
+        select(ChoreCompletion.id)
+        .where(ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today)
+        .limit(1)
+    ):
+        raise ApiError(status.HTTP_409_CONFLICT, "chore.not_repeatable")
+    db.add(
+        ChoreCompletion(
+            chore_id=chore.id,
+            member_id=own,
+            date=today,
+            request_key=body.request_key,
+            approved=False,
+            points=chore.child_xp,
+        )
+    )
+    db.commit()
+    return my_chores(auth, db)

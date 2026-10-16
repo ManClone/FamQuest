@@ -10,7 +10,15 @@ import { RedeemDialog } from './RedeemDialog'
 import { RewardCard } from './RewardCard'
 
 /** Belohnungskarten eines Kindes; ein Tipp auf „Einlösen“ öffnet die Bestätigung. */
-export function RewardGrid({ member, balance }: { member: Member; balance: number }) {
+export function RewardGrid({
+  member,
+  balance,
+  compact = false,
+}: {
+  member: Member
+  balance: number
+  compact?: boolean
+}) {
   const { t } = useTranslation()
   const rewards = useRewards()
   const [selected, setSelected] = useState<Reward | null>(null)
@@ -37,10 +45,13 @@ export function RewardGrid({ member, balance }: { member: Member; balance: numbe
 
   return (
     <>
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-4">
+      <ul
+        className={`grid ${compact ? 'grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))] gap-3' : 'grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-4'}`}
+      >
         {own.map((reward) => (
           <RewardCard
             key={reward.id}
+            compact={compact}
             reward={reward}
             member={member}
             balance={balance}

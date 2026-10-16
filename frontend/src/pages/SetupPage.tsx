@@ -5,13 +5,11 @@ import { useNavigate } from 'react-router'
 import { type SetupData, useSetup } from '../api/auth'
 import { ApiError } from '../api/client'
 import { Logo } from '../components/Logo'
-import { PinPad } from '../components/PinPad'
 import { Alert, Button, CenteredCard, TextField } from '../components/ui'
 import { errorMessage } from '../errors'
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '../i18n'
 import { PASSWORD_MIN_LENGTH, isValidEmail } from '../validation'
 
-type Step = 'details' | 'pin' | 'pin-repeat'
 type DetailField = 'family_name' | 'email' | 'password' | 'password_repeat'
 /** Felder, zu denen der Server Fehler melden kann (die Wiederholung prüft nur das Frontend). */
 const DETAIL_FIELDS: DetailField[] = ['family_name', 'email', 'password']
@@ -25,7 +23,6 @@ export function SetupPage() {
   const navigate = useNavigate()
   const setup = useSetup()
 
-  const [step, setStep] = useState<Step>('details')
   const [details, setDetails] = useState<Record<DetailField, string>>({
     family_name: '',
     email: '',
@@ -33,8 +30,6 @@ export function SetupPage() {
     password_repeat: '',
   })
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<DetailField, string>>>({})
-  const [firstPin, setFirstPin] = useState('')
-  const [pinError, setPinError] = useState<string>()
   const [formError, setFormError] = useState<string>()
 
   const language = i18n.resolvedLanguage ?? DEFAULT_LANGUAGE
@@ -55,23 +50,9 @@ export function SetupPage() {
     event.preventDefault()
     const errors = validateDetails()
     setFieldErrors(errors)
-    if (Object.keys(errors).length === 0) setStep('pin')
-  }
-
-  const submitPin = (pin: string) => {
-    setFirstPin(pin)
-    setPinError(undefined)
-    setStep('pin-repeat')
-  }
-
-  const submitPinRepeat = (pin: string) => {
-    if (pin !== firstPin) {
-      setPinError('pin.mismatch')
-      setStep('pin')
-      return
-    }
+    if (Object.keys(errors).length) return
     const { password_repeat: _repeat, ...account } = details
-    const data: SetupData = { ...account, language, pin, timezone: browserTimezone() }
+    const data: SetupData = { ...account, language, timezone: browserTimezone() }
     setup.mutate(data, {
       onSuccess: () => navigate('/', { replace: true }),
       onError: (error) => {
@@ -83,7 +64,6 @@ export function SetupPage() {
         }
         setFieldErrors(errors)
         setFormError(Object.keys(errors).length ? undefined : errorMessage(t, error))
-        setStep('details')
       },
     })
   }
@@ -94,24 +74,6 @@ export function SetupPage() {
       min: PASSWORD_MIN_LENGTH,
       defaultValue: t('errors.validation.invalid'),
     })
-
-  if (step !== 'details') {
-    return (
-      <CenteredCard>
-        <p className="text-lg text-slate-600">{t('setup.pin_intro')}</p>
-        <PinPad
-          key={step}
-          title={t(step === 'pin' ? 'setup.pin_title' : 'setup.pin_repeat_title')}
-          onSubmit={step === 'pin' ? submitPin : submitPinRepeat}
-          error={step === 'pin' && pinError ? errorMessage(t, pinError) : undefined}
-          busy={setup.isPending}
-        />
-        <Button variant="secondary" onClick={() => setStep('details')} disabled={setup.isPending}>
-          {t('actions.back')}
-        </Button>
-      </CenteredCard>
-    )
-  }
 
   return (
     <CenteredCard>

@@ -4,10 +4,10 @@ from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
 from app.api.members import get_member
-from app.auth import DbSession, ParentSession
+from app.auth import CurrentSession, DbSession, ParentSession, ensure_member_access
 from app.errors import ApiError
 from app.models import PointTransaction
-from app.points import balance, book, lock_member
+from app.points import balance, book, level_xp, lock_member
 from app.schemas import PointBookingIn, PointHistoryOut, PointTransactionOut
 
 router = APIRouter(tags=["points"])
@@ -34,12 +34,13 @@ def transaction_out(transaction: PointTransaction) -> PointTransactionOut:
 @router.get("/members/{member_id}/points")
 def get_points(
     member_id: int,
-    _: ParentSession,
+    auth: CurrentSession,
     db: DbSession,
     before: Annotated[int | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=HISTORY_PAGE_SIZE)] = HISTORY_PAGE_SIZE,
 ) -> PointHistoryOut:
     """Punktestand und Buchungen einer Person, neueste zuerst."""
+    ensure_member_access(db, auth, member_id)
     get_member(db, member_id)
     query = select(PointTransaction).where(PointTransaction.member_id == member_id)
     if before is not None:
@@ -64,3 +65,20 @@ def add_points(
     book(db, member_id, body.amount, "manual", reason=body.reason, user_id=auth_session.user_id)
     db.commit()
     return get_points(member_id, auth_session, db)
+
+
+@router.get("/members/{member_id}/progress")
+def member_progress(member_id: int, auth: CurrentSession, db: DbSession) -> dict[str, int]:
+    """Levels use earned task XP, never the balance spent on rewards."""
+    ensure_member_access(db, auth, member_id)
+    get_member(db, member_id)
+    earned = level_xp(db, member_id)
+    # Display-only levels: level 1 starts at 0 XP, each next level needs 100 XP.
+    step = 100
+    return {
+        "earned_xp": earned,
+        "level": earned // step + 1,
+        "level_progress": earned % step,
+        "level_size": step,
+        "remaining_xp": step - earned % step,
+    }

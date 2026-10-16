@@ -3,6 +3,7 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tansta
 import { ApiError, api, apiGet, setCsrfToken } from './client'
 
 export interface Me {
+  member_id?: number | null
   user: { email: string; role: string; language: string | null }
   family: { name: string; default_language: string; timezone: string; pin_enabled: boolean }
   csrf_token: string
@@ -14,7 +15,6 @@ export interface SetupData {
   family_name: string
   email: string
   password: string
-  pin: string
   timezone: string
 }
 
@@ -105,14 +105,6 @@ export function useLogout() {
   })
 }
 
-export const useUnlockParent = () =>
-  useMeMutation((pin: string) => api<Me>('POST', '/parent/unlock', { pin }))
-
-export const useLockParent = () => useMeMutation(() => api<Me>('POST', '/parent/lock'))
-
-export const useSetPin = () =>
-  useMeMutation((pin: string) => api<Me>('PUT', '/parent/pin', { pin }))
-
 export interface FamilySettings {
   name: string
   default_language: string
@@ -124,11 +116,4 @@ export const useUpdateFamily = () =>
   useMeMutation(
     (settings: FamilySettings) => api<Me>('PUT', '/parent/family', settings),
     (queryClient) => void queryClient.invalidateQueries({ queryKey: ['today'] }),
-  )
-
-export const useDisablePin = () => useMeMutation(() => api<Me>('DELETE', '/parent/pin'))
-
-export const useResetPin = () =>
-  useMeMutation((data: { password: string; pin: string }) =>
-    api<Me>('POST', '/parent/pin/reset', data),
   )

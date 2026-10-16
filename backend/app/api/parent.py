@@ -1,29 +1,11 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.auth import (
-    CurrentSession,
-    DbSession,
-    ParentSession,
-    get_family,
-    me_response,
-    unlock_parent_area,
-)
+from app.auth import DbSession, ParentSession, get_family, me_response
 from app.demo_mode import NotInDemo
-from app.errors import ApiError
-from app.logs import logger
-from app.schemas import FamilyName, LanguageCode, MeResponse, Pin, Timezone
-from app.security import hash_secret, login_limiter, pin_limiter, verify_secret
+from app.schemas import FamilyName, LanguageCode, MeResponse, Timezone
 
 router = APIRouter(prefix="/parent", tags=["parent"])
-
-
-class UnlockRequest(BaseModel):
-    pin: str
-
-
-class PinRequest(BaseModel):
-    pin: Pin
 
 
 class FamilySettings(BaseModel):
@@ -32,78 +14,10 @@ class FamilySettings(BaseModel):
     timezone: Timezone
 
 
-class PinResetRequest(BaseModel):
-    password: str
-    pin: Pin
-
-
-@router.post("/unlock")
-def unlock(body: UnlockRequest, auth_session: CurrentSession, db: DbSession) -> MeResponse:
-    family = get_family(db)
-    if family.pin_enabled:
-        limit_key = f"session:{auth_session.id}"
-        if pin_limiter.is_blocked(limit_key):
-            raise ApiError(status.HTTP_429_TOO_MANY_REQUESTS, "auth.rate_limited")
-        if not verify_secret(family.parent_pin_hash, body.pin):
-            pin_limiter.record_failure(limit_key)
-            logger.warning("Falsche Eltern-PIN (Session %s)", auth_session.id)
-            raise ApiError(status.HTTP_403_FORBIDDEN, "pin.wrong")
-        pin_limiter.reset(limit_key)
-    unlock_parent_area(auth_session)
-    db.commit()
-    return me_response(db, auth_session)
-
-
-@router.post("/lock")
-def lock(auth_session: CurrentSession, db: DbSession) -> MeResponse:
-    auth_session.parent_unlocked_until = None
-    db.commit()
-    return me_response(db, auth_session)
-
-
-@router.put("/pin", dependencies=[NotInDemo])
-def set_pin(body: PinRequest, auth_session: ParentSession, db: DbSession) -> MeResponse:
-    """PIN festlegen oder ändern (auch zum Wiedereinschalten)."""
-    family = get_family(db)
-    family.parent_pin_hash = hash_secret(body.pin)
-    family.pin_enabled = True
-    db.commit()
-    return me_response(db, auth_session)
-
-
 @router.put("/family", dependencies=[NotInDemo])
 def update_family(body: FamilySettings, auth_session: ParentSession, db: DbSession) -> MeResponse:
-    """Familienname, Standardsprache und Zeitzone („heute“ rechnet danach in der neuen Zone)."""
     family = get_family(db)
     family.name, family.default_language = body.name, body.default_language
     family.timezone = body.timezone
-    db.commit()
-    return me_response(db, auth_session)
-
-
-@router.delete("/pin", dependencies=[NotInDemo])
-def disable_pin(auth_session: ParentSession, db: DbSession) -> MeResponse:
-    family = get_family(db)
-    family.parent_pin_hash = None
-    family.pin_enabled = False
-    db.commit()
-    return me_response(db, auth_session)
-
-
-@router.post("/pin/reset", dependencies=[NotInDemo])
-def reset_pin(body: PinResetRequest, auth_session: CurrentSession, db: DbSession) -> MeResponse:
-    """PIN vergessen: mit dem Passwort des angemeldeten Kontos eine neue PIN setzen."""
-    limit_key = f"email:{auth_session.user.email}"
-    if login_limiter.is_blocked(limit_key):
-        raise ApiError(status.HTTP_429_TOO_MANY_REQUESTS, "auth.rate_limited")
-    if not verify_secret(auth_session.user.password_hash, body.password):
-        login_limiter.record_failure(limit_key)
-        raise ApiError(status.HTTP_403_FORBIDDEN, "auth.invalid_credentials")
-
-    login_limiter.reset(limit_key)
-    family = get_family(db)
-    family.parent_pin_hash = hash_secret(body.pin)
-    family.pin_enabled = True
-    unlock_parent_area(auth_session)
     db.commit()
     return me_response(db, auth_session)

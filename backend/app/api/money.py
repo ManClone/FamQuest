@@ -3,18 +3,32 @@
 Balances are shown separately so quest bonus reversals never masquerade as
 changes to unconditional pocket money. No payment is initiated here.
 """
+
 import datetime as dt
 
 from fastapi import APIRouter, status
-from sqlalchemy import select
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 
 from app.api.members import get_member
-from app.auth import DbSession, ParentSession
+from app.auth import DbSession, ParentSession, get_family
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
-from app.models import BankBalanceSnapshot, BankTransaction, MemberBankAccount
-from app.money import allowance_balance, bonus_balance, money_balance, post_weekly_allowance, weekly_allowance_booked
+from app.models import (
+    BankBalanceSnapshot,
+    BankTransaction,
+    MemberBankAccount,
+    MoneyPaymentMatch,
+    MoneyTransaction,
+)
+from app.money import (
+    allowance_balance,
+    bonus_balance,
+    money_balance,
+    post_weekly_allowance,
+    weekly_allowance_booked,
+)
+from app.today import family_now
 
 router = APIRouter(tags=["money"])
 
@@ -118,7 +132,9 @@ def get_weekly_allowance_settings(
     member = get_member(db, member_id)
     if member.role != "child":
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
-    return WeeklyAllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
+    return WeeklyAllowanceSettings(
+        member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents
+    )
 
 
 @router.put(
@@ -133,9 +149,16 @@ def set_weekly_allowance_settings(
     member = get_member(db, member_id)
     if member.role != "child":
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
+    db.refresh(member, with_for_update=True)
     member.weekly_allowance_cents = body.weekly_amount_cents
+    if body.weekly_amount_cents is not None:
+        today = family_now(get_family(db)).date()
+        monday = today - dt.timedelta(days=today.weekday())
+        post_weekly_allowance(db, member_id, body.weekly_amount_cents, monday)
     db.commit()
-    return WeeklyAllowanceSettings(member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents)
+    return WeeklyAllowanceSettings(
+        member_id=member_id, weekly_amount_cents=member.weekly_allowance_cents
+    )
 
 
 class BankBalanceOut(BaseModel):
@@ -156,10 +179,12 @@ def get_member_bank_balances(
     if member.role != "child":
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "money.child_required")
     accounts = db.scalars(
-        select(MemberBankAccount).where(
+        select(MemberBankAccount)
+        .where(
             MemberBankAccount.member_id == member_id,
             MemberBankAccount.active.is_(True),
-        ).order_by(MemberBankAccount.id)
+        )
+        .order_by(MemberBankAccount.id)
     ).all()
     result = []
     for account in accounts:
@@ -169,14 +194,16 @@ def get_member_bank_balances(
             .order_by(BankBalanceSnapshot.observed_at.desc(), BankBalanceSnapshot.id.desc())
             .limit(1)
         )
-        result.append(BankBalanceOut(
-            account_id=account.id,
-            display_name=account.display_name,
-            provider=account.provider,
-            currency=account.currency,
-            balance_cents=snapshot.balance_cents if snapshot else None,
-            observed_at=snapshot.observed_at if snapshot else None,
-        ))
+        result.append(
+            BankBalanceOut(
+                account_id=account.id,
+                display_name=account.display_name,
+                provider=account.provider,
+                currency=account.currency,
+                balance_cents=snapshot.balance_cents if snapshot else None,
+                observed_at=snapshot.observed_at if snapshot else None,
+            )
+        )
     return result
 
 
@@ -207,6 +234,65 @@ def get_member_bank_transactions(
         .join(MemberBankAccount, BankTransaction.account_id == MemberBankAccount.id)
         .where(MemberBankAccount.member_id == member_id, MemberBankAccount.active.is_(True))
         .order_by(BankTransaction.booked_on.desc(), BankTransaction.id.desc())
-        .offset(offset).limit(limit)
+        .offset(offset)
+        .limit(limit)
     ).all()
     return [BankTransactionOut.model_validate(row, from_attributes=True) for row in rows]
+
+
+class AllowancePaymentStatus(BaseModel):
+    member_id: int
+    week_start: dt.date
+    expected_cents: int
+    received_cents: int
+    missing_cents: int
+    bank_connected: bool
+
+
+@router.get(
+    "/members/{member_id}/money/allowance-payment-status", response_model=AllowancePaymentStatus
+)
+def allowance_payment_status(
+    member_id: int, _: ParentSession, db: DbSession
+) -> AllowancePaymentStatus:
+    member = get_member(db, member_id)
+    if member.role != "child":
+        raise ApiError(422, "money.child_required")
+    today = family_now(get_family(db)).date()
+    monday = today - dt.timedelta(days=today.weekday())
+    expected = int(
+        db.scalar(
+            select(func.coalesce(func.sum(MoneyTransaction.amount_cents), 0)).where(
+                MoneyTransaction.member_id == member_id,
+                MoneyTransaction.kind == "allowance",
+                MoneyTransaction.reason == f"weekly:{monday.isoformat()}",
+            )
+        )
+        or 0
+    )
+    received = int(
+        db.scalar(
+            select(func.coalesce(func.sum(MoneyPaymentMatch.amount_cents), 0)).where(
+                MoneyPaymentMatch.member_id == member_id,
+                MoneyPaymentMatch.category == "allowance",
+                MoneyPaymentMatch.week_start == monday,
+            )
+        )
+        or 0
+    )
+    connected = (
+        db.scalar(
+            select(MemberBankAccount.id)
+            .where(MemberBankAccount.member_id == member_id, MemberBankAccount.active)
+            .limit(1)
+        )
+        is not None
+    )
+    return AllowancePaymentStatus(
+        member_id=member_id,
+        week_start=monday,
+        expected_cents=expected,
+        received_cents=received,
+        missing_cents=max(0, expected - received),
+        bank_connected=connected,
+    )

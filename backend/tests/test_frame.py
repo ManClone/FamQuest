@@ -92,8 +92,22 @@ def test_invalid_night_mode_is_rejected(client, parent, change):
     assert get_settings(client) == DEFAULT
 
 
-def test_changes_need_unlocked_parent_area(client, admin):
-    response = client.put("/api/frame/settings", json={"show_tasks": True}, headers=csrf(admin))
+def test_frame_settings_require_parent_role(client, admin):
+    account = client.post(
+        "/api/auth/accounts",
+        json={"email": "child-frame@example.org", "password": "test-password-456", "role": "child"},
+        headers=csrf(admin),
+    )
+    assert account.status_code == 201, account.text
+    assert client.post("/api/auth/logout", headers=csrf(admin)).status_code == 204
+    login = client.post(
+        "/api/auth/login",
+        json={"email": "child-frame@example.org", "password": "test-password-456"},
+    )
+    assert login.status_code == 200, login.text
+    response = client.put(
+        "/api/frame/settings", json={"show_tasks": True}, headers=csrf(login.json())
+    )
     assert response.status_code == 403
     assert get_settings(client) == DEFAULT
 

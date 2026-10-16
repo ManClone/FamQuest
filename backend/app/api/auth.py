@@ -1,20 +1,23 @@
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.auth import (
     CurrentSession,
     DbSession,
+    ParentSession,
     check_origin,
     client_ip,
     end_session,
     me_response,
     start_session,
 )
+from app.demo_mode import NotInDemo
 from app.errors import ApiError
 from app.logs import logger
-from app.models import User
-from app.schemas import Email, MeResponse
+from app.models import FamilyMember, User
+from app.schemas import Email, MeResponse, Password
 from app.security import hash_secret, login_limiter, needs_rehash, verify_secret
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -63,3 +66,44 @@ def logout(auth_session: CurrentSession, response: Response, db: DbSession) -> N
 @router.get("/me")
 def me(auth_session: CurrentSession, db: DbSession) -> MeResponse:
     return me_response(db, auth_session)
+
+
+class AccountCreateRequest(BaseModel):
+    email: Email
+    password: Password
+    role: str
+
+
+class AccountOut(BaseModel):
+    id: int
+    email: str
+    role: str
+    member_id: int | None = None
+
+
+@router.get("/accounts", dependencies=[NotInDemo])
+def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
+    links = dict(
+        db.execute(
+            select(FamilyMember.user_id, FamilyMember.id).where(FamilyMember.user_id.is_not(None))
+        ).all()
+    )
+    return [
+        AccountOut(id=user.id, email=user.email, role=user.role, member_id=links.get(user.id))
+        for user in db.scalars(select(User).order_by(User.id))
+    ]
+
+
+@router.post("/accounts", status_code=status.HTTP_201_CREATED, dependencies=[NotInDemo])
+def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession) -> AccountOut:
+    if body.role not in ("parent", "child"):
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "auth.invalid_role")
+    user = User(email=body.email, password_hash=hash_secret(body.password), role=body.role)
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ApiError(status.HTTP_409_CONFLICT, "auth.email_taken") from exc
+    logger.info("Konto %s mit Rolle %s erstellt", user.id, user.role)
+    return AccountOut(id=user.id, email=user.email, role=user.role)

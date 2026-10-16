@@ -111,7 +111,8 @@
     "pin_saved": "The new PIN has been saved.",
     "pin_disabled": "The PIN is turned off.",
     "account_section": "Account",
-    "signed_in_as": "Signed in as {{email}}"
+    "signed_in_as": "Signed in as {{email}}",
+    "back_short": "Home"
   },
   "parents_nav": {
     "label": "Parents' area sections",
@@ -125,7 +126,8 @@
     "connections": "Calendar & weather",
     "settings": "Settings",
     "more": "More",
-    "household": "Household"
+    "household": "Household",
+    "profile": "Profile"
   },
   "pinpad": {
     "delete": "Delete digit",
@@ -262,7 +264,10 @@
     "move_up": "Move {{title}} up",
     "move_down": "Move {{title}} down",
     "kids_only": "Tasks are for the children. Household chores live in the cleaning plan:",
-    "kids_only_link": "go to “Household”"
+    "kids_only_link": "go to “Household”",
+    "repeatable": "Repeat during the day",
+    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately.",
+    "multiple_times": "Choose multiple times. Each selected period gets its own execution."
   },
   "routines": {
     "section": "Routines",
@@ -358,7 +363,10 @@
     "kind_task_completed": "Task done",
     "kind_task_undone": "Task undone",
     "kind_manual": "Booked by parents",
-    "kind_reward_redeemed": "Reward redeemed"
+    "kind_reward_redeemed": "Reward redeemed",
+    "kind_reward_cancelled": "Reward cancelled",
+    "kind_chore_completed": "Household task completed",
+    "kind_chore_undone": "Household task undone"
   },
   "errors": {
     "common": {
@@ -386,8 +394,14 @@
     "auth": {
       "not_authenticated": "Please sign in",
       "invalid_credentials": "Email or password is incorrect",
+      "email_taken": "This email address is already in use.",
+      "invalid_role": "This account role is not allowed.",
       "rate_limited": "Too many attempts. Please wait a few minutes.",
-      "csrf_failed": "Security check failed. Please reload the page."
+      "csrf_failed": "Security check failed. Please reload the page.",
+      "login_already_linked": "This login is already assigned to a person.",
+      "login_role_mismatch": "The login role does not match the person.",
+      "login_password_required": "Please set a password for the new login.",
+      "login_role_protected": "Your own parent account and administrator accounts cannot be changed into child accounts."
     },
     "setup": {
       "already_done": "Setup has already been completed",
@@ -422,7 +436,10 @@
       "step_invalid": "This step doesn't fit the routine. Please reload."
     },
     "completion": {
-      "day_changed": "A new day has started. The tasks have been updated."
+      "day_changed": "A new day has started. The tasks have been updated.",
+      "request_key_required": "Please reload this task.",
+      "request_key_used": "This request belongs to another execution.",
+      "not_repeatable": "This task is not repeatable."
     },
     "points": {
       "insufficient": "There aren't enough points for that."
@@ -487,7 +504,9 @@
       "weekly_invalid": "The weekly assignment is invalid. Please reload the suggestion.",
       "credit_requires_parent": "Only adults can receive chore XP.",
       "not_completed": "This chore has not been completed yet.",
-      "parent_required": "An adult account is required for this action."
+      "parent_required": "An adult account is required for this action.",
+      "request_conflict": "This execution was already saved elsewhere. Please reload.",
+      "not_repeatable": "This task is already completed today or awaiting approval."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
@@ -497,6 +516,10 @@
       "child_required": "This feature is only available for children",
       "invalid_allowance": "Invalid pocket money amount",
       "invalid_pagination": "Invalid pagination parameters"
+    },
+    "profile": {
+      "own_only": "You can only access your own profile and tasks.",
+      "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family."
     }
   },
   "rewards": {
@@ -544,7 +567,18 @@
     "pool_add_one": "Add {{count}} reward",
     "pool_add_other": "Add {{count}} rewards",
     "pool_added_one": "{{name}} has {{count}} new reward.",
-    "pool_added_other": "{{name}} has {{count}} new rewards."
+    "pool_added_other": "{{name}} has {{count}} new rewards.",
+    "cancel": "Cancel redemption",
+    "cancel_reason": "Reason for cancellation",
+    "cancel_hint": "The reward stays in the history. {{count}} stars will be refunded.",
+    "cancel_confirm": "Cancel and refund stars",
+    "cancelled": "Cancelled on",
+    "refunded": "{{count}} stars refunded",
+    "audience": "Manage rewards for",
+    "audience_parent": "Parents",
+    "audience_child": "Children",
+    "need_parents": "Add a parent family member first.",
+    "choose_parent": "Choose a parent"
   },
   "care": {
     "title": "Who did it?",
@@ -976,7 +1010,20 @@
     "wizard_add_one": "Add {{count}} chore",
     "wizard_add_other": "Add {{count}} chores",
     "wizard_added_one": "{{count}} chore is in the cleaning plan.",
-    "wizard_added_other": "{{count}} chores are in the cleaning plan."
+    "wizard_added_other": "{{count}} chores are in the cleaning plan.",
+    "repeat": "Complete again",
+    "repeat_title": "Complete {{title}} again",
+    "today_count": "Completed {{count}} times today",
+    "repeatable": "Can be completed several times a day",
+    "task_settings": "Task",
+    "adult_xp": "Adult XP",
+    "child_enabled": "Available to children",
+    "child_xp": "Child XP",
+    "eligible_children": "Which children may help?",
+    "child_hint": "Assigned household tasks automatically appear for children. Parents confirm their completions.",
+    "future_money": "Money (coming later)",
+    "awaiting": "{{count}} completions awaiting approval",
+    "child_complete": "Done!"
   },
   "todos": {
     "title": "To do",
@@ -990,5 +1037,81 @@
     "repeat": "“{{title}}” comes back: move it to the cleaning plan",
     "repeat_hint": "Comes back: pick a room and an interval. This moves the entry from “To do” to the cleaning plan.",
     "need_room": "“{{title}}” comes back? The cleaning plan needs a room first."
+  },
+  "member_login": {
+    "title": "Login",
+    "add": "Add login",
+    "change": "Edit login",
+    "enable": "Set up a personal login",
+    "choose": "Assign login",
+    "new": "Create new credentials",
+    "new_password": "New password",
+    "keep_password": "Leave blank to keep the current password.",
+    "password_hint": "At least 10 characters.",
+    "role_hint": "Access follows the person’s role. Administrator access is preserved."
+  },
+  "pocket_money": {
+    "title": "Pocket money",
+    "bonus": "Bonus",
+    "no_child": "First add a child to your family.",
+    "child": "Child",
+    "automatic": "Automatic weekly pocket money",
+    "current": "Weekly amount",
+    "not_configured": "Not set up yet",
+    "weekly_amount": "Weekly amount in euros",
+    "save": "Save weekly amount",
+    "disable": "Disable automatic credits",
+    "disabled": "Automatic credits disabled. Existing entitlements are preserved.",
+    "saved": "Weekly amount saved. Pocket money is credited automatically.",
+    "invalid_amount": "Enter an amount between 0.01 and 1,000 euros with at most two decimal places.",
+    "schedule_hint": "The current week is credited when configured, then each week from Monday. Weeks already credited are never credited twice.",
+    "payment_status": "Payment received this week",
+    "expected": "Pocket money entitlement",
+    "received": "Confirmed receipt",
+    "missing": "Still outstanding: {{amount}}",
+    "confirmed": "Payment fully confirmed.",
+    "no_bank": "No bank account connected yet. Receipt has not been confirmed.",
+    "not_due": "No pocket money has been credited for this week yet.",
+    "bank_hint": "An entitlement is not a received payment. A future bank connection can reconcile receipts and report missing amounts.",
+    "no_balance": "No balance available yet",
+    "transactions": "Bank transactions"
+  },
+  "personal": {
+    "profile": "My profile",
+    "access": "My login",
+    "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family.",
+    "saved": "Profile saved.",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "password_saved": "Password changed. Other sessions have been signed out.",
+    "password_mismatch": "The new passwords do not match.",
+    "change_password": "Change password",
+    "manage_family": "Manage family",
+    "dashboard": "Dashboard",
+    "overdue": "Overdue",
+    "current": "Current tasks",
+    "my_points_one": "{{count}} point",
+    "my_points_other": "{{count}} points",
+    "all_tasks": "All my tasks",
+    "edit_schedule": "Set the schedule directly on this task",
+    "schedule_hint": "The existing schedule is preserved. If you replace it here, the selected days and time apply to all selected children. Tasks, assignments and previously earned points are preserved.",
+    "schedule_preserved": "The existing schedule is preserved until you replace it here.",
+    "manage_area": "Manage {{area}}"
+  },
+  "child_progress": {
+    "overview": "My adventure",
+    "adventure": "Every task takes you further!",
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars",
+    "level": "Level {{level}}",
+    "remaining_one": "{{count}} XP to level {{level}}",
+    "remaining_other": "{{count}} XP to level {{level}}",
+    "level_progress": "Progress to the next level",
+    "earned_one": "{{count}} experience XP earned",
+    "earned_other": "{{count}} experience XP earned",
+    "level_hint": "{{count}} XP per level. Redeeming rewards keeps your experience.",
+    "reward_history": "Your redeemed rewards",
+    "today_progress": "Your day",
+    "back_tasks": "Back to my tasks"
   }
 }
