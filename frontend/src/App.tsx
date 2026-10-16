@@ -16,6 +16,7 @@ import { LoginPage } from './pages/LoginPage'
 import { ParentsPage } from './pages/ParentsPage'
 import { PersonPage } from './pages/PersonPage'
 import { RewardsPage } from './pages/RewardsPage'
+import { RewardsBoardPage } from './pages/RewardsBoardPage'
 import { SetupPage } from './pages/SetupPage'
 import { TasksWeekPage } from './pages/TasksWeekPage'
 import { ChildTasksPage } from './pages/ChildTasksPage'
@@ -130,6 +131,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route element={<ParentOnly />}>
               <Route path="/household" element={<ChoresPage />} />
+              <Route path="/rewards/board" element={<RewardsBoardPage />} />
             </Route>
           </Route>
           <Route element={<ParentOnly />}>

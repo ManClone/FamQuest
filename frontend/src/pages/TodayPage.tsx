@@ -58,7 +58,9 @@ export function TodayPage({ parentDashboard = false }: { parentDashboard?: boole
         <h1 className="text-3xl font-extrabold text-orange-600">
           {parentDashboard ? t('personal.dashboard') : me?.family.name}
         </h1>
-        {parentDashboard && <p className="text-xl font-bold text-slate-600">{me?.family.name}</p>}
+        {parentDashboard && (
+          <p className="text-3xl font-extrabold text-orange-600">{me?.family.name}</p>
+        )}
         {today && (
           <p className="text-xl font-bold text-slate-600">{formatLongDate(language, today.date)}</p>
         )}

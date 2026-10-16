@@ -12,6 +12,7 @@ import { useToday } from '../api/today'
 import { usePhotos } from '../api/photos'
 import { getFrameIdleMinutes } from '../frameIdle'
 import { useIdleTimeout } from '../useIdleTimeout'
+import { NAV_POSITION_CLASSES, NAV_CONTENT_SPACING } from './navigationStyles'
 
 interface NavItemProps {
   to: string
@@ -80,7 +81,7 @@ export function AppShell() {
     <div className="flex min-h-dvh flex-col sm:flex-row">
       <nav
         aria-label={t('nav.label')}
-        className="fixed inset-x-0 bottom-0 z-10 flex gap-2 border-t border-orange-100 bg-white/95 p-2 backdrop-blur sm:sticky sm:top-0 sm:h-dvh sm:w-28 sm:shrink-0 sm:flex-col sm:border-t-0 sm:border-r sm:p-3"
+        className={`${NAV_POSITION_CLASSES} z-20 gap-2 bg-white/95 p-2 backdrop-blur sm:w-28 sm:p-3`}
       >
         <NavItem
           to="/"
@@ -101,7 +102,7 @@ export function AppShell() {
           <NavItem to="/tasks" label={t('nav.tasks')} icon={StarIcon} active={onTasks} />
         )}
         <NavItem
-          to={isParent ? '/parents/rewards' : '/rewards'}
+          to={isParent ? '/rewards/board' : '/rewards'}
           label={t('nav.rewards')}
           icon={GiftIcon}
           active={pathname.startsWith('/rewards') || pathname.startsWith('/parents/rewards')}
@@ -116,7 +117,7 @@ export function AppShell() {
           }
         />
       </nav>
-      <div className="flex min-w-0 flex-1 flex-col pb-28 sm:pb-0">
+      <div className={`flex min-w-0 flex-1 flex-col ${NAV_CONTENT_SPACING}`}>
         <Outlet />
       </div>
     </div>

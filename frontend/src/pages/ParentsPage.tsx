@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
+import GearIcon from '~icons/fluent-emoji-flat/gear'
+import { NAV_CONTENT_SPACING } from '../components/navigationStyles'
 
 import { type Me, useMe } from '../api/auth'
 import { type Chore, type ChoreRoom, useChores } from '../api/chores'
@@ -41,6 +43,7 @@ export const PARENT_IDLE_TIMEOUT_MS = 2 * 60 * 1000
 
 export function ParentsPage() {
   const { data: me } = useMe()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const leave = () => navigate('/')
   useIdleTimeout(PARENT_IDLE_TIMEOUT_MS, leave)
@@ -53,10 +56,19 @@ export function ParentsPage() {
   return (
     <div className="flex min-h-dvh">
       <ParentsNav area={area ?? DEFAULT_AREA} />
-      <div className="min-w-0 flex-1 pb-28 md:pb-0">
-        <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 sm:pt-6">
-          <BackButton onClick={leave} />
-        </div>
+      <div className={`min-w-0 flex-1 ${NAV_CONTENT_SPACING}`}>
+        <header
+          data-testid="settings-header"
+          className="sticky top-0 z-10 border-b border-orange-100 bg-orange-50/95 shadow-sm backdrop-blur"
+        >
+          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+            <BackButton onClick={leave} />
+            <p className="ml-auto flex items-center gap-2 text-base font-extrabold text-orange-800 sm:text-xl">
+              <GearIcon className="size-7" aria-hidden="true" />
+              {t('nav.settings')}
+            </p>
+          </div>
+        </header>
         <ParentSettings key={area ?? DEFAULT_AREA} me={me} area={area ?? DEFAULT_AREA} />
       </div>
     </div>
