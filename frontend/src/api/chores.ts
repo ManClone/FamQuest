@@ -164,14 +164,6 @@ export const useMarkDone = () =>
       }),
   )
 
-/** Parent-only: approve adult XP for a completed chore. */
-export const useApproveChoreCredit = () =>
-  useParentMutation(
-    ({ id, memberId }: { id: number; memberId: number }) =>
-      api<Chore>('POST', `/chores/${id}/credit`, { member_id: memberId }),
-    [CHORES_KEY],
-  )
-
 export const useUndoDone = () =>
   useDoneMutation('chores', (item: number | { id: number; completionId?: number | null }) => {
     const id = typeof item === 'number' ? item : item.id

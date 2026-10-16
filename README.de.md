@@ -2,6 +2,8 @@
 
 # FamQuest
 
+> **Familienzweig / erster Live-Test:** Aktuelle Bedienung und Branch-Aufteilung stehen in [docs/LIVE-TEST.md](docs/LIVE-TEST.md). Aeltere Abschnitte und Screenshots beschreiben teils noch die urspruengliche Eltern-PIN und Navigation.
+
 [English](README.md) · **Deutsch**
 
 Self-hosted, zweisprachige (Deutsch/Englisch) Familien-App für ein Touchscreen-Display am Kühlschrank:

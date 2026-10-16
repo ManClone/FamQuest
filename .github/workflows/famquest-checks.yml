@@ -57,3 +57,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build --target runtime -t famquest:ci .
+      - name: Verify non-root runtime permissions
+        run: >-
+          docker run --rm --entrypoint /bin/sh famquest:ci -ec
+          'test "$(id -u)" != 0;
+          test -r /app/alembic.ini;
+          test -x /app/docker-entrypoint.sh;
+          python -c "import app.main"'
