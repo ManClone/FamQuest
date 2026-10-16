@@ -1039,7 +1039,8 @@
     "future_money": "Geld (später verfügbar)",
     "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
     "child_complete": "Erledigt!",
-    "who_before_completion": "Wer hat {{title}} erledigt?"
+    "who_before_completion": "Wer hat {{title}} erledigt?",
+    "confirm_undo": "„{{title}}“ wirklich zurücknehmen?"
   },
   "todos": {
     "title": "Zu erledigen",

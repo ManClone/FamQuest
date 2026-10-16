@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import {
   type Chore,
@@ -18,6 +19,7 @@ export const WHO_TIMEOUT_MS = 12 * 1000
  * Gemeinsam für die Ansicht „Haushalt“, die Kachel auf „Heute“ und die Spalte unter „Aufgaben“.
  */
 export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
+  const { t } = useTranslation()
   const markDone = useMarkDone()
   const undoDone = useUndoDone()
   const todoDone = useTodoDone()
@@ -66,11 +68,24 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
     )
   }
 
+  const undoChore = (chore: Chore, completionId = chore.last_completion_id) => {
+    if (inFlight.current || undoDone.isPending) return
+    if (!window.confirm(t('chores.confirm_undo', { title: chore.title }))) return
+    inFlight.current = true
+    close()
+    undoDone.mutate(
+      { id: chore.id, completionId },
+      {
+        onSettled: () => {
+          inFlight.current = false
+        },
+      },
+    )
+  }
+
   const toggle = (chore: Chore) => {
     if (chore.done_today) {
-      close()
-      if (undoDone.isPending) return
-      undoDone.mutate({ id: chore.id, completionId: chore.last_completion_id })
+      undoChore(chore)
     } else {
       repeat(chore)
     }
@@ -78,8 +93,15 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
 
   const toggleTodo = (todo: Todo) => {
     if (todo.done) {
+      if (inFlight.current || todoUndo.isPending) return
+      if (!window.confirm(t('chores.confirm_undo', { title: todo.title }))) return
+      inFlight.current = true
       close()
-      todoUndo.mutate(todo.id)
+      todoUndo.mutate(todo.id, {
+        onSettled: () => {
+          inFlight.current = false
+        },
+      })
     } else {
       todoDone.mutate(
         { id: todo.id, memberId: null },
@@ -110,9 +132,8 @@ export function useChoreDone(chores: Chore[], todos: Todo[] = []) {
             close()
           },
           undo: () => {
-            if (!asking?.pending)
-              undoDone.mutate({ id: chore.id, completionId: asking?.completionId })
-            close()
+            if (asking?.pending) close()
+            else undoChore(chore, asking?.completionId)
           },
         }
       : todo

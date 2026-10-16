@@ -1039,7 +1039,8 @@
     "future_money": "Money (coming later)",
     "awaiting": "{{count}} completions awaiting approval",
     "child_complete": "Done!",
-    "who_before_completion": "Who completed {{title}}?"
+    "who_before_completion": "Who completed {{title}}?",
+    "confirm_undo": "Really undo “{{title}}”?"
   },
   "todos": {
     "title": "To do",
