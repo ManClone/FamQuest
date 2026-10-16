@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
-import StarIcon from '~icons/fluent-emoji-flat/star'
 import { useMe } from '../api/auth'
 import { pointsFor } from '../api/today'
 import { Alert, Button, Section } from '../components/ui'
@@ -10,6 +9,7 @@ import { useFamilyToday } from './family/useFamilyToday'
 import { ChildPicker } from './parents/formParts'
 import { RedemptionHistory } from './parents/RewardsSection'
 import { RewardGrid } from './rewards/RewardGrid'
+import { RewardSummary } from './rewards/RewardSummary'
 
 /** Everyday parent board, independent of reward administration in Settings. */
 export function RewardsBoardPage() {
@@ -26,14 +26,8 @@ export function RewardsBoardPage() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
       <header className="flex flex-wrap items-center gap-3">
-        <GiftIcon className="size-12" aria-hidden="true" />
-        <h1 className="text-3xl font-extrabold text-orange-600">{t('rewards.title')}</h1>
-        {member && (
-          <p className="ml-auto flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-2xl font-extrabold text-slate-800 shadow-sm">
-            <StarIcon className="size-9" aria-hidden="true" />
-            {t('points.total_label', { count: total })}
-          </p>
-        )}
+        <GiftIcon className="size-9" aria-hidden="true" />
+        <h1 className="flex-1 text-2xl font-extrabold text-orange-600">{t('rewards.title')}</h1>
       </header>
       {family.isPending ? (
         <p role="status">{t('common.loading')}</p>
@@ -51,6 +45,9 @@ export function RewardsBoardPage() {
             childMembers={children}
             selected={member}
             onSelect={setSelected}
+            detail={(person) => (
+              <RewardSummary member={person} total={pointsFor(family.today!, person.id).total} />
+            )}
           />
           {member.id !== me?.member_id && (
             <p className="rounded-2xl bg-white p-3 text-slate-600">{t('rewards.own_only')}</p>

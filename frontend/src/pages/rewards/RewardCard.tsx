@@ -23,7 +23,7 @@ export function RewardCard({
   member,
   balance,
   onRedeem,
-  compact = false,
+  compact = true,
   canRedeem = true,
 }: RewardCardProps) {
   const { t } = useTranslation()
@@ -33,17 +33,17 @@ export function RewardCard({
 
   return (
     <li
-      className={`flex min-w-0 flex-col items-center ${compact ? 'gap-2 rounded-2xl p-3' : 'gap-3 rounded-3xl p-4'} border-4 bg-white text-center shadow-sm`}
+      className={`flex min-w-0 flex-col items-center ${compact ? 'gap-2 rounded-2xl border-2 p-3' : 'gap-3 rounded-3xl border-4 p-4'} bg-white text-center shadow-sm`}
       style={{ borderColor: affordable ? tokens.main : 'transparent' }}
     >
-      <TaskIcon icon={reward.icon} className={compact ? 'size-14' : 'size-24'} />
+      <TaskIcon icon={reward.icon} className={compact ? 'size-12' : 'size-24'} />
       <h3
-        className={`${compact ? 'text-lg leading-snug' : 'text-2xl'} font-extrabold break-words hyphens-auto text-slate-800`}
+        className={`${compact ? 'text-base leading-snug' : 'text-2xl'} font-extrabold break-words hyphens-auto text-slate-800`}
       >
         {reward.name}
       </h3>
       <p
-        className={`flex items-center gap-1 ${compact ? 'text-lg' : 'text-2xl'} font-extrabold text-slate-700`}
+        className={`flex items-center gap-1 ${compact ? 'text-base' : 'text-2xl'} font-extrabold text-slate-700`}
       >
         <StarIcon className={compact ? 'size-5' : 'size-8'} aria-hidden="true" />
         <span aria-hidden="true">{reward.cost}</span>

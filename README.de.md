@@ -7,6 +7,8 @@ gemeinsame Belohnungsansicht mit Einlösen nur für das eigene Profil und dauerh
 freigeschaltete Level. Siehe [Releaseumfang und Abnahme](docs/STABLE-1.md).
 Die Bankanbindung bleibt zurückgestellt.
 
+Die stabile Version enthält außerdem kompakte Belohnungskacheln und Punkte unter den Profilnamen, bei Kindern mit Lob-Herzen.
+
 > **Familienzweig / erster Live-Test:** Aktuelle Bedienung und Branch-Aufteilung stehen in [docs/LIVE-TEST.md](docs/LIVE-TEST.md). Aeltere Abschnitte und Screenshots beschreiben teils noch die urspruengliche Eltern-PIN und Navigation.
 
 [English](README.md) · **Deutsch**

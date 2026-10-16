@@ -143,11 +143,13 @@ export function ChildPicker({
   childMembers,
   selected,
   onSelect,
+  detail,
 }: {
   label: string
   childMembers: Member[]
   selected: Member
   onSelect: (memberId: number) => void
+  detail?: (member: Member) => ReactNode
 }) {
   return (
     <div role="group" aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 py-1">
@@ -158,7 +160,14 @@ export function ChildPicker({
           onClick={() => onSelect(child.id)}
         >
           <Avatar name={child.name} color={child.color} src={child.avatar_url} size="sm" />
-          {child.name}
+          {detail ? (
+            <span className="flex flex-col items-start gap-1">
+              <span>{child.name}</span>
+              {detail(child)}
+            </span>
+          ) : (
+            child.name
+          )}
         </FilterChip>
       ))}
     </div>
