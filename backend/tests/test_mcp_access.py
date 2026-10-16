@@ -51,6 +51,16 @@ def test_service_parent_uses_real_task_parameters_but_cannot_manage_accounts(
     spec = response.json()
     assert "/api/tasks/schedule" in spec["paths"]
     assert "/api/chores/weekly-confirmed" in spec["paths"]
+    assert "/api/maintenance/consistency" in spec["paths"]
+    for path in (
+        "/api/members/{member_id}/points/{transaction_id}/reverse",
+        "/api/members/{member_id}/penalties/{transaction_id}/reverse",
+        "/api/members/{member_id}/praise/{praise_id}/revoke",
+    ):
+        operation = spec["paths"][path]["post"]
+        assert any(
+            p["name"] == "X-MCP-Parent-Confirmed" and p["required"] for p in operation["parameters"]
+        )
     assert "/api/auth/accounts" not in spec["paths"]
     assert client.post("/api/auth/accounts", json={}, headers=headers).status_code == 403
     assert client.put("/api/profile/password", json={}, headers=headers).status_code == 403

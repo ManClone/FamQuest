@@ -24,6 +24,7 @@ it('only allows the linked adult to redeem while keeping the other adult board v
     'GET /api/members': Response.json([
       makeMember({ id: 1, name: 'Flo', role: 'parent' }),
       makeMember({ id: 2, name: 'Viola', role: 'parent', color: 'purple' }),
+      makeMember({ id: 3, name: 'Tim', role: 'child', color: 'green' }),
     ]),
     'GET /api/today': Response.json(
       makeToday({
@@ -36,6 +37,7 @@ it('only allows the linked adult to redeem while keeping the other adult board v
     'GET /api/rewards': Response.json([
       makeReward({ id: 1, member_id: 1, name: 'Coffee', cost: 10 }),
       makeReward({ id: 2, member_id: 2, name: 'Cinema', cost: 10 }),
+      makeReward({ id: 3, member_id: 3, name: 'Ice cream', cost: 10 }),
     ]),
     'GET /api/redemptions': Response.json({ redemptions: [], has_more: false }),
   })
@@ -49,6 +51,9 @@ it('only allows the linked adult to redeem while keeping the other adult board v
     ),
   ).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Redeem Cinema' }))
+  expect(calls.some((call) => call.key.startsWith('POST'))).toBe(false)
+  await user.click(screen.getByRole('button', { name: /Tim/ }))
+  expect(await screen.findByRole('button', { name: 'Redeem Ice cream' })).toBeDisabled()
   expect(calls.some((call) => call.key.startsWith('POST'))).toBe(false)
   await user.click(screen.getByRole('button', { name: /Flo/ }))
   expect(await screen.findByRole('button', { name: 'Redeem Coffee' })).toBeEnabled()

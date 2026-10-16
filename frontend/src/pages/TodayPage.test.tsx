@@ -3,7 +3,15 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { DEFAULT_LAYOUT } from '../api/home'
 import i18n from '../i18n'
-import { makeChorePlan, makeMe, makeMember, makeToday, mockApi, renderApp, setupDone } from '../test/utils'
+import {
+  makeChorePlan,
+  makeMe,
+  makeMember,
+  makeToday,
+  mockApi,
+  renderApp,
+  setupDone,
+} from '../test/utils'
 
 beforeEach(async () => {
   await i18n.changeLanguage('de')
@@ -36,7 +44,9 @@ describe('Startseite Heute', () => {
     setup(DEFAULT_LAYOUT.tiles.map((tile) => ({ ...tile, visible: false })))
     expect(await screen.findByRole('heading', { level: 1 })).toBeVisible()
     await waitFor(() => {
-      expect(screen.queryAllByRole('link', { name: /Aufgaben öffnen|Haushalt öffnen/ })).toHaveLength(0)
+      expect(
+        screen.queryAllByRole('link', { name: /Aufgaben öffnen|Haushalt öffnen/ }),
+      ).toHaveLength(0)
     })
   })
 })

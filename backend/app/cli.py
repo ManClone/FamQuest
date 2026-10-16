@@ -8,6 +8,7 @@ Für den Fall, dass niemand mehr ins Konto kommt (es gibt bewusst keinen Versand
 
 import argparse
 import getpass
+import json
 import sys
 
 from sqlalchemy import select
@@ -65,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="FamQuest-Verwaltung")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("users", help="Konten auflisten")
+    commands.add_parser("consistency-report", help="Datenkonsistenz nur lesend prüfen")
     reset = commands.add_parser("reset-password", help="Passwort eines Kontos neu setzen")
     reset.add_argument("email")
     reset.add_argument(
@@ -75,6 +77,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "users":
         return list_users()
+    if args.command == "consistency-report":
+        from sqlalchemy import text
+
+        from app.maintenance import consistency_report
+
+        with SessionLocal() as db:
+            db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"))
+            print(json.dumps(consistency_report(db), default=str, ensure_ascii=False, indent=2))
+        return 0
     return reset_password(args.email, args.password_stdin)
 
 

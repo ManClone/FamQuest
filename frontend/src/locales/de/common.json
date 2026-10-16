@@ -368,7 +368,10 @@
     "kind_reward_cancelled": "Belohnung storniert",
     "kind_chore_completed": "Hausarbeit erledigt",
     "kind_chore_undone": "Hausarbeit zurückgenommen",
-    "kind_penalty_reversed": "Strafpunkte storniert"
+    "kind_penalty_reversed": "Strafpunkte storniert",
+    "kind_manual_reversed": "Manuelle Buchung storniert",
+    "reversed": "Storniert · Gegenbuchung #{{id}}",
+    "compensates": "Ausgleich für Buchung #{{id}}"
   },
   "errors": {
     "common": {
@@ -445,7 +448,11 @@
     },
     "points": {
       "insufficient": "So viele Punkte sind nicht vorhanden.",
-      "not_penalty": "Diese Buchung ist kein Strafpunkte-Abzug."
+      "not_penalty": "Diese Buchung ist kein Strafpunkte-Abzug.",
+      "not_manual": "Nur manuelle Buchungen können hier storniert werden.",
+      "invalid_compensation": "Diese Buchung ist kein passender, unverwendeter Ausgleich.",
+      "compensation_in_use": "Diese Buchung ist bereits als Ausgleich verknüpft.",
+      "compensation_review_required": "Bitte zuerst spätere Gutschriften prüfen und einen vorhandenen Ausgleich verknüpfen."
     },
     "reward": {
       "not_found": "Diese Belohnung gibt es nicht mehr",
@@ -593,7 +600,8 @@
     "audience_child": "Kinder",
     "need_parents": "Legt zuerst ein Elternteil als Familienmitglied an.",
     "choose_parent": "Elternteil wählen",
-    "own_only": "Einlösen kann hier nur die Person selbst. Fortschritt und Verlauf bleiben sichtbar."
+    "own_only": "Einlösen kann hier nur die Person selbst. Fortschritt und Verlauf bleiben sichtbar.",
+    "choose_member": "Familienmitglied wählen"
   },
   "care": {
     "title": "Wer hat’s gemacht?",
@@ -1126,13 +1134,16 @@
     "level_progress": "Fortschritt zum nächsten Level",
     "earned_one": "{{count}} Erfahrungs-XP gesammelt",
     "earned_other": "{{count}} Erfahrungs-XP gesammelt",
-    "level_hint": "{{count}} XP je Level. Einlösen kostet keine Erfahrung.",
+    "level_hint": "Sterne ausgeben und Kritik ändern deine Level-XP nicht.",
     "reward_history": "Deine eingelösten Belohnungen",
     "today_progress": "Dein Tag",
-    "back_tasks": "Zurück zu meinen Aufgaben"
+    "back_tasks": "Zurück zu meinen Aufgaben",
+    "praise_remaining": "Noch {{count}} Lob bis Level {{level}}",
+    "praise_progress": "Lob bis zum nächsten Level",
+    "xp_ready": "XP geschafft – das fehlende Lob wird noch benötigt."
   },
   "praise": {
-    "section": "Lob & Züchtigung",
+    "section": "Lob & Kritik",
     "count": "{{count}} Lobe",
     "give": "Lob vergeben",
     "deduct": "Strafpunkte",
@@ -1167,6 +1178,9 @@
     "empty": "Noch keine Strafpunkte abgezogen.",
     "reverse": "Abzug zurücknehmen",
     "reversed": "Storniert · Sterne erstattet",
-    "reason": "Grund der Rücknahme"
+    "reason": "Grund der Rücknahme",
+    "compensation_review": "Spätere Gutschriften könnten diesen Abzug bereits ausgeglichen haben. Vor einer Erstattung prüfen.",
+    "compensation_unrelated": "Ich habe geprüft: Diese Gutschriften gehören nicht zu diesem Abzug.",
+    "existing_compensation": "Bestehende Ausgleichsbuchung verknüpfen (optional)"
   }
 }

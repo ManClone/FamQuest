@@ -91,7 +91,7 @@ def test_unlinked_child_is_never_shown_other_children(client, parent, lena, now)
 def test_child_progress_and_redemption_history_are_personal_and_purchases_keep_levels(
     client, parent, now
 ):
-    from tests.test_rewards import add_reward, redeem
+    from tests.test_rewards import add_reward, redeem, redeem_as_owner
     from tests.test_today import complete
 
     one, credentials = add_person(client, parent, "Lena", "purple")
@@ -101,7 +101,7 @@ def test_child_progress_and_redemption_history_are_personal_and_purchases_keep_l
         assert complete(client, parent, task, member).status_code == 204
     own_reward = add_reward(client, parent, one, cost=10)
     other_reward = add_reward(client, parent, two, cost=10)
-    assert redeem(client, parent, other_reward).status_code == 201
+    assert redeem_as_owner(client, parent, other_reward).status_code == 201
     child = TestClient(client.app)
     try:
         me = child.post("/api/auth/login", json=credentials).json()
@@ -115,20 +115,24 @@ def test_child_progress_and_redemption_history_are_personal_and_purchases_keep_l
             "latest_praise_reason": None,
             "earned_xp": 100,
             "level": 2,
-            "level_progress": 0,
-            "level_size": 100,
-            "remaining_xp": 100,
+            "level_progress": 50,
+            "level_size": 60,
+            "remaining_xp": 10,
+            "next_level_xp": 110,
+            "required_praise": 0,
+            "remaining_praise": 0,
+            "praise_progress": 0,
         }
         assert child.get(f"/api/members/{one}/progress").json() == expected
-        assert child.get("/api/redemptions").json()["redemptions"] == []
-        assert child.get(f"/api/redemptions?member_id={two}").status_code == 403
+        assert len(child.get("/api/redemptions").json()["redemptions"]) == 1
+        assert child.get(f"/api/redemptions?member_id={two}").status_code == 200
         for _ in range(2):
             assert redeem(child, me, own_reward).status_code == 201
-        first = child.get("/api/redemptions?limit=1").json()
+        first = child.get(f"/api/redemptions?member_id={one}&limit=1").json()
         assert first["has_more"] is True
         assert first["redemptions"][0]["member_id"] == one
         cursor = first["redemptions"][0]["id"]
-        second = child.get(f"/api/redemptions?limit=1&before={cursor}").json()
+        second = child.get(f"/api/redemptions?member_id={one}&limit=1&before={cursor}").json()
         assert second["has_more"] is False
         assert second["redemptions"][0]["member_id"] == one
         assert second["redemptions"][0]["id"] < cursor

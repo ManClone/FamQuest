@@ -17,7 +17,7 @@ export function RewardsBoardPage() {
   const me = useMe().data
   const family = useFamilyToday()
   const [selected, setSelected] = useState<number | null>(null)
-  const children = (family.members ?? []).filter((person) => person.role === 'parent')
+  const children = family.members ?? []
   const member =
     children.find((child) => child.id === selected) ??
     children.find((person) => person.id === me?.member_id) ??
@@ -47,7 +47,7 @@ export function RewardsBoardPage() {
       ) : (
         <>
           <ChildPicker
-            label={t('rewards.choose_parent')}
+            label={t('rewards.choose_member')}
             childMembers={children}
             selected={member}
             onSelect={setSelected}

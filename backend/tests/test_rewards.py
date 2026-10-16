@@ -144,14 +144,14 @@ def test_managing_rewards_requires_parent_role(client, parent, lena):
     assert client.get("/api/redemptions").status_code == 403
     # An unlinked child cannot see or redeem another member's rewards.
     assert client.get("/api/rewards").json() == []
-    assert redeem(client, child, reward).json() == {"code": "profile.own_only"}
+    assert redeem(client, child, reward).json() == {"code": "reward.own_only"}
 
 
 def test_redeem_books_points_and_stores_redemption(client, parent, lena, now):
     book_manually(client, parent, lena, 12)
     reward = add_reward(client, parent, lena, name="Ein Eis", cost=5)
 
-    response = redeem(client, parent, reward)
+    response = redeem_as_owner(client, parent, reward)
 
     assert response.status_code == 201, response.text
     redemption = response.json()
@@ -171,7 +171,7 @@ def test_redeem_with_too_few_points(client, parent, lena):
     book_manually(client, parent, lena, 4)
     reward = add_reward(client, parent, lena, cost=5)
 
-    response = redeem(client, parent, reward)
+    response = redeem_as_owner(client, parent, reward)
 
     assert response.status_code == 409
     assert response.json() == {"code": "reward.insufficient_points"}
@@ -183,9 +183,9 @@ def test_balance_never_goes_negative(client, parent, lena):
     book_manually(client, parent, lena, 7)
     reward = add_reward(client, parent, lena, cost=5)
 
-    assert redeem(client, parent, reward).status_code == 201
+    assert redeem_as_owner(client, parent, reward).status_code == 201
     # Ein zweiter Tipp scheitert, statt den Stand ins Minus zu bringen.
-    assert redeem(client, parent, reward).status_code == 409
+    assert redeem_as_owner(client, parent, reward).status_code == 409
     assert history(client, lena)["total"] == 2
 
 
@@ -193,14 +193,14 @@ def test_inactive_and_unknown_rewards_cannot_be_redeemed(client, parent, lena):
     book_manually(client, parent, lena, 50)
     reward = add_reward(client, parent, lena, active=False)
 
-    assert redeem(client, parent, reward).json() == {"code": "reward.inactive"}
-    assert redeem(client, parent, 999).json() == {"code": "reward.not_found"}
+    assert redeem_as_owner(client, parent, reward).json() == {"code": "reward.inactive"}
+    assert redeem_as_owner(client, parent, 999).json() == {"code": "reward.not_found"}
 
 
 def test_history_survives_changes_to_reward(client, parent, lena):
     book_manually(client, parent, lena, 50)
     reward = add_reward(client, parent, lena, name="Kino", cost=40)
-    redeem(client, parent, reward)
+    redeem_as_owner(client, parent, reward)
 
     client.delete(f"/api/rewards/{reward}", headers=csrf(parent))
 
@@ -218,8 +218,8 @@ def test_redemptions_filtered_and_paged(client, parent, lena):
     book_manually(client, parent, lena, 100)
     book_manually(client, parent, tom, 100)
     for cost in (1, 2, 3):
-        redeem(client, parent, add_reward(client, parent, lena, cost=cost))
-    redeem(client, parent, add_reward(client, parent, tom, cost=4))
+        redeem_as_owner(client, parent, add_reward(client, parent, lena, cost=cost))
+    redeem_as_owner(client, parent, add_reward(client, parent, tom, cost=4))
 
     everyone = client.get("/api/redemptions").json()["redemptions"]
     assert [r["cost"] for r in everyone] == [4, 3, 2, 1]
@@ -243,7 +243,7 @@ def test_cancel_redemption_refunds_original_cost_once_with_audit(client, parent,
 
     book_manually(client, parent, lena, 12)
     reward = add_reward(client, parent, lena, cost=5)
-    redemption = redeem(client, parent, reward).json()
+    redemption = redeem_as_owner(client, parent, reward).json()
     # Historical purchases remain refundable after changing or deleting the reward.
     client.put(f"/api/rewards/{reward}", json=reward_data(lena, cost=50), headers=csrf(parent))
     client.delete(f"/api/rewards/{reward}", headers=csrf(parent))
@@ -279,7 +279,7 @@ def test_simultaneous_cancellations_refund_only_once(client, parent, lena):
 
     book_manually(client, parent, lena, 10)
     reward = add_reward(client, parent, lena, cost=5)
-    redemption = redeem(client, parent, reward).json()
+    redemption = redeem_as_owner(client, parent, reward).json()
 
     def cancel(_):
         return client.post(
@@ -343,3 +343,32 @@ def test_adults_can_edit_each_others_rewards_but_only_spend_their_own_points(cli
         == 200
     )
     assert history(client, viola)["total"] == 5
+
+
+def redeem_as_owner(client, parent, reward_id):
+    """Legacy redemption scenarios now authenticate as the actual reward owner."""
+    from fastapi.testclient import TestClient
+
+    from app.db import SessionLocal
+    from app.models import FamilyMember, Reward, User
+
+    with SessionLocal() as db:
+        reward = db.get(Reward, reward_id)
+        if reward is None:
+            return redeem(client, parent, reward_id)
+        member = db.get(FamilyMember, reward.member_id)
+        owner = db.get(User, member.user_id) if member.user_id else None
+        email = owner.email if owner else f"reward-owner-{member.id}@example.org"
+        member_id = member.id
+    if owner is None:
+        member_data = next(m for m in client.get("/api/members").json() if m["id"] == member_id)
+        payload = {key: member_data[key] for key in ("name", "role", "color", "event_symbols")}
+        payload["login"] = {"email": email, "password": "test-password-123"}
+        response = client.put(f"/api/members/{member_id}", json=payload, headers=csrf(parent))
+        assert response.status_code == 200, response.text
+    with TestClient(client.app) as child:
+        response = child.post(
+            "/api/auth/login", json={"email": email, "password": "test-password-123"}
+        )
+        assert response.status_code == 200, response.text
+        return redeem(child, response.json(), reward_id)

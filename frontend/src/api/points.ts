@@ -14,6 +14,7 @@ export type PointKind =
   | 'chore_completed'
   | 'chore_undone'
   | 'penalty_reversed'
+  | 'manual_reversed'
 
 export interface PointTransaction {
   id: number
@@ -25,6 +26,10 @@ export interface PointTransaction {
   icon: string | null
   task_date: string | null
   created_at: string
+  reversed_at?: string | null
+  reversal_transaction_id?: number | null
+  reversal_reason?: string | null
+  compensates_transaction_id?: number | null
 }
 
 export interface PointHistory {
@@ -81,6 +86,10 @@ export interface MemberProgress {
   level_progress: number
   level_size: number
   remaining_xp: number
+  next_level_xp?: number
+  required_praise?: number
+  remaining_praise?: number
+  praise_progress?: number
 }
 export function useMemberProgress(memberId: number) {
   return useQuery({

@@ -51,5 +51,52 @@ it('requires a reversal reason and keeps the original deduction visible', async 
     calls.find((call) => call.key === 'POST /api/members/1/penalties/2/reverse')?.body,
   ).toEqual({
     reason: 'Test entry',
+    compensation_reviewed: false,
+    existing_compensation_id: null,
   })
+})
+
+it('requires reviewing possible compensation and links the selected credit', async () => {
+  await i18n.changeLanguage('en')
+  const user = userEvent.setup()
+  const calls = mockApi({
+    'GET /api/members/1/penalties': Response.json({
+      penalties: [
+        {
+          id: 47,
+          amount: 1,
+          reason: 'Test deduction',
+          created_at: '2026-10-16T12:00:00Z',
+          reversed_at: null,
+          reversal_reason: null,
+          compensation_candidate_ids: [48],
+        },
+      ],
+      has_more: false,
+    }),
+    'POST /api/members/1/penalties/47/reverse': Response.json({
+      transaction_id: 47,
+      refund_transaction_id: 48,
+    }),
+  })
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <PenaltyHistory memberId={1} />
+    </QueryClientProvider>,
+  )
+  await user.click(screen.getByText('Star deduction history'))
+  await user.click(await screen.findByRole('button', { name: 'Reverse deduction' }))
+  await user.type(screen.getByLabelText('Reason for reversal'), 'Already compensated')
+  expect(screen.getByRole('button', { name: 'Reverse deduction' })).toBeDisabled()
+  await user.selectOptions(screen.getByLabelText('Link an existing compensation (optional)'), '48')
+  await user.click(screen.getByRole('button', { name: 'Reverse deduction' }))
+  await waitFor(() =>
+    expect(calls.find((call) => call.key.startsWith('POST'))?.body).toEqual({
+      reason: 'Already compensated',
+      compensation_reviewed: false,
+      existing_compensation_id: 48,
+    }),
+  )
 })

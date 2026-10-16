@@ -80,6 +80,19 @@ def list_members(auth: CurrentSession, db: DbSession) -> list[MemberOut]:
     return [member_out(member) for member in members if own is None or member.id == own]
 
 
+@router.get("/rewards/members", tags=["rewards"])
+def reward_members(auth: CurrentSession, db: DbSession) -> list[MemberOut]:
+    """Minimal shared reward directory; does not expose personal tasks or point histories."""
+    if child_member_id(db, auth) == 0:
+        return []
+    return [
+        member_out(member)
+        for member in db.scalars(
+            select(FamilyMember).order_by(FamilyMember.position, FamilyMember.id)
+        )
+    ]
+
+
 @router.post("/members", status_code=status.HTTP_201_CREATED)
 def create_member(
     body: MemberIn, auth: ParentSession, db: DbSession, request: Request

@@ -40,7 +40,7 @@ function routes(extra: Record<string, Response | ((body: unknown) => Response)> 
   })
   return {
     'GET /api/setup/status': setupDone,
-    'GET /api/auth/me': Response.json(makeMe()),
+    'GET /api/auth/me': Response.json(makeMe({ member_id: 1 })),
     'GET /api/members': Response.json([lena, tom, mama]),
     'GET /api/today': () => Response.json(today),
     'GET /api/redemptions': Response.json({ redemptions: [], has_more: false }),
@@ -88,7 +88,7 @@ describe('Belohnungen am Display', () => {
     // Nur Kinder, Erwachsene bekommen keine Belohnungen.
     expect(await screen.findByRole('link', { name: 'Belohnungen von Lena' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Belohnungen von Tom' })).toBeVisible()
-    expect(screen.queryByRole('link', { name: 'Belohnungen von Mama' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Belohnungen von Mama' })).toBeVisible()
     expect(within(nav).getByRole('link', { name: 'Belohnungen' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -179,10 +179,11 @@ describe('Belohnungen am Display', () => {
     expect(screen.queryByRole('heading', { name: 'Mama', level: 1 })).toBeNull()
   })
 
-  it('leitet bei Erwachsenen zur Auswahl der Kinder', async () => {
+  it('zeigt auch die Belohnungen eines Erwachsenen im Lesemodus', async () => {
     mockApi(routes())
     renderApp('/rewards/3')
 
-    expect(await screen.findByRole('link', { name: 'Belohnungen von Lena' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Belohnungen von Mama' })).toBeVisible()
+    expect(screen.getByRole('button', { name: /Lena/ })).toBeVisible()
   })
 })

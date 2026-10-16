@@ -33,6 +33,7 @@ function setup(path = '/tasks') {
       }),
     ),
     'GET /api/members': Response.json([member]),
+    'GET /api/rewards/members': Response.json([member]),
     'GET /api/chores/mine': () =>
       Response.json([
         {

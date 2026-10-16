@@ -23,4 +23,7 @@ def grant_praise(db: Session, member_id: int, user_id: int, reason: str, source_
     )
     db.add(entry)
     db.flush()
+    from app.levels import advance
+
+    advance(db, member_id)
     return entry

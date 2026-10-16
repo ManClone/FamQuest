@@ -28,6 +28,7 @@ POINT_KINDS = (
     "chore_completed",
     "chore_undone",
     "penalty_reversed",
+    "manual_reversed",
 )
 MANUAL_MAX_POINTS = 1000
 REWARD_MAX_COST = 1000
@@ -355,6 +356,10 @@ class PointTransactionOut(BaseModel):
     icon: str | None
     task_date: dt.date | None
     created_at: dt.datetime
+    reversed_at: dt.datetime | None = None
+    reversal_transaction_id: int | None = None
+    reversal_reason: str | None = None
+    compensates_transaction_id: int | None = None
 
 
 class PointHistoryOut(BaseModel):

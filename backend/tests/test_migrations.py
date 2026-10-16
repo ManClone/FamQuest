@@ -64,6 +64,24 @@ def test_migrations_have_single_head():
     assert len(heads) == 1, f"Expected one migration head, got: {heads}"
 
 
+def test_level_migration_preserves_highest_historical_legacy_level():
+    config = alembic_config()
+    command.downgrade(config, "h20261016penalty")
+    with SessionLocal() as db:
+        for sql in [
+            "INSERT INTO family_members (id,name,role,color) VALUES (1,'Child','child','blue')",
+            "INSERT INTO point_transactions (member_id,amount,kind,task_date) VALUES "
+            "(1,1100,'task_completed','2026-10-16'),"
+            "(1,-1100,'task_undone','2026-10-16')",
+        ]:
+            db.execute(sa.text(sql))
+        db.commit()
+    command.upgrade(config, "head")
+    with SessionLocal() as db:
+        assert db.scalar(sa.text("SELECT highest_level FROM family_members WHERE id=1")) == 12
+        assert db.scalar(sa.text("SELECT sum(amount) FROM point_transactions")) == 0
+
+
 def test_household_upgrade_preserves_completions_and_xp():
     config = alembic_config()
     command.downgrade(config, "d20261015repeat")

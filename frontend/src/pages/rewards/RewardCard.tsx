@@ -49,7 +49,7 @@ export function RewardCard({
         <span aria-hidden="true">{reward.cost}</span>
         <span className="sr-only">{t('tasks.points_count', { count: reward.cost })}</span>
       </p>
-      {affordable ? (
+      {affordable || !canRedeem ? (
         <button
           type="button"
           onClick={onRedeem}
