@@ -27,7 +27,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     if op.get_bind().scalar(
         sa.text(
-            "SELECT EXISTS (SELECT 1 FROM chore_completions GROUP BY chore_id, date HAVING count(*) > 1)"
+            "SELECT EXISTS (SELECT 1 FROM chore_completions "
+            "GROUP BY chore_id, date HAVING count(*) > 1)"
         )
     ):
         raise RuntimeError(

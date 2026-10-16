@@ -363,7 +363,9 @@
     "kind_task_undone": "Task undone",
     "kind_manual": "Booked by parents",
     "kind_reward_redeemed": "Reward redeemed",
-    "kind_reward_cancelled": "Reward cancelled"
+    "kind_reward_cancelled": "Reward cancelled",
+    "kind_chore_completed": "Household task completed",
+    "kind_chore_undone": "Household task undone"
   },
   "errors": {
     "common": {
@@ -515,7 +517,8 @@
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
       "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family."
-    }
+    },
+    "chore.request_conflict": "This execution was already saved elsewhere. Please reload."
   },
   "rewards": {
     "title": "Rewards",

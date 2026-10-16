@@ -398,7 +398,10 @@ describe('Familienansicht', () => {
     await user.click(who.getByRole('button', { name: 'Mama' }))
 
     const writes = calls.filter((call) => call.key === 'PUT /api/chores/1/done')
-    expect(writes.map((call) => call.body)).toEqual([{ member_id: null }, { member_id: 3 }])
+    expect(writes.map((call) => call.body)).toEqual([
+      { member_id: null, request_key: expect.stringMatching(/^[a-f0-9]{32}$/) },
+      { member_id: 3, request_key: expect.any(String) },
+    ])
     const finished = within(await household.findByRole('region', { name: 'Heute erledigt' }))
     expect(finished.getByRole('button', { name: /Bad putzen/ })).toHaveAttribute(
       'aria-pressed',

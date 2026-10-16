@@ -6,7 +6,13 @@ import { TODAY_KEY } from './today'
 
 // Muss zu POINT_KINDS im Backend passen (backend/app/schemas.py).
 export type PointKind =
-  'task_completed' | 'task_undone' | 'manual' | 'reward_redeemed' | 'reward_cancelled'
+  | 'task_completed'
+  | 'task_undone'
+  | 'manual'
+  | 'reward_redeemed'
+  | 'reward_cancelled'
+  | 'chore_completed'
+  | 'chore_undone'
 
 export interface PointTransaction {
   id: number

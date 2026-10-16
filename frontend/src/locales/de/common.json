@@ -363,7 +363,9 @@
     "kind_task_undone": "Erledigung zurückgenommen",
     "kind_manual": "Von Eltern gebucht",
     "kind_reward_redeemed": "Belohnung eingelöst",
-    "kind_reward_cancelled": "Belohnung storniert"
+    "kind_reward_cancelled": "Belohnung storniert",
+    "kind_chore_completed": "Hausarbeit erledigt",
+    "kind_chore_undone": "Hausarbeit zurückgenommen"
   },
   "errors": {
     "common": {
@@ -515,7 +517,8 @@
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
       "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen."
-    }
+    },
+    "chore.request_conflict": "Diese Ausführung wurde bereits anderweitig gespeichert. Bitte neu laden."
   },
   "rewards": {
     "title": "Belohnungen",

@@ -214,3 +214,19 @@ it('storniert mit Vermerk und zeigt die Rueckbuchung im Verlauf', async () => {
   expect(screen.queryByRole('button', { name: 'Stornieren' })).toBeNull()
   expect(request).toHaveBeenCalledTimes(1)
 })
+
+it('trennt Eltern- und Kinderbelohnungen einschliesslich der Vorschlaege', async () => {
+  const user = userEvent.setup()
+  const parentReward = makeReward({ id: 9, member_id: mama.id, name: 'Eine Pause', cost: 20 })
+  api({ 'GET /api/rewards': Response.json([iceCream, zoo, parentReward]) })
+  renderApp('/parents/rewards')
+  await user.click(await screen.findByRole('button', { name: 'Eltern', pressed: false }))
+  expect(screen.getByRole('button', { name: 'Mama' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Eine Pause bearbeiten' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Eis essen gehen bearbeiten' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Aus Vorschl\u00e4gen w\u00e4hlen' }))
+  expect(await screen.findByRole('checkbox', { name: /Kaffeepause in Ruhe/ })).toBeVisible()
+  expect(
+    screen.queryByRole('checkbox', { name: /Besonderer Fr\u00fchst\u00fcckswunsch/ }),
+  ).toBeNull()
+})

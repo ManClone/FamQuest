@@ -19,7 +19,15 @@ TIMES_OF_DAY = ("morning", "midday", "afternoon", "evening")
 TASK_MAX_POINTS = 1000
 MAX_INTERVAL_DAYS = 365
 # Arten von Punktebuchungen.
-POINT_KINDS = ("task_completed", "task_undone", "manual", "reward_redeemed", "reward_cancelled")
+POINT_KINDS = (
+    "task_completed",
+    "task_undone",
+    "manual",
+    "reward_redeemed",
+    "reward_cancelled",
+    "chore_completed",
+    "chore_undone",
+)
 MANUAL_MAX_POINTS = 1000
 REWARD_MAX_COST = 1000
 # Status von Einlösungen; ein Freigabeprozess (requested, approved, rejected) kann folgen.

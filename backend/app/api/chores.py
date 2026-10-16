@@ -179,7 +179,7 @@ def _validate_assignment(db: DbSession, body: ChoreIn) -> None:
 
 
 def _get_chore(db: DbSession, chore_id: int) -> Chore:
-    chore = db.get(Chore, chore_id)
+    chore = db.scalar(select(Chore).where(Chore.id == chore_id).with_for_update())
     if chore is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "chore.not_found")
     return chore
