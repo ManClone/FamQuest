@@ -50,6 +50,9 @@ def test_approval_can_grant_one_heart_in_same_transaction(client, parent, lena, 
     assert progress["praise_count"] == 1
     assert progress["earned_xp"] == 5
     assert total(lena) == 3
+    assert progress["latest_deduction_amount"] == 2
+    assert progress["latest_deduction_reason"] == "Correction"
+    assert progress["latest_deduction_id"] > 0
 
 
 def test_children_cannot_praise_or_read_other_child_progress(client, parent, now):
@@ -112,3 +115,44 @@ def test_household_approval_with_praise_is_atomic_and_not_repeated(client, paren
     history = client.get(f"/api/members/{child_id}/praise").json()["praises"]
     assert len(history) == 1
     assert history[0]["reason"] == chore["title"]
+
+
+def test_parent_can_revoke_test_hearts_once_with_audit_without_affecting_stars(client, parent, now):
+    child_id, credentials = add_person(client, parent, "Tim", "blue")
+    ids = []
+    for key, reason in [("a", "Katzenklo reinigen"), ("b", "Test"), ("c", "Test")]:
+        result = client.post(
+            f"/api/members/{child_id}/praise",
+            json={"reason": reason, "request_key": key * 32},
+            headers=csrf(parent),
+        )
+        assert result.status_code == 201
+        ids.append(result.json()["id"])
+    path = f"/api/members/{child_id}/praise/{ids[1]}/revoke"
+    with TestClient(client.app) as child:
+        me = child.post("/api/auth/login", json=credentials).json()
+        assert child.post(path, json={"reason": "Self"}, headers=csrf(me)).status_code == 403
+    for praise_id in ids[1:]:
+        target = f"/api/members/{child_id}/praise/{praise_id}/revoke"
+        first = client.post(target, json={"reason": "Testeintrag"}, headers=csrf(parent))
+        assert first.status_code == 200
+        assert (
+            client.post(target, json={"reason": "Changed retry"}, headers=csrf(parent)).json()
+            == first.json()
+        )
+    progress = client.get(f"/api/members/{child_id}/progress").json()
+    assert progress["praise_count"] == 1
+    assert progress["latest_praise_id"] == ids[0]
+    assert progress["earned_xp"] == 0
+    assert total(child_id) == 0
+    history = client.get(f"/api/members/{child_id}/praise").json()["praises"]
+    assert len(history) == 3
+    assert sum(item["revoked_at"] is not None for item in history) == 2
+    assert {item["revocation_reason"] for item in history if item["revoked_at"]} == {"Testeintrag"}
+    # Replaying the original creation cannot restore a revoked heart.
+    client.post(
+        f"/api/members/{child_id}/praise",
+        json={"reason": "Test", "request_key": "b" * 32},
+        headers=csrf(parent),
+    )
+    assert client.get(f"/api/members/{child_id}/progress").json()["praise_count"] == 1

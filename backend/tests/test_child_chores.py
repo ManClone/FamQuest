@@ -1,3 +1,5 @@
+import datetime as dt
+
 from fastapi.testclient import TestClient
 
 from tests.conftest import csrf
@@ -111,3 +113,65 @@ def test_weekly_assignment_respects_child_eligibility():
     ]
     result = suggest_week(chores, [10, 20])
     assert result == {1: 10, 2: 20}
+
+
+def test_confirmed_household_executions_can_be_corrected_individually(client, parent, now):
+    from app.db import SessionLocal
+    from app.models import Chore
+
+    child_id, credentials = add_person(client, parent, "Tim", "blue")
+    room = add_room(client, parent)
+    chore = add_chore(
+        client,
+        parent,
+        room["id"],
+        child_enabled=True,
+        child_member_ids=[child_id],
+        child_xp=4,
+        repeatable=True,
+    )
+    with TestClient(client.app) as child:
+        me = child.post("/api/auth/login", json=credentials).json()
+        for n in range(4):
+            assert (
+                child.put(
+                    f"/api/chores/mine/{chore['id']}/done",
+                    json={"request_key": str(n) * 32},
+                    headers=csrf(me),
+                ).status_code
+                == 200
+            )
+        approvals = client.get("/api/approvals").json()
+        for item in approvals:
+            assert (
+                client.post(f"/api/chore-approvals/{item['id']}", headers=csrf(parent)).status_code
+                == 204
+            )
+        assert total(child_id) == 16
+        history = client.get("/api/chore-approvals/confirmed").json()
+        assert len(history["items"]) == 4
+        target = history["items"][1]
+        assert child.get("/api/chore-approvals/confirmed").status_code == 403
+        path = f"/api/chore-approvals/{target['id']}/confirmed"
+        assert child.delete(path, headers=csrf(me)).status_code == 403
+        # Reverse the booked amount, even after changing the chore's reward and date.
+        with SessionLocal() as db:
+            db.get(Chore, chore["id"]).child_xp = 99
+            db.commit()
+        now["value"] = dt.datetime(2026, 10, 5, 12, tzinfo=dt.UTC)
+        assert client.delete(path, headers=csrf(parent)).status_code == 204
+        assert total(child_id) == 12
+        assert client.delete(path, headers=csrf(parent)).status_code == 204
+        assert total(child_id) == 12
+        remaining = client.get("/api/chore-approvals/confirmed").json()["items"]
+        assert len(remaining) == 3
+        assert target["id"] not in [item["id"] for item in remaining]
+        assert {item["points"] for item in remaining} == {4}
+        for item in remaining:
+            assert (
+                client.delete(
+                    f"/api/chore-approvals/{item['id']}/confirmed", headers=csrf(parent)
+                ).status_code
+                == 204
+            )
+        assert total(child_id) == 0

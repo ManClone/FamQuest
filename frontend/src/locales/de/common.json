@@ -11,7 +11,8 @@
     "logout": "Abmelden",
     "next": "Weiter",
     "retry": "Nochmal versuchen",
-    "save": "Speichern"
+    "save": "Speichern",
+    "close": "Schließen"
   },
   "languages": {
     "de": "Deutsch",
@@ -1126,7 +1127,7 @@
     "back_tasks": "Zurück zu meinen Aufgaben"
   },
   "praise": {
-    "section": "Lob & Sterne",
+    "section": "Lob & Züchtigung",
     "count": "{{count}} Lobe",
     "give": "Lob vergeben",
     "deduct": "Strafpunkte",
@@ -1137,6 +1138,23 @@
     "approve": "Bestätigen + Lob",
     "approve_label": "{{title}} von {{name}} bestätigen und loben",
     "count_one": "{{count}} Lob",
-    "count_other": "{{count}} Lobe"
+    "count_other": "{{count}} Lobe",
+    "deducted": "Sterne abgezogen",
+    "history": "Lob-Verlauf",
+    "revoke": "Lob zurücknehmen",
+    "revoked": "Zurückgenommen",
+    "revoke_reason": "Grund der Korrektur",
+    "empty": "Noch kein Lob vergeben."
+  },
+  "chore_history": {
+    "title": "Bestätigte Erledigungen",
+    "intro": "Jede Erledigung einzeln. Rückgängig entfernt sie und zieht die dafür gutgeschriebenen Punkte wieder ab.",
+    "empty": "Noch keine bestätigten Erledigungen.",
+    "undo": "Rückgängig",
+    "confirm": "Diese Erledigung wirklich rückgängig machen?",
+    "yes": "Ja, rückgängig machen",
+    "cancel": "Abbrechen",
+    "more": "Ältere laden",
+    "loading": "Wird geladen …"
   }
 }

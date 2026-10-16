@@ -4,7 +4,7 @@ import re
 from copy import deepcopy
 
 READ = (
-    r"/api/(members|profile|today|tasks|tasks/week|approvals)",
+    r"/api/(members|profile|today|tasks|tasks/week|approvals|chore-approvals/confirmed)",
     r"/api/members/[0-9]+/(points|progress|praise)",
     r"/api/(chores|chores/weekly-preview|chores/weekly-confirmed)",
     r"/api/(routines|todos|rewards|redemptions)",
@@ -13,7 +13,9 @@ READ = (
 )
 WRITE = (
     r"/api/(?:approvals|chore-approvals)/[0-9]+",
+    r"/api/chore-approvals/[0-9]+/confirmed",
     r"/api/members/[0-9]+/(?:praise|points)",
+    r"/api/members/[0-9]+/praise/[0-9]+/revoke",
     r"/api/redemptions/[0-9]+/cancel",
     r"/api/tasks(?:/[0-9]+|/schedule)?",
     r"/api/routines(?:/[0-9]+(?:/days|/steps)?)?",
@@ -56,7 +58,7 @@ def tool_schema(spec: dict) -> dict:
                         "schema": {"type": "string", "minLength": 16, "maxLength": 128},
                     }
                 )
-            if method != "get" and "approvals/" in path:
+            if method != "get" and ("approvals/" in path or path.endswith("/revoke")):
                 operation.setdefault("parameters", []).append(
                     {
                         "name": "X-MCP-Parent-Confirmed",

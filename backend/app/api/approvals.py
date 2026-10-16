@@ -3,7 +3,7 @@ from sqlalchemy import delete, func, select, update
 
 from app.auth import DbSession, ParentSession
 from app.errors import ApiError
-from app.models import Chore, ChoreCompletion, Task, TaskCompletion
+from app.models import Chore, ChoreCompletion, ChoreCredit, Task, TaskCompletion
 from app.money import book_money
 from app.points import book
 from app.schemas import ApprovalOut
@@ -192,3 +192,64 @@ def reject_chore(completion_id: int, _: ParentSession, db: DbSession) -> None:
     if not completion.approved:
         db.delete(completion)
         db.commit()
+
+
+@router.get("/chore-approvals/confirmed")
+def confirmed_chores(
+    _: ParentSession,
+    db: DbSession,
+    before: int | None = Query(default=None, ge=1),
+) -> dict:
+    """Confirmed household executions, newest first, including earlier days."""
+    query = (
+        select(ChoreCompletion, Chore, ChoreCredit)
+        .join(Chore)
+        .outerjoin(ChoreCredit, ChoreCredit.completion_id == ChoreCompletion.id)
+        .where(ChoreCompletion.approved.is_(True), ChoreCompletion.member_id.is_not(None))
+        .order_by(ChoreCompletion.id.desc())
+        .limit(51)
+    )
+    if before is not None:
+        query = query.where(ChoreCompletion.id < before)
+    rows = list(db.execute(query))
+    return {
+        "items": [
+            ApprovalOut(
+                id=c.id,
+                source="chore",
+                task_id=chore.id,
+                title=chore.title,
+                icon=chore.icon,
+                points=credit.amount if credit else 0,
+                member_id=c.member_id,
+                date=c.date,
+                completed_at=c.completed_at,
+            )
+            for c, chore, credit in rows[:50]
+        ],
+        "has_more": len(rows) > 50,
+    }
+
+
+@router.delete("/chore-approvals/{completion_id}/confirmed", status_code=204)
+def undo_confirmed_chore(completion_id: int, auth: ParentSession, db: DbSession) -> None:
+    """Remove exactly one execution and reverse its original credit once."""
+    from app.api.chores import _get_chore, _reverse_chore_credits
+
+    old = db.get(ChoreCompletion, completion_id)
+    if old is None:
+        return
+    chore = _get_chore(db, old.chore_id)
+    completion = db.scalar(
+        select(ChoreCompletion)
+        .where(ChoreCompletion.id == completion_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if completion is None:
+        return
+    if not completion.approved:
+        raise ApiError(status.HTTP_409_CONFLICT, "approval.not_found")
+    _reverse_chore_credits(db, [completion], chore.title)
+    db.delete(completion)
+    db.commit()

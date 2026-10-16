@@ -128,6 +128,9 @@ function ChildProgressHeader({
           memberId={member.id}
           latestId={data.latest_praise_id ?? 0}
           reason={data.latest_praise_reason}
+          deductionId={data.latest_deduction_id ?? 0}
+          deductionReason={data.latest_deduction_reason}
+          deductionAmount={data.latest_deduction_amount ?? 0}
         />
       )}
       {data ? (

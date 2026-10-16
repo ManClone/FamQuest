@@ -100,7 +100,7 @@ def current_session(request: Request, db: DbSession) -> AuthSession:
             raise ApiError(403, "mcp.operation_forbidden")
         if (
             request.method != "GET"
-            and "approvals/" in request.url.path
+            and ("approvals/" in request.url.path or request.url.path.endswith("/revoke"))
             and request.headers.get("x-mcp-parent-confirmed") != "true"
         ):
             raise ApiError(409, "mcp.parent_confirmation_required")
