@@ -68,7 +68,7 @@ it('identifies the settings area beside the home control on every management pag
   const header = await screen.findByTestId('settings-header')
   expect(within(header).getByText('Settings')).toBeVisible()
   expect(within(header).getByRole('button', { name: 'To the start page' })).toBeVisible()
-  await user.click(screen.getByRole('link', { name: 'Family', exact: true }))
+  await user.click(screen.getByRole('link', { name: 'Family' }))
   expect(screen.getByTestId('settings-header')).toBe(header)
   expect(within(header).getByText('Settings')).toBeVisible()
 })
