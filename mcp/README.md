@@ -1,28 +1,63 @@
-# FamQuest MCP – erster Prototyp
+# FamQuest MCP mit GitHub OAuth
 
-**Status:** Nur Quest-Entwürfe. Kein Zugriff auf FamQuest-API, Elternkonten, Bankkonten oder Taschengeld.
+Der Dienst erzeugt Werkzeuge aus dem aktuellen FamQuest-API-Schema. Aufgabenparameter
+werden nicht nochmals vereinfacht: Wiederholung, mehrere Tageszeiten, Personen, XP,
+Freigabe, optionale und wiederholbare Aufgaben bleiben erhalten. Haushalt, Routinen,
+Wochenverteilung, Kalender lesen, Essensplan, Einkauf und Belohnungsverwaltung sind enthalten.
+`get_pending_notifications` liest offene Kinderfreigaben, faellige Hausarbeiten und offene
+Einmalaufgaben. Es versendet selbst keine Nachrichten und richtet keine Automatisierung ein.
 
-## Lokal starten
+## Identitaet und Grenzen
 
-```bash
-cd mcp
-cp .env.example .env
-# In .env einen eigenen langen Zufallstoken setzen, z. B. mit: openssl rand -hex 32
-docker compose up -d --build
-```
+GitHub OAuth authentifiziert den Benutzer. `FAMQUEST_GITHUB_PARENTS` ordnet unveraenderliche
+numerische GitHub-IDs bestehenden FamQuest-**Konto-IDs** zu (keine Familienmitglied-IDs).
+Nicht zugeordnete GitHub-Konten erhalten keine Werkzeuge. FamQuest prueft bei jedem Aufruf,
+dass das zugeordnete Konto noch existiert und Eltern-/Adminrechte hat. Kein Cookie-Login
+und keine Weitergabe des GitHub-Tokens an die FamQuest-API.
 
-Die lokale `.env` benötigt zwei **verschiedene**, zufällig erzeugte Geheimnisse (`FAMQUEST_MCP_TOKEN` und `FAMQUEST_PARENT_TOKEN`), jeweils mindestens 32 Zeichen. Beispiel zur Erzeugung: `openssl rand -hex 32` zweimal ausführen. Die Elternansicht liegt unter `/parent` und nutzt HTTP Basic Auth (Benutzer `parent`, Passwort: `FAMQUEST_PARENT_TOKEN`). Sie darf nur über HTTPS oder innerhalb eines vertrauenswürdigen lokalen Netzes verwendet werden. Ein freigegebener Entwurf wird **noch nicht** in FamQuest veröffentlicht.\n\nStreamable-HTTP-Endpunkt im Container: `http://famquest-mcp:8000/mcp`.
-Auf dem Docker-Host ausschließlich `127.0.0.1:8091` gebunden. Für QNAP Container Station muss der Zugriff über ein internes Docker-Netzwerk bzw. passende lokale Portweiterleitung eingerichtet werden.
+Die App braucht `MCP_SERVICE_TOKEN`; der MCP-Dienst denselben Wert als
+`FAMQUEST_SERVICE_TOKEN`. Mindestens 32 zufaellige Zeichen, getrennt von allen OAuth-Secrets.
+Zugangsdaten, Kontoverwaltung, Bankbuchungen und manuelle Geldbuchungen sind ausgeschlossen.
+Sterne-Korrekturen sind fuer Eltern verfuegbar. Kinderfreigaben verlangen eine ausdrueckliche
+Elternentscheidung: das Werkzeug verlangt dazu `X-MCP-Parent-Confirmed=true`.
+Diese Angabe dokumentiert die Bestaetigung im Werkzeugaufruf; sie ersetzt keine menschliche
+Entscheidung. Der Assistent darf sie nie fuer eine automatische Freigabe setzen.
 
-## MCP-Werkzeuge
-- `propose_quest`: erstellt einen Entwurf mit XP, optionalem Euro-Cent-Bonus und Wiederholung.
-- `list_quest_proposals`: zeigt bis zu 100 Entwürfe.
+Jede Schreibaktion benoetigt `X-MCP-Request-Key` (UUID). Gleicher Elternteil, Schluessel
+und Inhalt liefern das gespeicherte Ergebnis zurueck. Andere Inhalte mit gleichem Schluessel
+werden abgewiesen. Nach Verbindungsabbruch oder Absturz wird ein unbekanntes Ergebnis
+nicht automatisch erneut geschrieben: zuerst aktuellen FamQuest-Stand pruefen.
+SQLite im persistenten Volume speichert Zeitpunkt, Eltern-ID, Pfad, Fingerabdruck und Ergebnis.
+Darin koennen Familiendaten stehen; das Volume gehoert in die Datensicherung.
 
-Entwürfe werden in einem persistenten SQLite-Docker-Volume gespeichert. **Es gibt noch keine Elternfreigabe oder Veröffentlichung in FamQuest.**
+## Einrichtung (noch nicht auf dem NAS aktiviert)
 
-## Sicherheit
-Der MCP-Endpunkt verlangt einen **Bearer-Token** (mindestens 32 Zeichen), der in der lokalen, nicht einzucheckenden `mcp/.env` steht. Alle HTTP-/WebSocket-Anfragen ohne gültigen Token werden abgewiesen. Das ist eine einfache erste Zugangssperre, **noch keine OAuth- oder rollenbasierte ChatGPT-Authentifizierung**. Nicht öffentlich bereitstellen und keinen Cloudflare-Tunnel verbinden, bevor ein geeigneter Auth-Gateway samt Tests eingerichtet ist. Nächster Schritt: Freigabeworkflow, Rollen, Integration in FamQuest und Ende-zu-Ende-Tests.
+1. `mcp/.env.example` nach `mcp/.env` kopieren und dort die Werte setzen.
+2. GitHub OAuth App anlegen. Homepage ist `MCP_PUBLIC_URL`, Callback ist exakt
+   `MCP_PUBLIC_URL/auth/callback`. Nur `read:user` wird benoetigt, kein Repositoryzugriff.
+3. Eigene GitHub-ID und korrekte FamQuest-Eltern-Konto-ID zuordnen. Client-ID und Secret
+   lokal in die MCP-Umgebung eintragen; Secrets nicht in Chat oder Git ablegen.
+4. Separate zufaellige Service-/JWT-Schluessel erzeugen. Den Speicher-Schluessel mit
+   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+   erzeugen. JWT- und Speicherschluessel bei Neustarts beibehalten. OAuth-Daten werden
+   verschluesselt im persistenten Volume gespeichert.
+5. App und MCP in dasselbe interne Docker-Netzwerk aufnehmen. Der separate Compose-Dienst
+   kann `app` sonst nicht aufloesen. `FAMQUEST_API_URL` muss auf die aktualisierte App zeigen.
+6. Cloudflare bekommt fuer diesen Dienst einen eigenen Hostnamen, zum Beispiel
+   `mcp-famquest.websiteclone.de`, mit Ziel `http://famquest-mcp:8000`.
+   Die gesamte Origin weiterleiten: OAuth-Discovery, `/auth/callback` und `/mcp` muessen
+   erreichbar sein. Der vorhandene App-Hostname bleibt beim App-Dienst.
+7. `docker compose up -d --build` im MCP-Verzeichnis. In ChatGPT den MCP-Endpunkt
+   `https://<MCP-Hostname>/mcp` mit OAuth verbinden und zuerst `get_connected_parent` pruefen.
 
-Lokal: `cd mcp && python -m unittest discover -s tests` (nach Installation der Python-Abhängigkeiten). Die Tests wurden im GitHub-Schreibvorgang nicht ausgeführt.
+Die beiden OAuth-Schluessel und die GitHub-App-Registrierung sind installationsabhaengig.
+Ohne sie ist die Implementierung nicht als live angebunden zu betrachten. Ein echter
+GitHub-/ChatGPT-Verbindungsdurchlauf bleibt Teil der Inbetriebnahme.
 
-Der bestehende FamQuest-Quellcode und seine AGPL-Lizenz bleiben unverändert.
+## Tests
+
+`python -m unittest discover -s tests -v` prueft Identitaetszuordnung, Retry-Verhalten,
+Schluesselkonflikte und unbekannte Ergebnisse ohne echte GitHub-Zugangsdaten. Backendtests
+pruefen Rollen und die erlaubten API-Pfade. Docker baut mit `requirements.lock`.
+Alte Quest-Entwurfsdaten bleiben im bisherigen Volume erhalten; sie werden nicht automatisch
+als echte Aufgaben veroeffentlicht.

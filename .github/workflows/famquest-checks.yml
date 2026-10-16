@@ -64,3 +64,14 @@ jobs:
           test -r /app/alembic.ini;
           test -x /app/docker-entrypoint.sh;
           python -c "import app.main"'
+  mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install 3.12
+      - run: uv venv --python 3.12 mcp/.venv
+      - run: uv pip sync --python mcp/.venv/bin/python mcp/requirements.lock
+      - run: .venv/bin/python -m unittest discover -s tests -v
+        working-directory: mcp
+      - run: docker build -t famquest-mcp:ci mcp

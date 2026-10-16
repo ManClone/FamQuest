@@ -1,168 +1,157 @@
-"""FamQuest MCP: authenticated, draft-only quest proposal service.
+"""FamQuest MCP: live API tools with GitHub OAuth and explicit parent mapping."""
 
-No bank access, no FamQuest parent-session impersonation, no quest publication.
-"""
-import hmac
-import base64
-import html
+import asyncio
+import json
 import os
-import sqlite3
-from urllib.parse import urlsplit
-from contextlib import contextmanager
-from datetime import datetime, timezone
+import re
 from pathlib import Path
-from typing import Literal
 
-from mcp.server.fastmcp import FastMCP
-from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, RedirectResponse, PlainTextResponse
-from starlette.routing import Route
-from starlette.middleware import Middleware
-from starlette.middleware.sessions import SessionMiddleware
-import uvicorn
-from pydantic import Field
-
-DB_PATH = Path(os.getenv("QUEST_DB_PATH", "/data/quests.sqlite3"))
-HOST = os.getenv("MCP_HOST", "0.0.0.0")
-PORT = int(os.getenv("MCP_PORT", "8000"))
-TOKEN = os.getenv("FAMQUEST_MCP_TOKEN", "")
-PARENT_TOKEN = os.getenv("FAMQUEST_PARENT_TOKEN", "")
-if len(TOKEN) < 32 or len(PARENT_TOKEN) < 32 or hmac.compare_digest(TOKEN, PARENT_TOKEN):
-    raise RuntimeError("Zwei unterschiedliche Tokens mit mindestens 32 Zeichen erforderlich")
-
-mcp = FastMCP("FamQuest Quest Entwürfe", host=HOST, port=PORT, stateless_http=True, json_response=True)
+import httpx
+from cryptography.fernet import Fernet
+from fastmcp import FastMCP
+from fastmcp.server.auth.providers.github import GitHubProvider
+from fastmcp.server.middleware import Middleware
+from gateway import GatewayTransport, parent_id
+from key_value.aio.stores.disk import DiskStore
+from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
+from mcp.types import ToolAnnotations
 
 
-class BearerAuth:
-    """Require a shared bearer secret for every HTTP and WebSocket request."""
+class ParentBoundary(Middleware):
+    def __init__(self, mapping):
+        self.mapping = mapping
 
-    def __init__(self, app):
-        self.app = app
+    async def on_call_tool(self, context, call_next):
+        parent_id(self.mapping)
+        return await call_next(context)
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "lifespan":
-            return await self.app(scope, receive, send)
-        headers = dict(scope.get("headers", []))
-        path = scope.get("path", "")
-        parent = path.startswith("/parent")
-        expected = ("Basic " + base64.b64encode(("parent:" + PARENT_TOKEN).encode()).decode()).encode() if parent else ("Bearer " + TOKEN).encode()
-        actual = headers.get(b"authorization", b"")
-        if not hmac.compare_digest(actual, expected):
-            if scope["type"] == "http":
-                await send({"type": "http.response.start", "status": 401,
-                            "headers": [(b"content-type", b"text/plain"),
-                                        (b"www-authenticate", b'Basic realm="FamQuest Eltern"' if parent else b"Bearer")]})
-                await send({"type": "http.response.body", "body": b"Unauthorized"})
-            else:
-                await send({"type": "websocket.close", "code": 1008})
-            return
-        await self.app(scope, receive, send)
+    async def on_list_tools(self, context, call_next):
+        parent_id(self.mapping)
+        return await call_next(context)
 
 
-@contextmanager
-def database():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(DB_PATH, timeout=10)
-    try:
-        con.execute("PRAGMA busy_timeout=10000")
-        con.execute("""CREATE TABLE IF NOT EXISTS quest_proposals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL, description TEXT NOT NULL,
-            points INTEGER NOT NULL, bonus_cents INTEGER NOT NULL,
-            recurrence TEXT NOT NULL, created_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'draft'
-        )""")
-        yield con
-        con.commit()
-    finally:
-        con.close()
+def tool_metadata(route, component):
+    read = route.method.upper() == "GET"
+    component.annotations = ToolAnnotations(
+        readOnlyHint=read,
+        destructiveHint=not read,
+        idempotentHint=read,
+        openWorldHint=False,
+    )
 
 
-@mcp.tool()
-def propose_quest(
-    title: str = Field(min_length=1, max_length=100),
-    description: str = Field(min_length=1, max_length=500),
-    points: int = Field(ge=0, le=1000),
-    bonus_cents: int = Field(ge=0, le=10000),
-    recurrence: Literal["once", "daily", "weekly"] = "once",
-) -> dict:
-    """Speichert einen Quest-Entwurf für Tim. Veröffentlicht keine Aufgabe und bucht kein Geld.
+def build_server(spec, client, mapping, auth=None):
+    names = {}
+    for path, operations in spec["paths"].items():
+        for method, operation in operations.items():
+            name = (
+                method
+                + "_"
+                + re.sub(r"[^a-zA-Z0-9]+", "_", path.removeprefix("/api/")).strip("_")
+            )
+            names[operation["operationId"]] = name
+    server = FastMCP.from_openapi(
+        spec,
+        client,
+        name="FamQuest",
+        auth=auth,
+        mcp_names=names,
+        mcp_component_fn=tool_metadata,
+        instructions=(
+            "Manage the linked family's tasks, routines, household, weekly plan, meals, shopping "
+            "and rewards. Read current definitions and member IDs before planning. All API "
+            "parameters and validation apply unchanged. Use the same X-MCP-Request-Key for "
+            "retries, a fresh UUID for a new action. Do not claim success on an API error. "
+            "Child approvals require an explicit decision by the parent; never approve them "
+            "automatically. Money, banking, credentials and account management are excluded. "
+            "The Household category is populated by household chores, never create it as a routine."
+        ),
+    )
+    server.add_middleware(ParentBoundary(mapping))
 
-    bonus_cents sind Euro-Cent als unverbindlicher Vorschlag für Eltern.
-    """
-    title = title.strip()
-    description = description.strip()
-    if not title or not description:
-        raise ValueError("Titel und Beschreibung dürfen nicht leer sein")
-    with database() as db:
-        cursor = db.execute(
-            "INSERT INTO quest_proposals (title,description,points,bonus_cents,recurrence,created_at) VALUES (?,?,?,?,?,?)",
-            (title, description, points, bonus_cents, recurrence, datetime.now(timezone.utc).isoformat()),
+    @server.tool(annotations={"readOnlyHint": True, "openWorldHint": False})
+    async def get_connected_parent() -> dict:
+        """Show the linked parent profile; use this to verify which account is connected."""
+        response = await client.get("/api/profile")
+        response.raise_for_status()
+        return {"parent_user_id": parent_id(mapping), "profile": response.json()}
+
+    @server.tool(annotations={"readOnlyHint": True, "openWorldHint": False})
+    async def get_pending_notifications() -> dict:
+        """Read pending child approvals and household reminders. Does not send notifications.
+
+        Suitable for reminder checks: notify only when something is pending. Failures must
+        be reported as unavailable, never as an empty queue.
+        """
+        approvals, household = await asyncio.gather(
+            client.get("/api/approvals"),
+            client.get("/api/chores"),
         )
-        return {"id": cursor.lastrowid, "status": "draft", "published": False,
-                "message": "Nur Entwurf; Elternfreigabe und FamQuest-Veröffentlichung folgen."}
+        approvals.raise_for_status()
+        household.raise_for_status()
+        plan = household.json()
+        due = [
+            c
+            for c in plan.get("chores", [])
+            if c["level"] == "due" and not c["done_today"]
+        ]
+        todos = [t for t in plan.get("todos", []) if not t["done"]]
+        return {
+            "approvals": approvals.json(),
+            "due_household": due,
+            "open_todos": todos,
+            "has_pending": bool(approvals.json() or due or todos),
+        }
+
+    return server
 
 
-@mcp.tool()
-def list_quest_proposals() -> list[dict]:
-    """Zeigt Quest-Entwürfe an, noch nicht in FamQuest veröffentlicht."""
-    with database() as db:
-        db.row_factory = sqlite3.Row
-        return [dict(row) for row in db.execute(
-            "SELECT id,title,description,points,bonus_cents,recurrence,created_at,status FROM quest_proposals ORDER BY id DESC LIMIT 100"
-        )]
-
-
-async def parent_review(request):
-    """Minimal parent-only review view; no publishing to FamQuest yet."""
-    with database() as db:
-        db.row_factory = sqlite3.Row
-        rows = [dict(x) for x in db.execute(
-            "SELECT id,title,description,points,bonus_cents,recurrence,status FROM quest_proposals ORDER BY id DESC LIMIT 100"
-        )]
-    parts = ["<h1>Quest-Entwürfe zur Prüfung</h1>",
-             "<p>Freigabe bestätigt nur den Entwurf; Veröffentlichung in FamQuest ist noch nicht implementiert.</p>"]
-    for q in rows:
-        title = html.escape(q["title"])
-        desc = html.escape(q["description"])
-        parts.append(f"<section><h2>{title}</h2><p>{desc}</p><p>{q['points']} XP · {q['bonus_cents']} Cent vorgeschlagen · Status: {html.escape(q['status'])}</p>")
-        if q["status"] == "draft":
-            for decision, label in (("approved", "Entwurf freigeben"), ("rejected", "Ablehnen")):
-                parts.append(f'<form action="/parent/decide/{q["id"]}/{decision}" method="post"><button>{label}</button></form>')
-        parts.append("</section><hr>")
-    return HTMLResponse("<!doctype html><html lang='de'><meta charset='utf-8'><title>FamQuest Freigabe</title><body>" + "".join(parts) + "</body></html>")
-
-
-async def parent_decide(request):
-    # Browser Basic authentication is ambient: reject cross-site form submissions.
-    origin = request.headers.get("origin", "")
-    host = request.headers.get("host", "")
-    if not origin or urlsplit(origin).netloc != host or urlsplit(origin).scheme not in ("http", "https"):
-        return PlainTextResponse("Origin check failed", status_code=403)
-    proposal_id = int(request.path_params["proposal_id"])
-    decision = request.path_params["decision"]
-    if decision not in ("approved", "rejected"):
-        return PlainTextResponse("Invalid decision", status_code=400)
-    with database() as db:
-        result = db.execute(
-            "UPDATE quest_proposals SET status=? WHERE id=? AND status='draft'",
-            (decision, proposal_id),
+async def main():
+    os.umask(0o077)
+    mapping = json.loads(os.environ["FAMQUEST_GITHUB_PARENTS"])
+    if not mapping or any(
+        not k.isdecimal() or type(v) is not int or v < 1 for k, v in mapping.items()
+    ):
+        raise ValueError(
+            "Map immutable numeric GitHub user IDs to existing FamQuest parent user IDs."
         )
-        if result.rowcount != 1:
-            return PlainTextResponse("Not found or already reviewed", status_code=409)
-    return RedirectResponse("/parent", status_code=303)
-
-
-def build_app():
-    # Keep the MCP ASGI app mounted separately. All requests are protected by BearerAuth.
-    from starlette.applications import Starlette
-    from starlette.routing import Mount
-    return Starlette(routes=[
-        Route("/parent", parent_review, methods=["GET"]),
-        Route("/parent/decide/{proposal_id:int}/{decision:str}", parent_decide, methods=["POST"]),
-        Mount("/", app=mcp.streamable_http_app()),
-    ])
+    secret = os.environ["FAMQUEST_SERVICE_TOKEN"]
+    if len(secret) < 32:
+        raise ValueError(
+            "FAMQUEST_SERVICE_TOKEN must contain at least 32 random characters."
+        )
+    base = os.environ.get("FAMQUEST_API_URL", "http://app:8080")
+    data = Path(os.environ.get("MCP_DATA_DIR", "/data"))
+    auth = GitHubProvider(
+        client_id=os.environ["GITHUB_CLIENT_ID"],
+        client_secret=os.environ["GITHUB_CLIENT_SECRET"],
+        base_url=os.environ["MCP_PUBLIC_URL"],
+        required_scopes=["read:user"],
+        jwt_signing_key=os.environ["MCP_JWT_SIGNING_KEY"],
+        client_storage=FernetEncryptionWrapper(
+            DiskStore(directory=data / "oauth"),
+            fernet=Fernet(os.environ["MCP_STORAGE_ENCRYPTION_KEY"]),
+        ),
+    )
+    async with httpx.AsyncClient(
+        base_url=base, timeout=30, follow_redirects=False
+    ) as bootstrap:
+        response = await bootstrap.get(
+            "/api/internal/mcp/schema",
+            headers={
+                "Authorization": "Bearer " + secret,
+                "X-FamQuest-Parent-ID": str(next(iter(mapping.values()))),
+            },
+        )
+        response.raise_for_status()
+        spec = response.json()
+    transport = GatewayTransport(secret, mapping, data / "audit.sqlite3")
+    async with httpx.AsyncClient(
+        base_url=base, transport=transport, timeout=30
+    ) as client:
+        server = build_server(spec, client, mapping, auth)
+        await server.run_async(transport="http", host="0.0.0.0", port=8000)
 
 
 if __name__ == "__main__":
-    uvicorn.run(BearerAuth(build_app()), host=HOST, port=PORT)
+    asyncio.run(main())
