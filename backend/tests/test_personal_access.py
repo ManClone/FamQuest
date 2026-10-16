@@ -107,6 +107,9 @@ def test_child_progress_and_redemption_history_are_personal_and_purchases_keep_l
         me = child.post("/api/auth/login", json=credentials).json()
         assert child.get(f"/api/members/{two}/progress").status_code == 403
         expected = {
+            "praise_count": 0,
+            "latest_praise_id": 0,
+            "latest_praise_reason": None,
             "earned_xp": 100,
             "level": 2,
             "level_progress": 0,

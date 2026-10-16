@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 from sqlalchemy import delete, func, select, update
 
 from app.auth import DbSession, ParentSession
@@ -57,7 +57,12 @@ def list_approvals(_: ParentSession, db: DbSession) -> list[ApprovalOut]:
 
 
 @router.post("/approvals/{completion_id}", status_code=status.HTTP_204_NO_CONTENT)
-def approve(completion_id: int, auth_session: ParentSession, db: DbSession) -> None:
+def approve(
+    completion_id: int,
+    auth_session: ParentSession,
+    db: DbSession,
+    praise: bool = Query(default=False),
+) -> None:
     """Bestätigt die Erledigung und bucht ihre Punkte, genau einmal (auch bei Doppel-Tipp)."""
     approved = db.execute(
         update(TaskCompletion)
@@ -93,6 +98,16 @@ def approve(completion_id: int, auth_session: ParentSession, db: DbSession) -> N
         title or "Aufgabe",
         approved.id,
     )
+    if praise:
+        from app.praise import grant_praise
+
+        grant_praise(
+            db,
+            approved.member_id,
+            auth_session.user_id,
+            title or "Aufgabe",
+            f"task:{completion_id}",
+        )
     db.commit()
 
 
@@ -110,7 +125,12 @@ def reject(completion_id: int, _: ParentSession, db: DbSession) -> None:
 
 
 @router.post("/chore-approvals/{completion_id}", status_code=status.HTTP_204_NO_CONTENT)
-def approve_chore(completion_id: int, _: ParentSession, db: DbSession) -> None:
+def approve_chore(
+    completion_id: int,
+    _: ParentSession,
+    db: DbSession,
+    praise: bool = Query(default=False),
+) -> None:
     from app.api.chores import _get_chore
     from app.models import ChoreCredit
     from app.points import lock_member
@@ -147,6 +167,10 @@ def approve_chore(completion_id: int, _: ParentSession, db: DbSession) -> None:
                 amount=completion.points,
             )
         )
+    if praise and completion.member_id is not None:
+        from app.praise import grant_praise
+
+        grant_praise(db, completion.member_id, _.user_id, chore.title, f"chore:{completion_id}")
     db.commit()
 
 

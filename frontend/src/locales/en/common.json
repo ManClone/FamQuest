@@ -506,7 +506,8 @@
       "not_completed": "This chore has not been completed yet.",
       "parent_required": "An adult account is required for this action.",
       "request_conflict": "This execution was already saved elsewhere. Please reload.",
-      "not_repeatable": "This task is already completed today or awaiting approval."
+      "not_repeatable": "This task is already completed today or awaiting approval.",
+      "fixed_assignee_only": "This task is fixed to another person. Change its assignment in Settings > Household first."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
@@ -520,6 +521,10 @@
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
       "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family."
+    },
+    "praise": {
+      "child_required": "Please select a child.",
+      "request_conflict": "This praise was already saved differently. Please reload."
     },
     "mcp": {
       "operation_forbidden": "This operation is not available through MCP.",
@@ -1028,7 +1033,8 @@
     "child_hint": "Assigned household tasks automatically appear for children. Parents confirm their completions.",
     "future_money": "Money (coming later)",
     "awaiting": "{{count}} completions awaiting approval",
-    "child_complete": "Done!"
+    "child_complete": "Done!",
+    "who_before_completion": "Who completed {{title}}?"
   },
   "todos": {
     "title": "To do",
@@ -1118,5 +1124,19 @@
     "reward_history": "Your redeemed rewards",
     "today_progress": "Your day",
     "back_tasks": "Back to my tasks"
+  },
+  "praise": {
+    "section": "Praise & stars",
+    "count": "{{count}} praises",
+    "give": "Give praise",
+    "deduct": "Deduct stars",
+    "amount": "Stars to deduct",
+    "reason": "Reason",
+    "saved": "Saved.",
+    "received": "You received praise!",
+    "approve": "Approve + praise",
+    "approve_label": "Approve {{title}} by {{name}} and give praise",
+    "count_one": "{{count}} praise",
+    "count_other": "{{count}} praises"
   }
 }
