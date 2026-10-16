@@ -61,7 +61,7 @@ it('opens a rewards board in everyday navigation rather than entering settings',
   expect(screen.queryByRole('button', { name: 'To the start page' })).toBeNull()
   expect(screen.queryByRole('navigation', { name: 'Parent area sections' })).toBeNull()
   expect(await screen.findByRole('button', { name: /Redeem.*A film/ })).toBeVisible()
-  await user.click(screen.getByRole('button', { name: 'Tom' }))
+  await user.click(screen.getByRole('button', { name: /Tom/ }))
   expect(await screen.findByRole('heading', { name: 'Zoo' })).toBeVisible()
   expect(screen.queryByRole('heading', { name: 'A film' })).toBeNull()
 })

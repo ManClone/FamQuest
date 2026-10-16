@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
-import TrophyIcon from '~icons/fluent-emoji-flat/trophy'
+import StarIcon from '~icons/fluent-emoji-flat/star'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 
 import { useMe } from '../api/auth'
@@ -17,17 +17,15 @@ import { useFamilyToday } from './family/useFamilyToday'
 import { RewardGrid } from './rewards/RewardGrid'
 import { RedemptionHistory } from './parents/RewardsSection'
 import { Section } from '../components/ui'
+import { RewardSummary } from './rewards/RewardSummary'
 
-function Balance({ total, size }: { total: number; size: 'md' | 'lg' }) {
+function Balance({ total }: { total: number }) {
   const { t } = useTranslation()
   return (
-    <span className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm">
-      <TrophyIcon className={size === 'lg' ? 'size-12' : 'size-8'} aria-hidden="true" />
+    <span className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 shadow-sm">
+      <StarIcon className="size-5" aria-hidden="true" />
       <span className="sr-only">{t('points.total_label', { count: total })}</span>
-      <span
-        aria-hidden="true"
-        className={`font-extrabold text-slate-800 tabular-nums ${size === 'lg' ? 'text-4xl' : 'text-2xl'}`}
-      >
+      <span aria-hidden="true" className="text-base font-extrabold text-slate-800 tabular-nums">
         {total}
       </span>
     </span>
@@ -81,7 +79,7 @@ export function RewardsPage() {
       <main
         className={`mx-auto flex w-full max-w-5xl flex-col ${childView ? 'gap-4' : 'gap-6'} p-4 sm:p-6`}
       >
-        <header className="flex flex-wrap items-center gap-4">
+        <header className="flex flex-wrap items-center gap-3">
           {!childView && (
             <Link
               to={me?.user.role === 'child' ? '/tasks' : '/rewards'}
@@ -93,33 +91,27 @@ export function RewardsPage() {
               <BackIcon className="size-12" aria-hidden="true" />
             </Link>
           )}
-          <Avatar
-            name={member.name}
-            color={member.color}
-            src={member.avatar_url}
-            size={childView ? 'md' : 'lg'}
-          />
-          <h1
-            className={`min-w-0 flex-1 ${childView ? 'text-3xl' : 'text-4xl'} font-extrabold break-words text-slate-800`}
-          >
-            <span className="sr-only">{t('rewards.of', { name: member.name })}</span>
-            <span aria-hidden="true">{member.name}</span>
+          <GiftIcon className="size-9 shrink-0" aria-hidden="true" />
+          <h1 className="min-w-0 flex-1 text-2xl font-extrabold text-orange-600">
+            {t('rewards.title')}
           </h1>
-          {(!childView || member.id === me?.member_id) && (
-            <Balance total={total} size={childView ? 'md' : 'lg'} />
-          )}
         </header>
         <ChildPicker
           label={t('rewards.choose_member')}
           childMembers={members}
           selected={member}
           onSelect={(id) => navigate(`/rewards/${id}`)}
+          detail={(person) =>
+            !childView || person.id === me?.member_id ? (
+              <RewardSummary member={person} total={pointsFor(today, person.id).total} />
+            ) : null
+          }
         />
         {member.id !== me?.member_id && <p>{t('rewards.own_only')}</p>}
         <RewardGrid
           member={member}
           balance={total}
-          compact={childView}
+          compact
           canRedeem={member.id === me?.member_id}
         />
         <Section
@@ -162,7 +154,7 @@ export function RewardsPage() {
                   {member.name}
                 </span>
                 {(me?.user.role !== 'child' || member.id === me.member_id) && (
-                  <Balance total={pointsFor(today, member.id).total} size="md" />
+                  <Balance total={pointsFor(today, member.id).total} />
                 )}
               </Link>
             </li>

@@ -43,6 +43,8 @@ function routes(extra: Record<string, Response | ((body: unknown) => Response)> 
     'GET /api/auth/me': Response.json(makeMe({ member_id: 1 })),
     'GET /api/members': Response.json([lena, tom, mama]),
     'GET /api/today': () => Response.json(today),
+    'GET /api/members/1/progress': Response.json({ praise_count: 2 }),
+    'GET /api/members/2/progress': Response.json({ praise_count: 0 }),
     'GET /api/redemptions': Response.json({ redemptions: [], has_more: false }),
     'GET /api/rewards': Response.json([iceCream, cinema, hidden, tomsReward]),
     'POST /api/rewards/1/redeem': () => {
@@ -95,7 +97,7 @@ describe('Belohnungen am Display', () => {
     )
 
     await user.click(screen.getByRole('link', { name: 'Belohnungen von Lena' }))
-    expect(await screen.findByRole('heading', { name: 'Belohnungen von Lena' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Belohnungen', level: 1 })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Ein Eis' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Kinobesuch' })).toBeVisible()
     // Inaktive und fremde Belohnungen sind nicht zu sehen.
@@ -128,7 +130,9 @@ describe('Belohnungen am Display', () => {
     expect(calls.filter((call) => call.key === 'POST /api/rewards/1/redeem')).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Fertig' }))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(await screen.findByText('Insgesamt 0 Punkte')).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('button', { name: /Lena/ })).findByLabelText('0 Sterne'),
+    ).toBeInTheDocument()
   })
 
   it('bricht ohne Einlösen ab', async () => {
@@ -183,7 +187,7 @@ describe('Belohnungen am Display', () => {
     mockApi(routes())
     renderApp('/rewards/3')
 
-    expect(await screen.findByRole('heading', { name: 'Belohnungen von Mama' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Belohnungen', level: 1 })).toBeVisible()
     expect(screen.getByRole('button', { name: /Lena/ })).toBeVisible()
   })
 })

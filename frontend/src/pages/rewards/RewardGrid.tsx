@@ -14,7 +14,7 @@ import { RewardCard } from './RewardCard'
 export function RewardGrid({
   member,
   balance,
-  compact = false,
+  compact = true,
   canRedeem: requestedRedeem,
 }: {
   member: Member
@@ -51,7 +51,7 @@ export function RewardGrid({
   return (
     <>
       <ul
-        className={`grid ${compact ? 'grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))] gap-3' : 'grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-4'}`}
+        className={`grid ${compact ? 'grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-4'}`}
       >
         {own.map((reward) => (
           <RewardCard

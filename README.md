@@ -6,6 +6,8 @@ The first stable family release covers issues #16–#23: audited corrections, sh
 reward visibility with owner-only redemption, and persistent milestone levels.
 See [the release scope and deployment checks](docs/STABLE-1.md). Banking remains deferred.
 
+The stable release also includes compact reward cards and points below profile names, with praise hearts for children.
+
 > **Family fork / first live test:** See [docs/LIVE-TEST.md](docs/LIVE-TEST.md) for current behavior and release branches. Older sections and screenshots still describe parts of the original PIN and navigation flow.
 
 **English** · [Deutsch](README.de.md)
