@@ -25,12 +25,12 @@ export function useApprovals() {
   return useQuery({ queryKey: APPROVALS_KEY, queryFn: () => apiGet<Approval[]>('/approvals') })
 }
 
-export const approve = (item: number | Approval) =>
+export const approve = (item: number | Approval, praise = false) =>
   api<void>(
     'POST',
     typeof item === 'number'
-      ? `/approvals/${item}`
-      : `/${item.source === 'chore' ? 'chore-approvals' : 'approvals'}/${item.id}`,
+      ? `/approvals/${item}${praise ? '?praise=true' : ''}`
+      : `/${item.source === 'chore' ? 'chore-approvals' : 'approvals'}/${item.id}${praise ? '?praise=true' : ''}`,
   )
 export const reject = (item: number | Approval) =>
   api<void>(

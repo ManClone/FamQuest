@@ -69,6 +69,9 @@ export function useBookPoints(memberId: number) {
 
 export const PROGRESS_KEY = ['member-progress'] as const
 export interface MemberProgress {
+  praise_count?: number
+  latest_praise_id?: number
+  latest_praise_reason?: string | null
   earned_xp: number
   level: number
   level_progress: number

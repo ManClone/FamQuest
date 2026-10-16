@@ -28,6 +28,7 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
   const { t } = useTranslation()
   const approvals = useApprovals()
   const confirm = useApprovalMutation(approve)
+  const confirmPraise = useApprovalMutation((item: Approval) => approve(item, true))
   const decline = useApprovalMutation(reject)
   const confirmAll = useApprovalMutation(async (items: Approval[]) => {
     for (const item of items) await approve(item)
@@ -42,8 +43,9 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
   }
   if (!approvals.data || approvals.data.length === 0) return null
 
-  const busy = confirm.isPending || decline.isPending || confirmAll.isPending
-  const error = confirm.error ?? decline.error ?? confirmAll.error
+  const busy =
+    confirmPraise.isPending || confirm.isPending || decline.isPending || confirmAll.isPending
+  const error = confirmPraise.error ?? confirm.error ?? decline.error ?? confirmAll.error
 
   return (
     <Section title={t('approvals.section')}>
@@ -58,6 +60,7 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
             today={today}
             busy={busy}
             onApprove={() => confirm.mutate(approval)}
+            onApprovePraise={() => confirmPraise.mutate(approval)}
             onReject={() => decline.mutate(approval)}
           />
         ))}
@@ -83,6 +86,7 @@ function ApprovalRow({
   busy,
   onApprove,
   onReject,
+  onApprovePraise,
 }: {
   approval: Approval
   member: Member | undefined
@@ -90,6 +94,7 @@ function ApprovalRow({
   busy: boolean
   onApprove: () => void
   onReject: () => void
+  onApprovePraise: () => void
 }) {
   const { t, i18n } = useTranslation()
   const language = i18n.resolvedLanguage ?? i18n.language
@@ -113,7 +118,15 @@ function ApprovalRow({
           </span>
         </span>
       </span>
-      <span className="flex gap-2">
+      <span className="flex flex-wrap gap-2">
+        <Button
+          variant="secondary"
+          disabled={busy}
+          onClick={onApprovePraise}
+          aria-label={t('praise.approve_label', { title: approval.title, name })}
+        >
+          ❤️ {t('praise.approve')}
+        </Button>
         <Button
           variant="secondary"
           disabled={busy}

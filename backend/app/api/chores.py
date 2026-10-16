@@ -804,6 +804,10 @@ def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> C
     # Serialize all executions and corrections for this chore.
     db.execute(select(Chore.id).where(Chore.id == chore_id).with_for_update())
     chore = _get_chore(db, chore_id)
+    if chore.assignment_mode == "fixed" and (
+        chore.fixed_member_id is None or body.member_id != chore.fixed_member_id
+    ):
+        raise ApiError(409, "chore.fixed_assignee_only")
     member = get_member(db, body.member_id) if body.member_id is not None else None
     today = _today(db)
     completion = db.scalar(

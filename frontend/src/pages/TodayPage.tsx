@@ -13,6 +13,7 @@ import {
 } from '../api/home'
 import { useToday } from '../api/today'
 import { useMembers } from '../api/members'
+import { EncouragementPanel } from './parents/EncouragementPanel'
 import { ApprovalsSection } from './parents/ApprovalsSection'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { useNow } from '../useNow'
@@ -92,6 +93,7 @@ export function TodayPage({ parentDashboard = false }: { parentDashboard?: boole
       {parentDashboard ? (
         <>
           <ApprovalsSection members={members} today={today?.date} />
+          <EncouragementPanel members={members} />
           {shown.has('chores') && <ChoresWidget expanded />}
         </>
       ) : (
