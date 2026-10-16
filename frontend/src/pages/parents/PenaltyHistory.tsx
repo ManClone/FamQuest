@@ -45,7 +45,12 @@ export function PenaltyHistory({ memberId }: { memberId: number }) {
     >
       <summary className="cursor-pointer py-1 font-bold">{t('penalty.history')}</summary>
       {open && (
-        <div className="mt-3 flex flex-col gap-3">
+        <div
+          role="region"
+          aria-label={t('penalty.history')}
+          tabIndex={0}
+          className="mt-3 flex max-h-[min(60dvh,24rem)] flex-col gap-3 overflow-y-auto overscroll-contain pr-2 [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:outline-orange-400"
+        >
           {history.isPending && <p>{t('common.loading')}</p>}
           {history.error && <Alert>{errorMessage(t, history.error)}</Alert>}
           {revoke.error && <Alert>{errorMessage(t, revoke.error)}</Alert>}
