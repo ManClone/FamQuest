@@ -130,7 +130,9 @@ describe('Belohnungen am Display', () => {
     expect(calls.filter((call) => call.key === 'POST /api/rewards/1/redeem')).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Fertig' }))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(await screen.findByLabelText('0 Sterne')).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('button', { name: /Lena/ })).findByLabelText('0 Sterne'),
+    ).toBeInTheDocument()
   })
 
   it('bricht ohne Einlösen ab', async () => {
