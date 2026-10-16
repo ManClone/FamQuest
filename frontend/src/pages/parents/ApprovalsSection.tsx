@@ -6,6 +6,7 @@ import StarIcon from '~icons/fluent-emoji-flat/star'
 import {
   type Approval,
   approve,
+  approveWithPraise,
   reject,
   useApprovalMutation,
   useApprovals,
@@ -28,7 +29,7 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
   const { t } = useTranslation()
   const approvals = useApprovals()
   const confirm = useApprovalMutation(approve)
-  const confirmPraise = useApprovalMutation((item: Approval) => approve(item, true))
+  const confirmPraise = useApprovalMutation(approveWithPraise)
   const decline = useApprovalMutation(reject)
   const confirmAll = useApprovalMutation(async (items: Approval[]) => {
     for (const item of items) await approve(item)

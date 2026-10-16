@@ -84,6 +84,32 @@ describe('Kontrolle durch die Eltern', () => {
     expect(calls.filter((call) => call.key === 'POST /api/approvals/8')).toHaveLength(1)
   })
 
+  it('vergibt Lob nur beim ausdruecklichen Bestaetigen mit Lob', async () => {
+    const user = userEvent.setup()
+    parentsApi([makeApproval()])
+    renderApp('/')
+    await screen.findByRole('heading', { name: 'Zu prüfen' })
+    await user.click(
+      section().getByRole('button', { name: 'Zimmer aufräumen von Lena bestätigen' }),
+    )
+    const ordinary = vi
+      .mocked(fetch)
+      .mock.calls.filter(
+        ([url, options]) => options?.method === 'POST' && String(url).includes('/approvals/'),
+      )
+    expect(ordinary).toHaveLength(1)
+    expect(String(ordinary[0][0])).not.toContain('praise=true')
+    await user.click(
+      section().getByRole('button', { name: 'Zimmer aufräumen von Lena bestätigen und loben' }),
+    )
+    const praised = vi
+      .mocked(fetch)
+      .mock.calls.filter(
+        ([url, options]) => options?.method === 'POST' && String(url).includes('praise=true'),
+      )
+    expect(praised).toHaveLength(1)
+  })
+
   it('bleibt ohne wartende Erledigungen unsichtbar', async () => {
     parentsApi([])
     renderApp('/')
