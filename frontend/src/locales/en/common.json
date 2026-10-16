@@ -1139,7 +1139,12 @@
     "approve_label": "Approve {{title}} by {{name}} and give praise",
     "count_one": "{{count}} praise",
     "count_other": "{{count}} praises",
-    "deducted": "Stars deducted"
+    "deducted": "Stars deducted",
+    "history": "Praise history",
+    "revoke": "Revoke praise",
+    "revoked": "Revoked",
+    "revoke_reason": "Reason for correction",
+    "empty": "No praise yet."
   },
   "chore_history": {
     "title": "Confirmed household tasks",

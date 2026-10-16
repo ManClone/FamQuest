@@ -10,6 +10,7 @@ from app.errors import ApiError
 from app.models import PointTransaction, Praise
 from app.points import balance, book, level_xp, lock_member
 from app.schemas import PointBookingIn, PointHistoryOut, PointTransactionOut
+from app.today import utcnow
 
 router = APIRouter(tags=["points"])
 
@@ -79,10 +80,15 @@ def member_progress(
     # Display-only levels: level 1 starts at 0 XP, each next level needs 100 XP.
     step = 100
     latest = db.scalar(
-        select(Praise).where(Praise.member_id == member_id).order_by(Praise.id.desc()).limit(1)
+        select(Praise)
+        .where(Praise.member_id == member_id, Praise.revoked_at.is_(None))
+        .order_by(Praise.id.desc())
+        .limit(1)
     )
     praise_count = db.scalar(
-        select(func.count()).select_from(Praise).where(Praise.member_id == member_id)
+        select(func.count())
+        .select_from(Praise)
+        .where(Praise.member_id == member_id, Praise.revoked_at.is_(None))
     )
     deduction = db.scalar(
         select(PointTransaction)
@@ -140,8 +146,44 @@ def praise_history(
     entries = list(db.scalars(query.order_by(Praise.id.desc()).limit(51)))
     return {
         "praises": [
-            {"id": item.id, "reason": item.reason, "created_at": item.created_at}
+            {
+                "id": item.id,
+                "reason": item.reason,
+                "created_at": item.created_at,
+                "revoked_at": item.revoked_at,
+                "revocation_reason": item.revocation_reason,
+            }
             for item in entries[:50]
         ],
         "has_more": len(entries) > 50,
+    }
+
+
+class PraiseRevocationIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=200, pattern=r"\S")
+
+
+@router.post("/members/{member_id}/praise/{praise_id}/revoke")
+def revoke_praise(
+    member_id: int, praise_id: int, body: PraiseRevocationIn, auth: ParentSession, db: DbSession
+) -> dict:
+    """Revoke one heart once; retain original reason, creator and correction audit."""
+    get_member(db, member_id)
+    lock_member(db, member_id)
+    entry = db.scalar(
+        select(Praise)
+        .where(Praise.id == praise_id, Praise.member_id == member_id)
+        .with_for_update()
+    )
+    if entry is None:
+        raise ApiError(404, "common.not_found")
+    if entry.revoked_at is None:
+        entry.revoked_at = utcnow()
+        entry.revoked_by_user_id = auth.user_id
+        entry.revocation_reason = body.reason.strip()
+        db.commit()
+    return {
+        "id": entry.id,
+        "revoked_at": entry.revoked_at,
+        "revocation_reason": entry.revocation_reason,
     }

@@ -1139,7 +1139,12 @@
     "approve_label": "{{title}} von {{name}} bestätigen und loben",
     "count_one": "{{count}} Lob",
     "count_other": "{{count}} Lobe",
-    "deducted": "Sterne abgezogen"
+    "deducted": "Sterne abgezogen",
+    "history": "Lob-Verlauf",
+    "revoke": "Lob zurücknehmen",
+    "revoked": "Zurückgenommen",
+    "revoke_reason": "Grund der Korrektur",
+    "empty": "Noch kein Lob vergeben."
   },
   "chore_history": {
     "title": "Bestätigte Erledigungen",

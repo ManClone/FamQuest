@@ -55,6 +55,23 @@ def test_service_parent_uses_real_task_parameters_but_cannot_manage_accounts(
     assert client.post("/api/auth/accounts", json={}, headers=headers).status_code == 403
     assert client.put("/api/profile/password", json={}, headers=headers).status_code == 403
     assert client.post("/api/approvals/1", headers=headers).status_code == 409
+    praise = client.post(
+        f"/api/members/{lena}/praise",
+        json={"reason": "Test", "request_key": "d" * 32},
+        headers=headers,
+    ).json()
+    revoke_path = f"/api/members/{lena}/praise/{praise['id']}/revoke"
+    assert (
+        client.post(revoke_path, json={"reason": "Test entry"}, headers=headers).status_code == 409
+    )
+    assert (
+        client.post(
+            revoke_path,
+            json={"reason": "Test entry"},
+            headers={**headers, "X-MCP-Parent-Confirmed": "true"},
+        ).status_code
+        == 200
+    )
     from tests.test_tasks import task_data
 
     payload = task_data(
