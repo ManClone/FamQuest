@@ -1,3 +1,4 @@
+from datetime import UTC
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
@@ -7,8 +8,10 @@ from sqlalchemy import func, select
 from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, ensure_member_access
 from app.errors import ApiError
+from app.levels import progress
 from app.models import PenaltyReversal, PointTransaction, Praise
-from app.points import balance, book, level_xp, lock_member
+from app.point_reversals import compensation_candidates, reverse_manual
+from app.points import balance, book, lock_member
 from app.schemas import PointBookingIn, PointHistoryOut, PointTransactionOut
 from app.today import utcnow
 
@@ -17,7 +20,11 @@ router = APIRouter(tags=["points"])
 HISTORY_PAGE_SIZE = 50
 
 
-def transaction_out(transaction: PointTransaction) -> PointTransactionOut:
+def transaction_out(
+    transaction: PointTransaction,
+    reversal: PenaltyReversal | None = None,
+    compensates: int | None = None,
+) -> PointTransactionOut:
     return PointTransactionOut(
         id=transaction.id,
         amount=transaction.amount,
@@ -30,6 +37,10 @@ def transaction_out(transaction: PointTransaction) -> PointTransactionOut:
         else None,
         task_date=transaction.task_date,
         created_at=transaction.created_at,
+        reversed_at=reversal.created_at if reversal else None,
+        reversal_transaction_id=reversal.refund_transaction_id if reversal else None,
+        reversal_reason=reversal.reason if reversal else None,
+        compensates_transaction_id=compensates,
     )
 
 
@@ -48,9 +59,23 @@ def get_points(
     if before is not None:
         query = query.where(PointTransaction.id < before)
     transactions = list(db.scalars(query.order_by(PointTransaction.id.desc()).limit(limit + 1)))
+    ids = [t.id for t in transactions[:limit]]
+    reversals = {
+        r.transaction_id: r
+        for r in db.scalars(select(PenaltyReversal).where(PenaltyReversal.transaction_id.in_(ids)))
+    }
+    compensations = {
+        r.refund_transaction_id: r.transaction_id
+        for r in db.scalars(
+            select(PenaltyReversal).where(PenaltyReversal.refund_transaction_id.in_(ids))
+        )
+    }
     return PointHistoryOut(
         total=balance(db, member_id),
-        transactions=[transaction_out(t) for t in transactions[:limit]],
+        transactions=[
+            transaction_out(t, reversals.get(t.id), compensations.get(t.id))
+            for t in transactions[:limit]
+        ],
         has_more=len(transactions) > limit,
     )
 
@@ -76,9 +101,6 @@ def member_progress(
     """Levels use earned task XP, never the balance spent on rewards."""
     ensure_member_access(db, auth, member_id)
     get_member(db, member_id)
-    earned = level_xp(db, member_id)
-    # Display-only levels: level 1 starts at 0 XP, each next level needs 100 XP.
-    step = 100
     latest = db.scalar(
         select(Praise)
         .where(Praise.member_id == member_id, Praise.revoked_at.is_(None))
@@ -99,6 +121,9 @@ def member_progress(
             ~select(PenaltyReversal.transaction_id)
             .where(PenaltyReversal.transaction_id == PointTransaction.id)
             .exists(),
+            ~select(PenaltyReversal.transaction_id)
+            .where(PenaltyReversal.refund_transaction_id == PointTransaction.id)
+            .exists(),
         )
         .order_by(PointTransaction.id.desc())
         .limit(1)
@@ -110,11 +135,7 @@ def member_progress(
         "praise_count": praise_count or 0,
         "latest_praise_id": latest.id if latest else 0,
         "latest_praise_reason": latest.reason if latest else None,
-        "earned_xp": earned,
-        "level": earned // step + 1,
-        "level_progress": earned % step,
-        "level_size": step,
-        "remaining_xp": step - earned % step,
+        **progress(db, member_id),
     }
 
 
@@ -181,13 +202,16 @@ def revoke_praise(
     if entry is None:
         raise ApiError(404, "common.not_found")
     if entry.revoked_at is None:
+        from app.levels import advance
+
+        advance(db, member_id)
         entry.revoked_at = utcnow()
         entry.revoked_by_user_id = auth.user_id
         entry.revocation_reason = body.reason.strip()
         db.commit()
     return {
         "id": entry.id,
-        "revoked_at": entry.revoked_at,
+        "revoked_at": entry.revoked_at.astimezone(UTC),
         "revocation_reason": entry.revocation_reason,
     }
 
@@ -222,6 +246,14 @@ def penalty_history(
                 "reversed_at": reversal.created_at if reversal else None,
                 "reversal_reason": reversal.reason if reversal else None,
                 "refund_transaction_id": reversal.refund_transaction_id if reversal else None,
+                "compensates_transaction_id": db.scalar(
+                    select(PenaltyReversal.transaction_id).where(
+                        PenaltyReversal.refund_transaction_id == entry.id
+                    )
+                ),
+                "compensation_candidate_ids": compensation_candidates(db, entry)
+                if reversal is None
+                else [],
             }
             for entry, reversal in rows[:50]
         ],
@@ -229,49 +261,56 @@ def penalty_history(
     }
 
 
+class PointReversalIn(PraiseRevocationIn):
+    existing_compensation_id: int | None = Field(default=None, ge=1)
+    compensation_reviewed: bool = False
+
+
+def reverse_points_entry(member_id, transaction_id, body, auth, db, *, penalty_only=False):
+    get_member(db, member_id)
+    reversal = reverse_manual(
+        db,
+        member_id,
+        transaction_id,
+        auth.user_id,
+        body.reason,
+        penalty_only=penalty_only,
+        existing_compensation_id=body.existing_compensation_id,
+        compensation_reviewed=body.compensation_reviewed,
+    )
+    db.commit()
+    return {
+        "transaction_id": reversal.transaction_id,
+        "refund_transaction_id": reversal.refund_transaction_id,
+        "amount": -db.get(PointTransaction, transaction_id).amount,
+        "reversed_at": reversal.created_at,
+        "reason": reversal.reason,
+    }
+
+
 @router.post("/members/{member_id}/penalties/{transaction_id}/reverse")
 def reverse_penalty(
     member_id: int,
     transaction_id: int,
-    body: PraiseRevocationIn,
+    body: PointReversalIn,
     auth: ParentSession,
     db: DbSession,
 ) -> dict:
-    """Refund exactly the original manual deduction once, without granting XP or praise."""
-    get_member(db, member_id)
-    lock_member(db, member_id)
-    entry = db.scalar(
-        select(PointTransaction)
-        .where(PointTransaction.id == transaction_id, PointTransaction.member_id == member_id)
-        .with_for_update(of=PointTransaction)
-    )
-    if entry is None:
-        raise ApiError(404, "common.not_found")
-    if entry.kind != "manual" or entry.amount >= 0:
-        raise ApiError(409, "points.not_penalty")
-    reversal = db.get(PenaltyReversal, transaction_id)
-    if reversal is None:
-        refund = book(
-            db,
-            member_id,
-            -entry.amount,
-            "penalty_reversed",
-            reason=body.reason.strip(),
-            user_id=auth.user_id,
-        )
-        db.flush()
-        reversal = PenaltyReversal(
-            transaction_id=entry.id,
-            refund_transaction_id=refund.id,
-            reason=body.reason.strip(),
-            created_by_user_id=auth.user_id,
-        )
-        db.add(reversal)
-        db.commit()
-    return {
-        "transaction_id": entry.id,
-        "refund_transaction_id": reversal.refund_transaction_id,
-        "amount": -entry.amount,
-        "reversed_at": reversal.created_at,
-        "reason": reversal.reason,
-    }
+    """Reverse a manual deduction once; review/link existing compensation before refunding."""
+    return reverse_points_entry(member_id, transaction_id, body, auth, db, penalty_only=True)
+
+
+@router.post("/members/{member_id}/points/{transaction_id}/reverse")
+def reverse_points(
+    member_id: int,
+    transaction_id: int,
+    body: PointReversalIn,
+    auth: ParentSession,
+    db: DbSession,
+) -> dict:
+    """Reverse one manual credit/debit. Never reverses task, reward or refund entries.
+
+    A negative booking uses the same audit as penalty reversal, preventing double refunds.
+    Existing compensation must be explicitly linked, or reviewed as unrelated.
+    """
+    return reverse_points_entry(member_id, transaction_id, body, auth, db)

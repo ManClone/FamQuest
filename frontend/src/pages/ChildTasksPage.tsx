@@ -167,6 +167,34 @@ function ChildProgressHeader({
             {t('child_progress.earned', { count: data.earned_xp })} ·{' '}
             {t('child_progress.level_hint', { count: data.level_size })}
           </p>
+          {(data.required_praise ?? 0) > 0 && (
+            <>
+              <p className="font-bold text-slate-700">
+                {t('child_progress.praise_remaining', {
+                  count: data.remaining_praise ?? 0,
+                  level: data.level + 1,
+                })}
+              </p>
+              <div
+                role="progressbar"
+                aria-label={t('child_progress.praise_progress')}
+                aria-valuemin={0}
+                aria-valuemax={data.required_praise}
+                aria-valuenow={data.praise_progress ?? 0}
+                className="h-4 overflow-hidden rounded-full bg-white shadow-inner"
+              >
+                <div
+                  className="h-full rounded-full bg-rose-400"
+                  style={{
+                    width: `${((data.praise_progress ?? 0) / (data.required_praise ?? 1)) * 100}%`,
+                  }}
+                />
+              </div>
+              {data.remaining_xp === 0 && (data.remaining_praise ?? 0) > 0 && (
+                <p>{t('child_progress.xp_ready')}</p>
+              )}
+            </>
+          )}
         </div>
       ) : progress.isError ? (
         <Alert>{errorMessage(t, progress.error)}</Alert>

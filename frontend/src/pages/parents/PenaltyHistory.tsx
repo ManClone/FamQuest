@@ -15,6 +15,8 @@ type Entry = {
   created_at: string
   reversed_at: string | null
   reversal_reason: string | null
+  compensation_candidate_ids?: number[]
+  compensates_transaction_id?: number | null
 }
 export const PENALTY_HISTORY_KEY = ['penalty-history'] as const
 export function PenaltyHistory({ memberId }: { memberId: number }) {
@@ -22,6 +24,8 @@ export function PenaltyHistory({ memberId }: { memberId: number }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<number>()
   const [reason, setReason] = useState('')
+  const [reviewed, setReviewed] = useState(false)
+  const [compensation, setCompensation] = useState('')
   const history = useInfiniteQuery({
     queryKey: [...PENALTY_HISTORY_KEY, memberId],
     queryFn: ({ pageParam }) =>
@@ -34,7 +38,11 @@ export function PenaltyHistory({ memberId }: { memberId: number }) {
   })
   const revoke = useParentMutation(
     (id: number) =>
-      api('POST', `/members/${memberId}/penalties/${id}/reverse`, { reason: reason.trim() }),
+      api('POST', `/members/${memberId}/penalties/${id}/reverse`, {
+        reason: reason.trim(),
+        compensation_reviewed: reviewed,
+        existing_compensation_id: compensation ? Number(compensation) : null,
+      }),
     [PENALTY_HISTORY_KEY, POINTS_KEY, PROGRESS_KEY, TODAY_KEY],
   )
   const entries = history.data?.pages.flatMap((page) => page.penalties) ?? []
@@ -64,12 +72,44 @@ export function PenaltyHistory({ memberId }: { memberId: number }) {
                 <p className="text-sm text-slate-500">
                   {new Date(entry.created_at).toLocaleString(i18n.language)}
                 </p>
-                {entry.reversed_at ? (
+                {entry.compensates_transaction_id ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    {t('points.compensates', { id: entry.compensates_transaction_id })}
+                  </p>
+                ) : entry.reversed_at ? (
                   <p className="mt-2 text-sm text-slate-600">
                     {t('penalty.reversed')} · {entry.reversal_reason}
                   </p>
                 ) : selected === entry.id ? (
                   <div className="mt-3 flex flex-col gap-2">
+                    {!!entry.compensation_candidate_ids?.length && (
+                      <>
+                        <p>{t('penalty.compensation_review')}</p>
+                        <label className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={reviewed}
+                            onChange={(event) => setReviewed(event.target.checked)}
+                          />
+                          {t('penalty.compensation_unrelated')}
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          {t('penalty.existing_compensation')}
+                          <select
+                            className="rounded-lg border p-2"
+                            value={compensation}
+                            onChange={(event) => setCompensation(event.target.value)}
+                          >
+                            <option value="">—</option>
+                            {entry.compensation_candidate_ids.map((id) => (
+                              <option key={id} value={id}>
+                                #{id}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
                     <TextField
                       label={t('penalty.reason')}
                       value={reason}
@@ -81,7 +121,11 @@ export function PenaltyHistory({ memberId }: { memberId: number }) {
                       <Button
                         size="compact"
                         variant="danger"
-                        disabled={!reason.trim() || revoke.isPending}
+                        disabled={
+                          !reason.trim() ||
+                          revoke.isPending ||
+                          (!!entry.compensation_candidate_ids?.length && !reviewed && !compensation)
+                        }
                         onClick={() =>
                           revoke.mutate(entry.id, {
                             onSuccess: () => {
@@ -112,6 +156,8 @@ export function PenaltyHistory({ memberId }: { memberId: number }) {
                     onClick={() => {
                       setSelected(entry.id)
                       setReason('')
+                      setReviewed(false)
+                      setCompensation('')
                     }}
                   >
                     {t('penalty.reverse')}

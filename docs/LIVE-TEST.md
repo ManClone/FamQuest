@@ -4,6 +4,10 @@ Dieser Stand ist die Grundlage fuer den Familientest. `main` ist der Live-Branch
 `develop` bleibt fuer weitere Entwicklung, insbesondere Geld und Bankanbindung.
 Eine Bankanbindung ist in diesem Stand nicht enthalten.
 
+Der Umfang der ersten stabilen Familienversion (#16–#23), die Levelmigration und
+die Abnahmeschritte stehen in [STABLE-1.md](STABLE-1.md). Dort ist auch der neue,
+ausschließlich lesende Konsistenzbericht beschrieben.
+
 ## Aktuelles Verhalten
 
 - Anmeldung und Berechtigungen sind kontobasiert. Kinder sehen ihre eigenen Aufgaben,

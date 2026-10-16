@@ -100,6 +100,7 @@ class FamilyMember(Base):
     __tablename__ = "family_members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    highest_level: Mapped[int] = mapped_column(default=1, server_default="1")
     name: Mapped[str] = mapped_column(String(50))
     # Erweiterbare Werte (siehe schemas.MEMBER_ROLES), bewusst kein Datenbank-Enum.
     role: Mapped[str] = mapped_column(String(20))
@@ -884,7 +885,7 @@ class Praise(Base):
 
 
 class PenaltyReversal(Base):
-    """Audited, once-only refund of an original manual star deduction."""
+    """Shared once-only correction audit for manual entries (legacy table name retained)."""
 
     __tablename__ = "penalty_reversals"
     transaction_id: Mapped[int] = mapped_column(

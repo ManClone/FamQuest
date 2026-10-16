@@ -368,7 +368,10 @@
     "kind_reward_cancelled": "Reward cancelled",
     "kind_chore_completed": "Household task completed",
     "kind_chore_undone": "Household task undone",
-    "kind_penalty_reversed": "Star deduction reversed"
+    "kind_penalty_reversed": "Star deduction reversed",
+    "kind_manual_reversed": "Manual booking reversed",
+    "reversed": "Reversed · correction #{{id}}",
+    "compensates": "Compensation for booking #{{id}}"
   },
   "errors": {
     "common": {
@@ -445,7 +448,11 @@
     },
     "points": {
       "insufficient": "There aren't enough points for that.",
-      "not_penalty": "This entry is not a manual star deduction."
+      "not_penalty": "This entry is not a manual star deduction.",
+      "not_manual": "Only manual entries can be reversed here.",
+      "invalid_compensation": "This entry is not a matching unused compensation.",
+      "compensation_in_use": "This entry is already linked as a compensation.",
+      "compensation_review_required": "Review later credits and link any existing compensation first."
     },
     "reward": {
       "not_found": "This reward no longer exists",
@@ -593,7 +600,8 @@
     "audience_child": "Children",
     "need_parents": "Add a parent family member first.",
     "choose_parent": "Choose a parent",
-    "own_only": "Only this person can redeem their rewards. Progress and history remain visible."
+    "own_only": "Only this person can redeem their rewards. Progress and history remain visible.",
+    "choose_member": "Choose a family member"
   },
   "care": {
     "title": "Who did it?",
@@ -1039,7 +1047,8 @@
     "future_money": "Money (coming later)",
     "awaiting": "{{count}} completions awaiting approval",
     "child_complete": "Done!",
-    "who_before_completion": "Who completed {{title}}?"
+    "who_before_completion": "Who completed {{title}}?",
+    "confirm_undo": "Really undo “{{title}}”?"
   },
   "todos": {
     "title": "To do",
@@ -1125,10 +1134,13 @@
     "level_progress": "Progress to the next level",
     "earned_one": "{{count}} experience XP earned",
     "earned_other": "{{count}} experience XP earned",
-    "level_hint": "{{count}} XP per level. Redeeming rewards keeps your experience.",
+    "level_hint": "Spending stars and criticism do not change your level XP.",
     "reward_history": "Your redeemed rewards",
     "today_progress": "Your day",
-    "back_tasks": "Back to my tasks"
+    "back_tasks": "Back to my tasks",
+    "praise_remaining": "{{count}} more praise to level {{level}}",
+    "praise_progress": "Praise to the next level",
+    "xp_ready": "XP reached – the remaining praise is still needed."
   },
   "praise": {
     "section": "Praise & discipline",
@@ -1166,6 +1178,9 @@
     "empty": "No star deductions yet.",
     "reverse": "Reverse deduction",
     "reversed": "Reversed · stars refunded",
-    "reason": "Reason for reversal"
+    "reason": "Reason for reversal",
+    "compensation_review": "Later credits may already compensate this deduction. Review before refunding.",
+    "compensation_unrelated": "I checked: these credits are unrelated to this deduction.",
+    "existing_compensation": "Link an existing compensation (optional)"
   }
 }

@@ -5,7 +5,8 @@ import TrophyIcon from '~icons/fluent-emoji-flat/trophy'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 
 import { useMe } from '../api/auth'
-import { childrenOf } from '../api/members'
+import { useRewardMembers } from '../api/members'
+import { ChildPicker } from './parents/formParts'
 import { pointsFor } from '../api/today'
 import { Avatar } from '../components/Avatar'
 import { Alert, Button } from '../components/ui'
@@ -39,10 +40,12 @@ export function RewardsPage() {
   const navigate = useNavigate()
   const { memberId } = useParams()
   const me = useMe().data
-  const { members, today, isPending, error, refetch } = useFamilyToday()
+  const { members: ownMembers, today, isPending, error, refetch } = useFamilyToday()
+  const directory = useRewardMembers(me?.user.role === 'child')
+  const members = me?.user.role === 'child' ? directory.data : ownMembers
   useIdleTimeout(PERSON_IDLE_TIMEOUT_MS, () => navigate('/'))
 
-  if (isPending) {
+  if (isPending || (me?.user.role === 'child' && directory.isPending)) {
     return (
       <p role="status" className="p-6 text-xl text-slate-600">
         {t('common.loading')}
@@ -52,13 +55,20 @@ export function RewardsPage() {
   if (!members || !today) {
     return (
       <div className="flex flex-col items-start gap-4 p-6">
-        <Alert>{errorMessage(t, error)}</Alert>
-        <Button onClick={() => void refetch()}>{t('actions.retry')}</Button>
+        <Alert>{errorMessage(t, error ?? directory.error)}</Alert>
+        <Button
+          onClick={() => {
+            void refetch()
+            void directory.refetch()
+          }}
+        >
+          {t('actions.retry')}
+        </Button>
       </div>
     )
   }
 
-  const children = childrenOf(members)
+  const children = members
   if (me?.user.role === 'child' && me.member_id && memberId === undefined)
     return <Navigate to={`/rewards/${me.member_id}`} replace />
 
@@ -95,11 +105,36 @@ export function RewardsPage() {
             <span className="sr-only">{t('rewards.of', { name: member.name })}</span>
             <span aria-hidden="true">{member.name}</span>
           </h1>
-          <Balance total={total} size={childView ? 'md' : 'lg'} />
+          {(!childView || member.id === me?.member_id) && (
+            <Balance total={total} size={childView ? 'md' : 'lg'} />
+          )}
         </header>
-        <RewardGrid member={member} balance={total} compact={childView} />
-        <Section title={t('child_progress.reward_history')}>
-          <RedemptionHistory member={member} timeZone={me?.family.timezone ?? 'Europe/Berlin'} />
+        <ChildPicker
+          label={t('rewards.choose_member')}
+          childMembers={members}
+          selected={member}
+          onSelect={(id) => navigate(`/rewards/${id}`)}
+        />
+        {member.id !== me?.member_id && <p>{t('rewards.own_only')}</p>}
+        <RewardGrid
+          member={member}
+          balance={total}
+          compact={childView}
+          canRedeem={member.id === me?.member_id}
+        />
+        <Section
+          title={
+            member.id === me?.member_id
+              ? t('child_progress.reward_history')
+              : t('rewards.history', { name: member.name })
+          }
+        >
+          <RedemptionHistory
+            showTitle={false}
+            member={member}
+            timeZone={me?.family.timezone ?? 'Europe/Berlin'}
+            readOnly={member.id !== me?.member_id}
+          />
         </Section>
       </main>
     )
@@ -126,7 +161,9 @@ export function RewardsPage() {
                 <span className="text-2xl font-extrabold break-words text-slate-800">
                   {member.name}
                 </span>
-                <Balance total={pointsFor(today, member.id).total} size="md" />
+                {(me?.user.role !== 'child' || member.id === me.member_id) && (
+                  <Balance total={pointsFor(today, member.id).total} size="md" />
+                )}
               </Link>
             </li>
           ))}

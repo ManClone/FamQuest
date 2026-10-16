@@ -33,6 +33,7 @@ const KIND_ICONS: Record<PointKind, typeof ManualIcon> = {
   chore_completed: CheckIcon,
   chore_undone: UndoIcon,
   penalty_reversed: UndoIcon,
+  manual_reversed: UndoIcon,
 }
 
 type Direction = 'credit' | 'deduct'
@@ -232,6 +233,17 @@ function TransactionRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-lg font-bold break-words text-slate-800">{transaction.reason}</span>
+        {transaction.reversed_at && (
+          <span className="text-sm text-slate-600">
+            {t('points.reversed', { id: transaction.reversal_transaction_id })} ·{' '}
+            {transaction.reversal_reason}
+          </span>
+        )}
+        {transaction.compensates_transaction_id && (
+          <span className="text-sm text-slate-600">
+            {t('points.compensates', { id: transaction.compensates_transaction_id })}
+          </span>
+        )}
         <span className="flex flex-wrap items-center gap-x-2 text-base text-slate-500">
           {transaction.icon && <KindIcon className="size-5" aria-hidden="true" />}
           {t(`points.kind_${transaction.kind}`)} · {when}

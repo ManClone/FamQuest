@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
 from app.api.members import get_member
-from app.auth import CurrentSession, DbSession, ParentSession, child_member_id, ensure_member_access
+from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.errors import ApiError
 from app.models import PointTransaction, Reward, RewardRedemption
 from app.points import balance, book, lock_member
@@ -63,7 +63,7 @@ def list_rewards(auth: CurrentSession, db: DbSession) -> list[RewardOut]:
     """Alle Belohnungen; das Display zeigt davon nur die aktiven."""
     rewards = db.scalars(select(Reward).order_by(Reward.member_id, Reward.cost, Reward.id))
     own = child_member_id(db, auth)
-    return [reward_out(reward) for reward in rewards if own is None or reward.member_id == own]
+    return [reward_out(reward) for reward in rewards] if own != 0 else []
 
 
 @router.post("/rewards", status_code=status.HTTP_201_CREATED)
@@ -97,9 +97,8 @@ def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> Redemp
     verhindert, dass zwei gleichzeitige Einlösungen den Stand ins Minus bringen.
     """
     reward = get_reward(db, reward_id)
-    ensure_member_access(db, auth, reward.member_id)
     member = get_member(db, reward.member_id)
-    if member.role == "parent" and member.user_id != auth.user_id:
+    if member.user_id != auth.user_id:
         raise ApiError(status.HTTP_403_FORBIDDEN, "reward.own_only")
     if not reward.active:
         raise ApiError(status.HTTP_409_CONFLICT, "reward.inactive")
@@ -163,12 +162,8 @@ def list_redemptions(
 ) -> RedemptionHistoryOut:
     """Einlösungen aller Kinder oder eines Kindes, neueste zuerst."""
     own = child_member_id(db, auth)
-    if own is not None:
-        if own == 0:
-            raise ApiError(status.HTTP_403_FORBIDDEN, "profile.not_linked")
-        if member_id is not None:
-            ensure_member_access(db, auth, member_id)
-        member_id = own
+    if own == 0:
+        raise ApiError(status.HTTP_403_FORBIDDEN, "profile.not_linked")
     query = select(RewardRedemption)
     if member_id is not None:
         query = query.where(RewardRedemption.member_id == member_id)

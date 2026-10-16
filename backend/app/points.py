@@ -25,6 +25,11 @@ def book(
     """Legt eine Buchung an; Aufgaben mit 0 Punkten erzeugen keine."""
     if amount == 0:
         return
+    if kind in LEVEL_EARNING_KINDS:
+        from app.levels import advance
+
+        lock_member(db, member_id)
+        advance(db, member_id)
     entry = PointTransaction(
         member_id=member_id,
         amount=amount,
@@ -36,6 +41,9 @@ def book(
         redemption=redemption,
     )
     db.add(entry)
+    if kind in LEVEL_EARNING_KINDS:
+        db.flush()
+        advance(db, member_id)
     return entry
 
 

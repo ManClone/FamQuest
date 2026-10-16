@@ -39,6 +39,10 @@ it('loads confirmed household executions on demand and removes only the selected
   expect(calls).toHaveLength(0)
   await user.click(screen.getByText('Confirmed household tasks'))
   expect(await screen.findAllByText('Litter box')).toHaveLength(4)
+  const region = screen.getByRole('region', { name: 'Confirmed household tasks' })
+  expect(region.className).toContain('overflow-y-auto')
+  expect(region.className).toContain('max-h-')
+  expect(region.closest('details')?.className).toContain('bg-white')
   const row = screen.getAllByRole('listitem')[1]
   await user.click(within(row).getByRole('button', { name: /^Undo$/ }))
   expect(calls.some((call) => call.key.startsWith('DELETE'))).toBe(false)

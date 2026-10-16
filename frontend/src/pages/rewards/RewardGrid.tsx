@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 
 import type { Member } from '../../api/members'
+import { useMe } from '../../api/auth'
 import { type Reward, rewardsFor, useRewards } from '../../api/rewards'
 import { Alert } from '../../components/ui'
 import { errorMessage } from '../../errors'
@@ -14,7 +15,7 @@ export function RewardGrid({
   member,
   balance,
   compact = false,
-  canRedeem = true,
+  canRedeem: requestedRedeem,
 }: {
   member: Member
   balance: number
@@ -23,6 +24,8 @@ export function RewardGrid({
 }) {
   const { t } = useTranslation()
   const rewards = useRewards()
+  const me = useMe().data
+  const canRedeem = member.id === me?.member_id && requestedRedeem !== false
   const [selected, setSelected] = useState<Reward | null>(null)
   const close = useCallback(() => setSelected(null), [])
 

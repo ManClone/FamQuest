@@ -20,6 +20,7 @@ from app.api import (
     frame,
     health,
     home,
+    maintenance,
     meals,
     members,
     money,
@@ -83,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api = APIRouter(prefix="/api")
     for module in (
         health,
+        maintenance,
         setup,
         auth,
         parent,
