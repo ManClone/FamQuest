@@ -235,3 +235,22 @@ def test_concurrent_household_request_is_credited_once(client, parent, now):
         responses = list(pool.map(attempt, range(4)))
     assert [response.status_code for response in responses] == [200] * 4
     assert total(flo) == 10
+
+
+def test_retry_preserves_booked_xp_after_chore_edit(client, parent, now):
+    flo = parent_member(client, parent, "Flo")
+    room = add_room(client, parent)
+    item = add_chore(client, parent, room["id"], adult_xp=15)
+    path = f"/api/chores/{item['id']}/done"
+    body = {"member_id": flo, "request_key": "a" * 32}
+    assert client.put(path, json=body, headers=csrf(parent)).status_code == 200
+    edited = client.put(
+        f"/api/chores/{item['id']}",
+        json={**item, "adult_xp": 70},
+        headers=csrf(parent),
+    )
+    assert edited.status_code == 200, edited.text
+    assert client.put(path, json=body, headers=csrf(parent)).status_code == 200
+    assert total(flo) == 15
+    assert client.delete(path, headers=csrf(parent)).status_code == 200
+    assert total(flo) == 0

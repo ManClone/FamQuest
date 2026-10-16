@@ -1,8 +1,11 @@
 """Read-only weekly assignment preview integration tests."""
 
+from fastapi.testclient import TestClient
+
 from tests.conftest import csrf
 from tests.test_adult_chore_credits import parent_member
 from tests.test_chores import add_chore, add_room
+from tests.test_personal_access import add_person
 
 
 def test_weekly_preview_keeps_fixed_shopping_and_balances_work(client, parent, now):
@@ -161,3 +164,35 @@ def test_weekly_preview_reports_deleted_fixed_adult_as_conflict(client, parent, 
         db.commit()
     response = client.get("/api/chores/weekly-preview")
     assert response.status_code == 409, response.text
+
+
+def test_weekly_preview_ignores_pending_child_work(client, parent, now):
+    child_id, credentials = add_person(client, parent, "Lena", "purple")
+    parent_member(client, parent, "Flo")
+    room = add_room(client, parent)
+    item = add_chore(
+        client,
+        parent,
+        room["id"],
+        estimated_minutes=30,
+        child_enabled=True,
+        child_member_ids=[child_id],
+        state="due",
+    )
+    child = TestClient(client.app)
+    try:
+        me = child.post("/api/auth/login", json=credentials).json()
+        response = child.put(
+            f"/api/chores/mine/{item['id']}/done",
+            json={"request_key": "b" * 32},
+            headers=csrf(me),
+        )
+        assert response.status_code == 200, response.text
+        preview = client.get("/api/chores/weekly-preview")
+        assert preview.status_code == 200, preview.text
+        assignments = preview.json()["assignments"]
+        assert len(assignments) == 1
+        # Pending work must not penalize the first eligible member's workload.
+        assert assignments[0]["member_id"] == child_id
+    finally:
+        child.close()

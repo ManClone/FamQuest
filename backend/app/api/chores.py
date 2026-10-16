@@ -452,6 +452,7 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
             ChoreCompletion.date >= since,
             ChoreCompletion.date <= today,
             ChoreCompletion.member_id.in_(adult_ids),
+            ChoreCompletion.approved.is_(True),
         )
     )
     previous_minutes = {member_id: 0 for member_id in adult_ids}
@@ -773,7 +774,8 @@ def _credit_completion(
     )
     if not completion.approved:
         amount = 0
-    if old is not None and old.member_id == completion.member_id and old.amount == amount:
+    # Retried executions retain the XP booked at completion, even after chore edits.
+    if old is not None and old.member_id == completion.member_id:
         return
     for member_id in sorted(
         ({old.member_id} if old else set()) | ({member.id} if member and amount else set())
