@@ -863,7 +863,7 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
         raise ApiError(status.HTTP_409_CONFLICT, "chore.not_completed")
     old = db.get(ChoreCredit, completion.id)
     amount = chore.adult_xp
-    if old is not None and old.member_id == member.id and old.amount == amount:
+    if old is not None and old.member_id == member.id:
         return _one_out(db, chore)
     # Serialize balance-affecting changes; lock in stable order.
     for member_id in sorted({member.id, old.member_id} if old else {member.id}):

@@ -252,5 +252,7 @@ def test_retry_preserves_booked_xp_after_chore_edit(client, parent, now):
     assert edited.status_code == 200, edited.text
     assert client.put(path, json=body, headers=csrf(parent)).status_code == 200
     assert total(flo) == 15
+    assert approve(client, parent, item["id"], flo).status_code == 200
+    assert total(flo) == 15
     assert client.delete(path, headers=csrf(parent)).status_code == 200
     assert total(flo) == 0
