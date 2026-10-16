@@ -246,10 +246,17 @@ def test_retry_preserves_booked_xp_after_chore_edit(client, parent, now):
     assert client.put(path, json=body, headers=csrf(parent)).status_code == 200
     edited = client.put(
         f"/api/chores/{item['id']}",
-        json={**item, "adult_xp": 70},
+        json={
+            "room_id": room["id"],
+            "title": item["title"],
+            "icon": item["icon"],
+            "interval_days": item["interval_days"],
+            "adult_xp": 70,
+        },
         headers=csrf(parent),
     )
     assert edited.status_code == 200, edited.text
+    assert total(flo) == 15
     assert client.put(path, json=body, headers=csrf(parent)).status_code == 200
     assert total(flo) == 15
     assert approve(client, parent, item["id"], flo).status_code == 200
