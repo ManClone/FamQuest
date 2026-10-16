@@ -35,7 +35,7 @@ def test_service_disabled_invalid_and_child_principals_denied(client, parent, mo
 
 
 def test_service_parent_uses_real_task_parameters_but_cannot_manage_accounts(
-    client, parent, monkeypatch
+    client, parent, lena, monkeypatch
 ):
     monkeypatch.setattr(get_settings(), "mcp_service_token", "s" * 40)
     from sqlalchemy import select
@@ -55,6 +55,29 @@ def test_service_parent_uses_real_task_parameters_but_cannot_manage_accounts(
     assert client.post("/api/auth/accounts", json={}, headers=headers).status_code == 403
     assert client.put("/api/profile/password", json={}, headers=headers).status_code == 403
     assert client.post("/api/approvals/1", headers=headers).status_code == 409
+    from tests.test_tasks import task_data
+
+    payload = task_data(
+        [lena],
+        title="Read together",
+        points=7,
+        repeatable=True,
+        needs_approval=True,
+        recurrence={"kind": "weekly", "weekdays": [1, 3, 5]},
+    )
+    saved = client.post(
+        "/api/tasks/schedule",
+        json={"task": payload, "times": ["morning", "evening"]},
+        headers=headers,
+    )
+    assert saved.status_code == 200, saved.text
+    tasks = client.get("/api/tasks", headers=headers).json()
+    assert len(tasks) == 2
+    assert {item["time_of_day"] for item in tasks} == {"morning", "evening"}
+    assert all(
+        item["points"] == 7 and item["repeatable"] and item["needs_approval"] for item in tasks
+    )
+    assert all(item["recurrence"]["weekdays"] == [1, 3, 5] for item in tasks)
 
 
 def test_schema_and_runtime_allowlist_agree_on_sensitive_operations():
