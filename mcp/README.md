@@ -43,12 +43,17 @@ Darin koennen Familiendaten stehen; das Volume gehoert in die Datensicherung.
    verschluesselt im persistenten Volume gespeichert.
 5. App und MCP in dasselbe interne Docker-Netzwerk aufnehmen. Der separate Compose-Dienst
    kann `app` sonst nicht aufloesen. `FAMQUEST_API_URL` muss auf die aktualisierte App zeigen.
-6. Cloudflare bekommt fuer diesen Dienst einen eigenen Hostnamen, zum Beispiel
-   `mcp-famquest.websiteclone.de`, mit Ziel `http://famquest-mcp:8000`.
-   Die gesamte Origin weiterleiten: OAuth-Discovery, `/auth/callback` und `/mcp` muessen
-   erreichbar sein. Der vorhandene App-Hostname bleibt beim App-Dienst.
+6. Dieselbe oeffentliche Origin kann App und MCP bedienen: `MCP_PUBLIC_URL` ist dann
+   beispielsweise `https://famquest.websiteclone.de` (ohne `/mcp`). Der MCP-Endpunkt ist
+   `https://famquest.websiteclone.de/mcp`, GitHubs Callback
+   `https://famquest.websiteclone.de/auth/callback`.
+   Vor der vorhandenen App-Fallbackroute eine Cloudflare-Pfadregel zum Dienst
+   `http://famquest-mcp:8000` einfuegen. Die notwendigen Pfade stehen in `routing.py`.
+   Die Pfade unveraendert weiterleiten; Discovery, Anmeldung, Consent und Tokenaustausch
+   gehoeren zum MCP-Dienst. Alle anderen Pfade bleiben beim bisherigen App-Ziel.
 7. `docker compose up -d --build` im MCP-Verzeichnis. In ChatGPT den MCP-Endpunkt
-   `https://<MCP-Hostname>/mcp` mit OAuth verbinden und zuerst `get_connected_parent` pruefen.
+   `https://<App-Hostname>/mcp` mit OAuth verbinden und zuerst `get_connected_parent` pruefen.
+
 
 Die beiden OAuth-Schluessel und die GitHub-App-Registrierung sind installationsabhaengig.
 Ohne sie ist die Implementierung nicht als live angebunden zu betrachten. Ein echter
