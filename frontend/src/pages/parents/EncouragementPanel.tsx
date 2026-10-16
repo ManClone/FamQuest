@@ -1,3 +1,4 @@
+import { PenaltyHistory, PENALTY_HISTORY_KEY } from './PenaltyHistory'
 import { PraiseHistory, PRAISE_HISTORY_KEY } from './PraiseHistory'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -51,7 +52,7 @@ function EncouragementForm({ member }: { member: Member }) {
         request_key: requestKey,
       })
     return bookPoints(member.id, { amount: -amount, reason: reason.trim() })
-  }, [POINTS_KEY, PROGRESS_KEY, TODAY_KEY, PRAISE_HISTORY_KEY])
+  }, [POINTS_KEY, PROGRESS_KEY, TODAY_KEY, PRAISE_HISTORY_KEY, PENALTY_HISTORY_KEY])
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!mode || !reason.trim()) return
@@ -151,6 +152,7 @@ function EncouragementForm({ member }: { member: Member }) {
         {saved && <p role="status">{t('praise.saved')}</p>}
       </form>
       <PraiseHistory memberId={member.id} />
+      <PenaltyHistory memberId={member.id} />
     </>
   )
 }

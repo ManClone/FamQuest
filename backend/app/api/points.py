@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, ensure_member_access
 from app.errors import ApiError
-from app.models import PointTransaction, Praise
+from app.models import PenaltyReversal, PointTransaction, Praise
 from app.points import balance, book, level_xp, lock_member
 from app.schemas import PointBookingIn, PointHistoryOut, PointTransactionOut
 from app.today import utcnow
@@ -96,6 +96,9 @@ def member_progress(
             PointTransaction.member_id == member_id,
             PointTransaction.kind == "manual",
             PointTransaction.amount < 0,
+            ~select(PenaltyReversal.transaction_id)
+            .where(PenaltyReversal.transaction_id == PointTransaction.id)
+            .exists(),
         )
         .order_by(PointTransaction.id.desc())
         .limit(1)
@@ -186,4 +189,89 @@ def revoke_praise(
         "id": entry.id,
         "revoked_at": entry.revoked_at,
         "revocation_reason": entry.revocation_reason,
+    }
+
+
+@router.get("/members/{member_id}/penalties")
+def penalty_history(
+    member_id: int, _: ParentSession, db: DbSession, before: int | None = Query(default=None, ge=1)
+) -> dict:
+    """Original manual deductions with their refund audit, newest first."""
+    get_member(db, member_id)
+    query = (
+        select(PointTransaction, PenaltyReversal)
+        .outerjoin(PenaltyReversal, PenaltyReversal.transaction_id == PointTransaction.id)
+        .where(
+            PointTransaction.member_id == member_id,
+            PointTransaction.kind == "manual",
+            PointTransaction.amount < 0,
+        )
+        .order_by(PointTransaction.id.desc())
+        .limit(51)
+    )
+    if before is not None:
+        query = query.where(PointTransaction.id < before)
+    rows = list(db.execute(query))
+    return {
+        "penalties": [
+            {
+                "id": entry.id,
+                "amount": -entry.amount,
+                "reason": entry.reason,
+                "created_at": entry.created_at,
+                "reversed_at": reversal.created_at if reversal else None,
+                "reversal_reason": reversal.reason if reversal else None,
+                "refund_transaction_id": reversal.refund_transaction_id if reversal else None,
+            }
+            for entry, reversal in rows[:50]
+        ],
+        "has_more": len(rows) > 50,
+    }
+
+
+@router.post("/members/{member_id}/penalties/{transaction_id}/reverse")
+def reverse_penalty(
+    member_id: int,
+    transaction_id: int,
+    body: PraiseRevocationIn,
+    auth: ParentSession,
+    db: DbSession,
+) -> dict:
+    """Refund exactly the original manual deduction once, without granting XP or praise."""
+    get_member(db, member_id)
+    lock_member(db, member_id)
+    entry = db.scalar(
+        select(PointTransaction)
+        .where(PointTransaction.id == transaction_id, PointTransaction.member_id == member_id)
+        .with_for_update()
+    )
+    if entry is None:
+        raise ApiError(404, "common.not_found")
+    if entry.kind != "manual" or entry.amount >= 0:
+        raise ApiError(409, "points.not_penalty")
+    reversal = db.get(PenaltyReversal, transaction_id)
+    if reversal is None:
+        refund = book(
+            db,
+            member_id,
+            -entry.amount,
+            "penalty_reversed",
+            reason=body.reason.strip(),
+            user_id=auth.user_id,
+        )
+        db.flush()
+        reversal = PenaltyReversal(
+            transaction_id=entry.id,
+            refund_transaction_id=refund.id,
+            reason=body.reason.strip(),
+            created_by_user_id=auth.user_id,
+        )
+        db.add(reversal)
+        db.commit()
+    return {
+        "transaction_id": entry.id,
+        "refund_transaction_id": reversal.refund_transaction_id,
+        "amount": -entry.amount,
+        "reversed_at": reversal.created_at,
+        "reason": reversal.reason,
     }

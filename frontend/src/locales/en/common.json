@@ -367,7 +367,8 @@
     "kind_reward_redeemed": "Reward redeemed",
     "kind_reward_cancelled": "Reward cancelled",
     "kind_chore_completed": "Household task completed",
-    "kind_chore_undone": "Household task undone"
+    "kind_chore_undone": "Household task undone",
+    "kind_penalty_reversed": "Star deduction reversed"
   },
   "errors": {
     "common": {
@@ -443,13 +444,15 @@
       "not_repeatable": "This task is not repeatable."
     },
     "points": {
-      "insufficient": "There aren't enough points for that."
+      "insufficient": "There aren't enough points for that.",
+      "not_penalty": "This entry is not a manual star deduction."
     },
     "reward": {
       "not_found": "This reward no longer exists",
       "inactive": "This reward is not available right now",
       "insufficient_points": "Not enough points yet",
-      "child_only": "Rewards are only for children"
+      "child_only": "Rewards are only for children",
+      "own_only": "Adults can only redeem their own rewards."
     },
     "approval": {
       "not_found": "This has already been checked or undone."
@@ -589,7 +592,8 @@
     "audience_parent": "Parents",
     "audience_child": "Children",
     "need_parents": "Add a parent family member first.",
-    "choose_parent": "Choose a parent"
+    "choose_parent": "Choose a parent",
+    "own_only": "Only this person can redeem their rewards. Progress and history remain visible."
   },
   "care": {
     "title": "Who did it?",
@@ -1156,5 +1160,12 @@
     "cancel": "Cancel",
     "more": "Load older",
     "loading": "Loading …"
+  },
+  "penalty": {
+    "history": "Star deduction history",
+    "empty": "No star deductions yet.",
+    "reverse": "Reverse deduction",
+    "reversed": "Reversed · stars refunded",
+    "reason": "Reason for reversal"
   }
 }

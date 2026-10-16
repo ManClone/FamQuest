@@ -159,7 +159,15 @@ export function RewardsSection({
   )
 }
 
-export function RedemptionHistory({ member, timeZone }: { member: Member; timeZone: string }) {
+export function RedemptionHistory({
+  member,
+  timeZone,
+  readOnly = false,
+}: {
+  member: Member
+  timeZone: string
+  readOnly?: boolean
+}) {
   const { t } = useTranslation()
   const history = useRedemptions(member.id)
   const redemptions = history.data?.pages.flatMap((page) => page.redemptions) ?? []
@@ -176,7 +184,12 @@ export function RedemptionHistory({ member, timeZone }: { member: Member; timeZo
       {redemptions.length > 0 && (
         <ul className="@container flex flex-col divide-y divide-slate-100">
           {redemptions.map((redemption) => (
-            <RedemptionRow key={redemption.id} redemption={redemption} timeZone={timeZone} />
+            <RedemptionRow
+              key={redemption.id}
+              redemption={redemption}
+              timeZone={timeZone}
+              readOnly={readOnly}
+            />
           ))}
         </ul>
       )}
@@ -194,10 +207,18 @@ export function RedemptionHistory({ member, timeZone }: { member: Member; timeZo
   )
 }
 
-function RedemptionRow({ redemption, timeZone }: { redemption: Redemption; timeZone: string }) {
+function RedemptionRow({
+  redemption,
+  timeZone,
+  readOnly,
+}: {
+  redemption: Redemption
+  timeZone: string
+  readOnly: boolean
+}) {
   const { t, i18n } = useTranslation()
   const role = useMe().data?.user.role
-  const canCancel = role === 'admin' || role === 'parent'
+  const canCancel = !readOnly && (role === 'admin' || role === 'parent')
   const cancel = useCancelRedemption()
   const [editing, setEditing] = useState(false)
   const [reason, setReason] = useState('')

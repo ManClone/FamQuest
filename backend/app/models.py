@@ -881,3 +881,20 @@ class Praise(Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     revocation_reason: Mapped[str | None] = mapped_column(String(200))
+
+
+class PenaltyReversal(Base):
+    """Audited, once-only refund of an original manual star deduction."""
+
+    __tablename__ = "penalty_reversals"
+    transaction_id: Mapped[int] = mapped_column(
+        ForeignKey("point_transactions.id", ondelete="CASCADE"), primary_key=True
+    )
+    refund_transaction_id: Mapped[int] = mapped_column(
+        ForeignKey("point_transactions.id", ondelete="CASCADE"), unique=True
+    )
+    reason: Mapped[str] = mapped_column(String(200))
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

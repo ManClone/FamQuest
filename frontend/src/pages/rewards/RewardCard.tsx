@@ -9,6 +9,7 @@ import { colorTokens } from '../../memberColors'
 
 interface RewardCardProps {
   compact?: boolean
+  canRedeem?: boolean
   reward: Reward
   member: Member
   /** Aktueller Punktestand des Kindes. */
@@ -23,6 +24,7 @@ export function RewardCard({
   balance,
   onRedeem,
   compact = false,
+  canRedeem = true,
 }: RewardCardProps) {
   const { t } = useTranslation()
   const tokens = colorTokens(member.color)
@@ -51,8 +53,9 @@ export function RewardCard({
         <button
           type="button"
           onClick={onRedeem}
+          disabled={!canRedeem}
           aria-label={t('rewards.redeem_label', { name: reward.name })}
-          className={`mt-auto flex w-full items-center justify-center ${compact ? 'min-h-12 gap-2 rounded-xl px-2 py-2 text-base' : 'min-h-20 gap-3 rounded-2xl px-4 text-2xl'} font-extrabold shadow-sm transition-transform focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-orange-400 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100`}
+          className={`mt-auto flex w-full items-center justify-center ${compact ? 'min-h-12 gap-2 rounded-xl px-2 py-2 text-base' : 'min-h-20 gap-3 rounded-2xl px-4 text-2xl'} font-extrabold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-transform focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-orange-400 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100`}
           style={{ backgroundColor: tokens.main, color: tokens.onMain }}
         >
           <GiftIcon className={compact ? 'size-6' : 'size-10'} aria-hidden="true" />
