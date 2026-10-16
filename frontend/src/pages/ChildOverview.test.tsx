@@ -123,6 +123,7 @@ it('shows own redemption history and a working back destination for children', a
   const history = screen.getByRole('region', { name: 'Your redeemed rewards' })
   expect(await within(history).findByText('A film')).toBeVisible()
   expect(within(history).getByText(/12:15/)).toBeVisible()
+  expect(within(history).queryByRole('button', { name: 'Cancel redemption' })).toBeNull()
   await user.keyboard('{Escape}')
   const back = screen.getByRole('link', { name: /Back/ })
   expect(back).toHaveAttribute('href', '/tasks')

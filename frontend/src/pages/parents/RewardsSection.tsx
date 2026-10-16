@@ -151,7 +151,7 @@ export function RedemptionHistory({ member, timeZone }: { member: Member; timeZo
         <p className="text-lg text-slate-600">{t('rewards.history_empty')}</p>
       )}
       {redemptions.length > 0 && (
-        <ul className="flex flex-col divide-y divide-slate-100">
+        <ul className="@container flex flex-col divide-y divide-slate-100">
           {redemptions.map((redemption) => (
             <RedemptionRow key={redemption.id} redemption={redemption} timeZone={timeZone} />
           ))}
@@ -187,7 +187,7 @@ function RedemptionRow({ redemption, timeZone }: { redemption: Redemption; timeZ
   }).format(new Date(redemption.created_at))
 
   return (
-    <li className="flex flex-wrap items-center gap-3 py-3">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-3 @xl:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
       <TaskIcon icon={redemption.reward_icon} className="size-12" />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-lg font-bold break-words text-slate-800">
@@ -208,18 +208,22 @@ function RedemptionRow({ redemption, timeZone }: { redemption: Redemption; timeZ
         )}
       </span>
       <span
-        className={`shrink-0 rounded-full px-3 py-1 text-xl font-extrabold tabular-nums ${cancelled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+        className={`col-start-2 justify-self-start rounded-full px-3 py-1 text-base font-extrabold tabular-nums @xl:col-start-auto ${cancelled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
       >
         {cancelled ? t('rewards.refunded', { count: redemption.cost }) : `−${redemption.cost}`}
       </span>
       {canCancel && !cancelled && !editing && (
-        <Button variant="secondary" onClick={() => setEditing(true)}>
+        <Button
+          variant="secondary"
+          className="col-start-2 justify-self-start @xl:col-start-auto"
+          onClick={() => setEditing(true)}
+        >
           {t('rewards.cancel')}
         </Button>
       )}
       {canCancel && !cancelled && editing && (
         <form
-          className="flex w-full flex-col gap-3 rounded-xl bg-orange-50 p-3"
+          className="col-span-full flex w-full flex-col gap-3 rounded-xl bg-orange-50 p-3"
           onSubmit={(event) => {
             event.preventDefault()
             if (reason.trim())
