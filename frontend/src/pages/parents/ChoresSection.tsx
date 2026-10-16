@@ -85,9 +85,9 @@ export function ChoresSection({
 
       <Section title="Wochenverteilung für Erwachsene">
         <p className="text-base text-slate-600">
-          Vorschlag für die laufende Woche. Feste Aufgaben bleiben zugeordnet; andere werden
-          nach geschätzter Arbeitszeit verteilt. Erst mit „Wochenplan verbindlich übernehmen“
-          wird die Verteilung für alle im Putzplan sichtbar.
+          Vorschlag für die laufende Woche. Feste Aufgaben bleiben zugeordnet; andere werden nach
+          geschätzter Arbeitszeit verteilt. Erst mit „Wochenplan verbindlich übernehmen“ wird die
+          Verteilung für alle im Putzplan sichtbar.
         </p>
         <div className="mt-3">
           <Button
@@ -108,27 +108,35 @@ export function ChoresSection({
                 Für diese Woche ist bereits ein Plan bestätigt.
               </p>
             )}
-            {weekPublished && <p className="font-semibold text-green-700">Wochenplan gespeichert.</p>}
+            {weekPublished && (
+              <p className="font-semibold text-green-700">Wochenplan gespeichert.</p>
+            )}
             {weeklyPreview.data && (
               <>
                 <p className="font-semibold text-slate-700">
                   Woche ab {weeklyPreview.data.week_start}
                 </p>
                 {weeklyPreview.data.assignments.length === 0 ? (
-                  <p className="mt-2 text-slate-600">Keine Aufgaben für diese Woche vorgeschlagen.</p>
+                  <p className="mt-2 text-slate-600">
+                    Keine Aufgaben für diese Woche vorgeschlagen.
+                  </p>
                 ) : (
                   <>
                     <ul className="mt-3 flex flex-col gap-3">
                       {weeklyPreview.data.assignments.map((assignment) => {
                         const chore = plan?.chores.find((item) => item.id === assignment.chore_id)
                         const isFixed = chore?.assignment_mode === 'fixed'
-                        const assigned = weeklyEdits[assignment.chore_id]
-                          ?? confirmedWeek.data?.assignments.find(
+                        const assigned =
+                          weeklyEdits[assignment.chore_id] ??
+                          confirmedWeek.data?.assignments.find(
                             (item) => item.chore_id === assignment.chore_id,
-                          )?.member_id
-                          ?? assignment.member_id
+                          )?.member_id ??
+                          assignment.member_id
                         return (
-                          <li key={assignment.chore_id} className="rounded-xl border border-slate-200 p-3">
+                          <li
+                            key={assignment.chore_id}
+                            className="rounded-xl border border-slate-200 p-3"
+                          >
                             <label className="flex flex-wrap items-center justify-between gap-2">
                               <span className="font-bold text-slate-800">
                                 {chore?.title ?? `Aufgabe #${assignment.chore_id}`}
@@ -147,7 +155,9 @@ export function ChoresSection({
                                 className="rounded-lg border border-slate-300 p-2"
                               >
                                 {adults.map((member) => (
-                                  <option key={member.id} value={member.id}>{member.name}</option>
+                                  <option key={member.id} value={member.id}>
+                                    {member.name}
+                                  </option>
                                 ))}
                               </select>
                             </label>
@@ -166,11 +176,12 @@ export function ChoresSection({
                           const assignments: WeeklyChorePreview['assignments'] =
                             weeklyPreview.data.assignments.map((entry) => ({
                               ...entry,
-                              member_id: weeklyEdits[entry.chore_id]
-                                ?? confirmedWeek.data?.assignments.find(
+                              member_id:
+                                weeklyEdits[entry.chore_id] ??
+                                confirmedWeek.data?.assignments.find(
                                   (saved) => saved.chore_id === entry.chore_id,
-                                )?.member_id
-                                ?? entry.member_id,
+                                )?.member_id ??
+                                entry.member_id,
                             }))
                           publishWeek.mutate(assignments, {
                             onSuccess: () => {
@@ -181,7 +192,9 @@ export function ChoresSection({
                           })
                         }}
                       >
-                        {publishWeek.isPending ? 'Speichert …' : 'Wochenplan verbindlich übernehmen'}
+                        {publishWeek.isPending
+                          ? 'Speichert …'
+                          : 'Wochenplan verbindlich übernehmen'}
                       </Button>
                       <Button
                         variant="secondary"
@@ -211,21 +224,21 @@ export function ChoresSection({
               <p className="text-lg text-slate-600">{t('chores.room_empty')}</p>
             )}
             {chores.length > 0 && (
-              <ul className="flex flex-col gap-3">
+              <ul className="@container flex flex-col gap-3">
                 {chores.map((chore) => (
                   <li
                     key={chore.id}
-                    className={`flex items-center gap-3 rounded-2xl border-2 border-slate-100 p-2 sm:p-3 ${chore.active ? '' : 'bg-slate-50'}`}
+                    className={`flex flex-wrap items-center justify-end gap-3 rounded-2xl border-2 border-slate-100 p-2 sm:p-3 ${chore.active ? '' : 'bg-slate-50'}`}
                   >
                     <button
                       type="button"
                       onClick={() => onEditChore(chore)}
                       aria-label={t('chores.edit_title', { title: chore.title })}
-                      className="flex min-w-0 flex-1 items-center gap-4 rounded-xl p-1 text-left transition-colors hover:bg-orange-50 focus-visible:outline-4 focus-visible:outline-orange-400 active:bg-orange-100"
+                      className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-xl p-1 text-left transition-colors hover:bg-orange-50 focus-visible:outline-4 focus-visible:outline-orange-400 active:bg-orange-100 @xl:w-auto @xl:flex-1 @xl:grid-cols-[auto_minmax(0,1fr)_auto]"
                     >
                       <TaskIcon
                         icon={chore.icon}
-                        className={`size-14 ${chore.active ? '' : 'opacity-40'}`}
+                        className={`size-12 shrink-0 @xl:size-14 ${chore.active ? '' : 'opacity-40'}`}
                       />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="text-lg font-bold break-words text-slate-800">
@@ -242,7 +255,7 @@ export function ChoresSection({
                       </span>
                       {chore.active && (
                         <span
-                          className={`shrink-0 text-right text-base font-bold ${chore.done_today ? 'text-slate-500' : LEVEL_COLORS[chore.level].text}`}
+                          className={`col-start-2 text-base font-bold @xl:col-start-auto @xl:text-right ${chore.done_today ? 'text-slate-500' : LEVEL_COLORS[chore.level].text}`}
                         >
                           {statusText(t, chore)}
                         </span>
@@ -255,26 +268,33 @@ export function ChoresSection({
                           <select
                             aria-label={`XP-Empfänger für ${chore.title}`}
                             value={selectedMembers[chore.id] ?? chore.done_by ?? ''}
-                            onChange={(event) => setSelectedMembers((previous) => ({
-                              ...previous, [chore.id]: Number(event.target.value),
-                            }))}
+                            onChange={(event) =>
+                              setSelectedMembers((previous) => ({
+                                ...previous,
+                                [chore.id]: Number(event.target.value),
+                              }))
+                            }
                             className="ml-2 rounded-lg border border-slate-300 p-2"
                           >
                             <option value="">Person wählen</option>
                             {adults.map((member) => (
-                              <option key={member.id} value={member.id}>{member.name}</option>
+                              <option key={member.id} value={member.id}>
+                                {member.name}
+                              </option>
                             ))}
                           </select>
                         </label>
                         <Button
                           variant="secondary"
-                          disabled={approve.isPending || !(
-                            selectedMembers[chore.id] ?? chore.done_by
-                          )}
-                          onClick={() => approve.mutate({
-                            id: chore.id,
-                            memberId: selectedMembers[chore.id] ?? chore.done_by!,
-                          })}
+                          disabled={
+                            approve.isPending || !(selectedMembers[chore.id] ?? chore.done_by)
+                          }
+                          onClick={() =>
+                            approve.mutate({
+                              id: chore.id,
+                              memberId: selectedMembers[chore.id] ?? chore.done_by!,
+                            })
+                          }
                         >
                           {chore.adult_xp} XP freigeben
                         </Button>
