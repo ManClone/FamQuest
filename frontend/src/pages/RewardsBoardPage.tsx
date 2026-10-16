@@ -56,8 +56,15 @@ export function RewardsBoardPage() {
             <p className="rounded-2xl bg-white p-3 text-slate-600">{t('rewards.own_only')}</p>
           )}
           <RewardGrid member={member} balance={total} canRedeem={member.id === me?.member_id} />
-          <Section title={t('child_progress.reward_history')}>
+          <Section
+            title={
+              member.id === me?.member_id
+                ? t('child_progress.reward_history')
+                : t('rewards.history', { name: member.name })
+            }
+          >
             <RedemptionHistory
+              showTitle={false}
               member={member}
               timeZone={me?.family.timezone ?? 'Europe/Berlin'}
               readOnly={member.id !== me?.member_id}

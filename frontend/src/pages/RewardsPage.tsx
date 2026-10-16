@@ -122,8 +122,15 @@ export function RewardsPage() {
           compact={childView}
           canRedeem={member.id === me?.member_id}
         />
-        <Section title={t('child_progress.reward_history')}>
+        <Section
+          title={
+            member.id === me?.member_id
+              ? t('child_progress.reward_history')
+              : t('rewards.history', { name: member.name })
+          }
+        >
           <RedemptionHistory
+            showTitle={false}
             member={member}
             timeZone={me?.family.timezone ?? 'Europe/Berlin'}
             readOnly={member.id !== me?.member_id}

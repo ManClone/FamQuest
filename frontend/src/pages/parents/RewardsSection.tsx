@@ -163,10 +163,12 @@ export function RedemptionHistory({
   member,
   timeZone,
   readOnly = false,
+  showTitle = true,
 }: {
   member: Member
   timeZone: string
   readOnly?: boolean
+  showTitle?: boolean
 }) {
   const { t } = useTranslation()
   const history = useRedemptions(member.id)
@@ -174,9 +176,11 @@ export function RedemptionHistory({
 
   return (
     <div className="flex flex-col gap-3 border-t-2 border-slate-100 pt-4">
-      <h3 className="text-xl font-extrabold text-slate-800">
-        {t('rewards.history', { name: member.name })}
-      </h3>
+      {showTitle && (
+        <h3 className="text-xl font-extrabold text-slate-800">
+          {t('rewards.history', { name: member.name })}
+        </h3>
+      )}
       {history.isError && <Alert>{errorMessage(t, history.error)}</Alert>}
       {history.isSuccess && redemptions.length === 0 && (
         <p className="text-lg text-slate-600">{t('rewards.history_empty')}</p>

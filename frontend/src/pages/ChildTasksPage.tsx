@@ -175,12 +175,21 @@ function ChildProgressHeader({
                   level: data.level + 1,
                 })}
               </p>
-              <progress
+              <div
+                role="progressbar"
                 aria-label={t('child_progress.praise_progress')}
-                max={data.required_praise}
-                value={data.praise_progress ?? 0}
-                className="h-4 w-full accent-rose-500"
-              />
+                aria-valuemin={0}
+                aria-valuemax={data.required_praise}
+                aria-valuenow={data.praise_progress ?? 0}
+                className="h-4 overflow-hidden rounded-full bg-white shadow-inner"
+              >
+                <div
+                  className="h-full rounded-full bg-rose-400"
+                  style={{
+                    width: `${((data.praise_progress ?? 0) / (data.required_praise ?? 1)) * 100}%`,
+                  }}
+                />
+              </div>
               {data.remaining_xp === 0 && (data.remaining_praise ?? 0) > 0 && (
                 <p>{t('child_progress.xp_ready')}</p>
               )}
