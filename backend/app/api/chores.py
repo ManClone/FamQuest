@@ -851,6 +851,8 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
     member = get_member(db, body.member_id)
     if member.role != "parent":
         raise ApiError(status.HTTP_422_UNPROCESSABLE_CONTENT, "chore.parent_required")
+    if chore.assignment_mode == "fixed" and body.member_id != chore.fixed_member_id:
+        raise ApiError(409, "chore.fixed_assignee_only")
     today = _today(db)
     completion = db.scalar(
         select(ChoreCompletion)

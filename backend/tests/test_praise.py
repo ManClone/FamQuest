@@ -83,6 +83,11 @@ def test_fixed_household_can_only_be_completed_for_assignee(client, parent, now)
     assert total(flo) == total(viola) == 0
     assert client.put(path, json={"member_id": flo}, headers=csrf(parent)).status_code == 200
     assert total(flo) == 10
+    correction = client.post(
+        f"/api/chores/{chore['id']}/credit", json={"member_id": viola}, headers=csrf(parent)
+    )
+    assert correction.status_code == 409
+    assert total(flo) == 10 and total(viola) == 0
 
 
 def test_household_approval_with_praise_is_atomic_and_not_repeated(client, parent, now):
