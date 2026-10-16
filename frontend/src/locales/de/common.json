@@ -520,6 +520,11 @@
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
       "not_linked": "Dieser Login ist noch keiner Person zugeordnet. Ein Elternteil kann ihn unter Familie zuordnen."
+    },
+    "mcp": {
+      "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
+      "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
+      "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
     }
   },
   "rewards": {
