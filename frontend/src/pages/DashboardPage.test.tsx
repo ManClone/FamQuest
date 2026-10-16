@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { DEFAULT_LAYOUT } from '../api/home'
@@ -93,10 +93,8 @@ it('restores the dashboard header and actionable chores without child task lists
   await waitFor(() => expect(screen.queryByRole('button', { name: /Water plants/ })).toBeNull())
 })
 
-it('keeps personal dashboard customization limited to visible dashboard widgets', async () => {
-  const user = userEvent.setup()
+it('keeps the parent dashboard free of the customization gear', async () => {
   setup()
-  await user.click(await screen.findByRole('button', { name: /Customise|Customize/ }))
-  const editor = screen.getByRole('heading', { name: /Customise|Customize/ }).parentElement!
-  expect(within(editor).getAllByRole('switch')).toHaveLength(2)
+  await screen.findByRole('heading', { name: 'Dashboard', level: 1 })
+  expect(screen.queryByRole('button', { name: /Customise|Customize/ })).toBeNull()
 })

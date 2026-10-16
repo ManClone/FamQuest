@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ListIcon from '~icons/fluent-emoji-flat/clipboard'
 import StarIcon from '~icons/fluent-emoji-flat/star'
 import PlusIcon from '~icons/lucide/plus'
 
 import type { Member } from '../../api/members'
+import { useMe } from '../../api/auth'
 import {
   type Redemption,
   type Reward,
@@ -11,9 +13,10 @@ import {
   updateReward,
   useRedemptions,
   useRewardsMutation,
+  useCancelRedemption,
 } from '../../api/rewards'
 import { TaskIcon } from '../../components/TaskIcon'
-import { Alert, Button, Section, Switch } from '../../components/ui'
+import { Alert, Button, Section, Switch, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { ChildPicker } from './formParts'
 
@@ -169,7 +172,13 @@ export function RedemptionHistory({ member, timeZone }: { member: Member; timeZo
 }
 
 function RedemptionRow({ redemption, timeZone }: { redemption: Redemption; timeZone: string }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const role = useMe().data?.user.role
+  const canCancel = role === 'admin' || role === 'parent'
+  const cancel = useCancelRedemption()
+  const [editing, setEditing] = useState(false)
+  const [reason, setReason] = useState('')
+  const cancelled = redemption.status === 'cancelled'
   const language = i18n.resolvedLanguage ?? i18n.language
   const when = new Intl.DateTimeFormat(language, {
     dateStyle: 'medium',
@@ -178,17 +187,71 @@ function RedemptionRow({ redemption, timeZone }: { redemption: Redemption; timeZ
   }).format(new Date(redemption.created_at))
 
   return (
-    <li className="flex items-center gap-3 py-3">
+    <li className="flex flex-wrap items-center gap-3 py-3">
       <TaskIcon icon={redemption.reward_icon} className="size-12" />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-lg font-bold break-words text-slate-800">
           {redemption.reward_name}
         </span>
         <span className="text-base text-slate-500">{when}</span>
+        {cancelled && (
+          <span className="text-base text-green-800">
+            {t('rewards.cancelled')}{' '}
+            {redemption.cancelled_at &&
+              new Intl.DateTimeFormat(language, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone,
+              }).format(new Date(redemption.cancelled_at))}
+            {redemption.cancellation_reason && ` · ${redemption.cancellation_reason}`}
+          </span>
+        )}
       </span>
-      <span className="shrink-0 rounded-full bg-red-100 px-3 py-1 text-xl font-extrabold text-red-800 tabular-nums">
-        −{redemption.cost}
+      <span
+        className={`shrink-0 rounded-full px-3 py-1 text-xl font-extrabold tabular-nums ${cancelled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+      >
+        {cancelled ? t('rewards.refunded', { count: redemption.cost }) : `−${redemption.cost}`}
       </span>
+      {canCancel && !cancelled && !editing && (
+        <Button variant="secondary" onClick={() => setEditing(true)}>
+          {t('rewards.cancel')}
+        </Button>
+      )}
+      {canCancel && !cancelled && editing && (
+        <form
+          className="flex w-full flex-col gap-3 rounded-xl bg-orange-50 p-3"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (reason.trim())
+              cancel.mutate(
+                { id: redemption.id, reason: reason.trim() },
+                { onSuccess: () => setEditing(false) },
+              )
+          }}
+        >
+          <p>{t('rewards.cancel_hint', { count: redemption.cost })}</p>
+          <TextField
+            label={t('rewards.cancel_reason')}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            required
+            maxLength={200}
+          />
+          {cancel.isError && <Alert>{errorMessage(t, cancel.error)}</Alert>}
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" disabled={cancel.isPending || !reason.trim()}>
+              {t('rewards.cancel_confirm')}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={cancel.isPending}
+              onClick={() => setEditing(false)}
+            >
+              {t('actions.cancel')}
+            </Button>
+          </div>
+        </form>
+      )}
     </li>
   )
 }

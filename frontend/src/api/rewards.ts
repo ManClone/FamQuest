@@ -23,7 +23,7 @@ export interface Reward extends RewardData {
 }
 
 // Muss zu REDEMPTION_STATUSES im Backend passen.
-export type RedemptionStatus = 'redeemed'
+export type RedemptionStatus = 'redeemed' | 'cancelled'
 
 export interface Redemption {
   id: number
@@ -35,6 +35,8 @@ export interface Redemption {
   reward_icon: string
   cost: number
   created_at: string
+  cancellation_reason?: string | null
+  cancelled_at?: string | null
 }
 
 interface RedemptionHistory {
@@ -76,6 +78,14 @@ export function useRewardsMutation<TVariables, TResult>(
   request: (variables: TVariables) => Promise<TResult>,
 ) {
   return useParentMutation(request, [REWARDS_KEY])
+}
+
+export function useCancelRedemption() {
+  return useParentMutation(
+    ({ id, reason }: { id: number; reason: string }) =>
+      api<Redemption>('POST', `/redemptions/${id}/cancel`, { reason }),
+    [REDEMPTIONS_KEY, POINTS_KEY, TODAY_KEY],
+  )
 }
 
 /** Einlösungen eines Kindes (oder aller), neueste zuerst; ältere per `fetchNextPage`. */

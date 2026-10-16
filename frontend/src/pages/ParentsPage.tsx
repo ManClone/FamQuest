@@ -12,7 +12,6 @@ import { type Reward, useRewards } from '../api/rewards'
 import { type Routine, useRoutines } from '../api/routines'
 import { type Task, useTasks } from '../api/tasks'
 import { useToday } from '../api/today'
-import { Button } from '../components/ui'
 import { useIdleTimeout } from '../useIdleTimeout'
 import { ApprovalsSection } from './parents/ApprovalsSection'
 import { ChoreEditor } from './parents/ChoreEditor'
@@ -61,10 +60,10 @@ export function ParentsPage() {
           data-testid="settings-header"
           className="sticky top-0 z-10 border-b border-orange-100 bg-orange-50/95 shadow-sm backdrop-blur"
         >
-          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+          <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-2 sm:px-6">
             <BackButton onClick={leave} />
-            <p className="ml-auto flex items-center gap-2 text-base font-extrabold text-orange-800 sm:text-xl">
-              <GearIcon className="size-7" aria-hidden="true" />
+            <p className="flex shrink-0 items-center gap-1 text-sm font-extrabold text-orange-800 sm:gap-2 sm:text-xl">
+              <GearIcon className="size-5 sm:size-7" aria-hidden="true" />
               {t('nav.settings')}
             </p>
           </div>
@@ -78,10 +77,16 @@ export function ParentsPage() {
 function BackButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation()
   return (
-    <Button variant="secondary" onClick={onClick} className="self-start">
-      <BackIcon className="size-8" aria-hidden="true" />
-      {t('parents.back')}
-    </Button>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t('parents.back')}
+      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 focus-visible:outline-4 focus-visible:outline-orange-400 sm:text-base"
+    >
+      <BackIcon className="size-6" aria-hidden="true" />
+      <span className="sm:hidden">{t('parents.back_short')}</span>
+      <span className="hidden sm:inline">{t('parents.back')}</span>
+    </button>
   )
 }
 

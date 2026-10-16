@@ -122,6 +122,12 @@ def test_managing_rewards_requires_parent_role(client, parent, lena):
         client.post("/api/rewards", json=reward_data(lena), headers=csrf(child)).status_code == 403
     )
     assert client.delete(f"/api/rewards/{reward}", headers=csrf(child)).status_code == 403
+    assert (
+        client.post(
+            "/api/redemptions/1/cancel", json={"reason": "No longer wanted"}, headers=csrf(child)
+        ).status_code
+        == 403
+    )
     assert client.get("/api/redemptions").status_code == 403
     # An unlinked child cannot see or redeem another member's rewards.
     assert client.get("/api/rewards").json() == []
@@ -214,3 +220,72 @@ def test_redemptions_filtered_and_paged(client, parent, lena):
     ).json()
     assert [r["cost"] for r in rest["redemptions"]] == [1]
     assert rest["has_more"] is False
+
+
+def test_cancel_redemption_refunds_original_cost_once_with_audit(client, parent, lena):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import PointTransaction
+
+    book_manually(client, parent, lena, 12)
+    reward = add_reward(client, parent, lena, cost=5)
+    redemption = redeem(client, parent, reward).json()
+    # Historical purchases remain refundable after changing or deleting the reward.
+    client.put(f"/api/rewards/{reward}", json=reward_data(lena, cost=50), headers=csrf(parent))
+    client.delete(f"/api/rewards/{reward}", headers=csrf(parent))
+    path = f"/api/redemptions/{redemption['id']}/cancel"
+    assert client.post(path, json={"reason": "   "}, headers=csrf(parent)).status_code == 422
+    assert history(client, lena)["total"] == 7
+    response = client.post(path, json={"reason": "  No longer wanted  "}, headers=csrf(parent))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["status"] == "cancelled"
+    assert result["cancellation_reason"] == "No longer wanted"
+    assert result["cancelled_at"] is not None
+    assert client.post(path, json={"reason": "Retry"}, headers=csrf(parent)).json() == result
+    assert history(client, lena)["total"] == 12
+    assert client.get("/api/redemptions").json()["redemptions"] == [result]
+    with SessionLocal() as db:
+        refunds = list(
+            db.scalars(select(PointTransaction).where(PointTransaction.kind == "reward_cancelled"))
+        )
+        assert len(refunds) == 1
+        assert refunds[0].amount == 5
+        assert refunds[0].created_by_user_id is not None
+    assert (
+        client.post(
+            "/api/redemptions/99999/cancel", json={"reason": "Missing"}, headers=csrf(parent)
+        ).status_code
+        == 404
+    )
+
+
+def test_simultaneous_cancellations_refund_only_once(client, parent, lena):
+    from concurrent.futures import ThreadPoolExecutor
+
+    book_manually(client, parent, lena, 10)
+    reward = add_reward(client, parent, lena, cost=5)
+    redemption = redeem(client, parent, reward).json()
+
+    def cancel(_):
+        return client.post(
+            f"/api/redemptions/{redemption['id']}/cancel",
+            json={"reason": "No longer wanted"},
+            headers=csrf(parent),
+        )
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        responses = list(pool.map(cancel, range(4)))
+    assert [response.status_code for response in responses] == [200] * 4
+    assert history(client, lena)["total"] == 10
+    assert (
+        len(
+            [
+                entry
+                for entry in history(client, lena)["transactions"]
+                if entry["kind"] == "reward_cancelled"
+            ]
+        )
+        == 1
+    )

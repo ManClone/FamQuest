@@ -111,7 +111,8 @@
     "pin_saved": "Die neue PIN ist gespeichert.",
     "pin_disabled": "Die PIN ist abgeschaltet.",
     "account_section": "Konto",
-    "signed_in_as": "Angemeldet als {{email}}"
+    "signed_in_as": "Angemeldet als {{email}}",
+    "back_short": "Startseite"
   },
   "parents_nav": {
     "label": "Bereiche des Elternbereichs",
@@ -361,7 +362,8 @@
     "kind_task_completed": "Aufgabe erledigt",
     "kind_task_undone": "Erledigung zurückgenommen",
     "kind_manual": "Von Eltern gebucht",
-    "kind_reward_redeemed": "Belohnung eingelöst"
+    "kind_reward_redeemed": "Belohnung eingelöst",
+    "kind_reward_cancelled": "Belohnung storniert"
   },
   "errors": {
     "common": {
@@ -560,7 +562,13 @@
     "pool_add_one": "{{count}} Belohnung hinzufügen",
     "pool_add_other": "{{count}} Belohnungen hinzufügen",
     "pool_added_one": "{{name}} hat {{count}} neue Belohnung.",
-    "pool_added_other": "{{name}} hat {{count}} neue Belohnungen."
+    "pool_added_other": "{{name}} hat {{count}} neue Belohnungen.",
+    "cancel": "Stornieren",
+    "cancel_reason": "Grund der Stornierung",
+    "cancel_hint": "Die Belohnung bleibt im Verlauf. {{count}} Sterne werden zurückgebucht.",
+    "cancel_confirm": "Stornieren und Sterne zurückgeben",
+    "cancelled": "Storniert am",
+    "refunded": "{{count}} Sterne zurück"
   },
   "care": {
     "title": "Wer hat’s gemacht?",

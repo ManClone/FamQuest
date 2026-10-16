@@ -51,6 +51,7 @@ it('opens a rewards board in everyday navigation rather than entering settings',
   const user = userEvent.setup()
   setup()
   const nav = await screen.findByRole('navigation', { name: 'Main navigation' })
+  expect(screen.queryByRole('button', { name: i18n.t('home.customize') })).toBeNull()
   await user.click(within(nav).getByRole('link', { name: 'Rewards' }))
   await screen.findByRole('heading', { name: 'Rewards', level: 1 })
   expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBe(nav)

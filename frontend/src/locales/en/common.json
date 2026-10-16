@@ -111,7 +111,8 @@
     "pin_saved": "The new PIN has been saved.",
     "pin_disabled": "The PIN is turned off.",
     "account_section": "Account",
-    "signed_in_as": "Signed in as {{email}}"
+    "signed_in_as": "Signed in as {{email}}",
+    "back_short": "Home"
   },
   "parents_nav": {
     "label": "Parents' area sections",
@@ -361,7 +362,8 @@
     "kind_task_completed": "Task done",
     "kind_task_undone": "Task undone",
     "kind_manual": "Booked by parents",
-    "kind_reward_redeemed": "Reward redeemed"
+    "kind_reward_redeemed": "Reward redeemed",
+    "kind_reward_cancelled": "Reward cancelled"
   },
   "errors": {
     "common": {
@@ -560,7 +562,13 @@
     "pool_add_one": "Add {{count}} reward",
     "pool_add_other": "Add {{count}} rewards",
     "pool_added_one": "{{name}} has {{count}} new reward.",
-    "pool_added_other": "{{name}} has {{count}} new rewards."
+    "pool_added_other": "{{name}} has {{count}} new rewards.",
+    "cancel": "Cancel redemption",
+    "cancel_reason": "Reason for cancellation",
+    "cancel_hint": "The reward stays in the history. {{count}} stars will be refunded.",
+    "cancel_confirm": "Cancel and refund stars",
+    "cancelled": "Cancelled on",
+    "refunded": "{{count}} stars refunded"
   },
   "care": {
     "title": "Who did it?",

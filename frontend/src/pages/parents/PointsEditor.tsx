@@ -29,6 +29,7 @@ const KIND_ICONS: Record<PointKind, typeof ManualIcon> = {
   task_undone: UndoIcon,
   manual: ManualIcon,
   reward_redeemed: GiftIcon,
+  reward_cancelled: UndoIcon,
 }
 
 type Direction = 'credit' | 'deduct'

@@ -175,3 +175,42 @@ describe('Belohnungen im Elternbereich', () => {
     ).toBeVisible()
   })
 })
+
+it('storniert mit Vermerk und zeigt die Rueckbuchung im Verlauf', async () => {
+  const user = userEvent.setup()
+  let cancelled = false
+  const request = vi.fn((body: unknown) => {
+    expect(body).toEqual({ reason: 'Doch nicht gewollt' })
+    cancelled = true
+    return Response.json({ ...redemption, status: 'cancelled' })
+  })
+  api({
+    'GET /api/redemptions': () =>
+      Response.json({
+        redemptions: [
+          {
+            ...redemption,
+            ...(cancelled
+              ? {
+                  status: 'cancelled',
+                  cancellation_reason: 'Doch nicht gewollt',
+                  cancelled_at: '2026-10-16T08:00:00Z',
+                }
+              : {}),
+          },
+        ],
+        has_more: false,
+      }),
+    'POST /api/redemptions/5/cancel': request,
+  })
+  renderApp('/parents/rewards')
+  await user.click(await screen.findByRole('button', { name: 'Stornieren' }))
+  const confirm = screen.getByRole('button', { name: 'Stornieren und Sterne zur\u00fcckgeben' })
+  expect(confirm).toBeDisabled()
+  await user.type(screen.getByLabelText('Grund der Stornierung'), 'Doch nicht gewollt')
+  await user.click(confirm)
+  expect(await screen.findByText('Doch nicht gewollt', { exact: false })).toBeVisible()
+  expect(screen.getByText('10 Sterne zur\u00fcck')).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Stornieren' })).toBeNull()
+  expect(request).toHaveBeenCalledTimes(1)
+})

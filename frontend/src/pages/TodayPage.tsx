@@ -69,7 +69,7 @@ export function TodayPage({ parentDashboard = false }: { parentDashboard?: boole
           <span className="sr-only">{t('home.time')}: </span>
           <time>{time}</time>
         </p>
-        {editing === null && layout.data && (
+        {!parentDashboard && editing === null && layout.data && (
           <button
             type="button"
             aria-label={t('home.customize')}
