@@ -11,7 +11,8 @@
     "logout": "Abmelden",
     "next": "Weiter",
     "retry": "Nochmal versuchen",
-    "save": "Speichern"
+    "save": "Speichern",
+    "close": "Schließen"
   },
   "languages": {
     "de": "Deutsch",
@@ -1137,7 +1138,8 @@
     "approve": "Bestätigen + Lob",
     "approve_label": "{{title}} von {{name}} bestätigen und loben",
     "count_one": "{{count}} Lob",
-    "count_other": "{{count}} Lobe"
+    "count_other": "{{count}} Lobe",
+    "deducted": "Sterne abgezogen"
   },
   "chore_history": {
     "title": "Bestätigte Erledigungen",

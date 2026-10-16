@@ -50,6 +50,9 @@ def test_approval_can_grant_one_heart_in_same_transaction(client, parent, lena, 
     assert progress["praise_count"] == 1
     assert progress["earned_xp"] == 5
     assert total(lena) == 3
+    assert progress["latest_deduction_amount"] == 2
+    assert progress["latest_deduction_reason"] == "Correction"
+    assert progress["latest_deduction_id"] > 0
 
 
 def test_children_cannot_praise_or_read_other_child_progress(client, parent, now):

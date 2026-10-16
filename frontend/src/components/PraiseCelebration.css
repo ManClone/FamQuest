@@ -1,0 +1,145 @@
+.reward-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 1rem;
+  background: radial-gradient(ellipse at bottom, #353369, #0d102a);
+}
+.reward-notice.is-deduction {
+  background: radial-gradient(ellipse at bottom, #4c485e, #202538);
+}
+.notice-effects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.notice-card {
+  position: relative;
+  width: min(100%, 32rem);
+  max-height: 90dvh;
+  overflow-y: auto;
+  border-radius: 2rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  text-align: center;
+  background: #fffaf6;
+  box-shadow: 0 20px 80px #0005;
+  animation: notice-enter 0.4s ease-out both;
+}
+.notice-character {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 7rem;
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+.notice-burst {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  color: hsl(var(--hue) 95% 72%);
+}
+.notice-burst i {
+  position: absolute;
+  width: 0.35rem;
+  height: 1.8rem;
+  border-radius: 1rem;
+  background: currentColor;
+  box-shadow: 0 0 14px currentColor;
+  opacity: 0;
+  transform: rotate(var(--angle));
+  animation: notice-spark 2.4s ease-out var(--delay) 4;
+}
+.notice-flying-star {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  font-size: 2rem;
+  opacity: 0;
+  animation: notice-star 2s ease-out var(--delay) 1 both;
+}
+.notice-face {
+  display: inline-block;
+  animation: notice-wobble 1.2s ease-in-out 0.3s 1;
+}
+.notice-hand {
+  position: absolute;
+  left: calc(50% + 1.8rem);
+  top: 1rem;
+  font-size: 3.5rem;
+  opacity: 0;
+  animation: notice-wave 1.2s ease-in-out 0.3s 1;
+}
+@keyframes notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes notice-spark {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(0) scaleY(0.2);
+  }
+  18% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(-10rem) scaleY(0.3);
+  }
+}
+@keyframes notice-star {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) rotate(140deg) scale(0.2);
+  }
+}
+@keyframes notice-wobble {
+  35%,
+  65% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes notice-wave {
+  0% {
+    opacity: 0;
+    transform: translateX(3rem);
+  }
+  35%,
+  60% {
+    opacity: 1;
+    transform: translateX(-0.7rem) rotate(-20deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reward-notice *,
+  .reward-notice *::before {
+    animation: none !important;
+  }
+  .notice-effects,
+  .notice-hand {
+    display: none;
+  }
+}

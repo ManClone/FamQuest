@@ -11,7 +11,8 @@
     "logout": "Sign out",
     "next": "Next",
     "retry": "Try again",
-    "save": "Save"
+    "save": "Save",
+    "close": "Close"
   },
   "languages": {
     "de": "Deutsch",
@@ -1137,7 +1138,8 @@
     "approve": "Approve + praise",
     "approve_label": "Approve {{title}} by {{name}} and give praise",
     "count_one": "{{count}} praise",
-    "count_other": "{{count}} praises"
+    "count_other": "{{count}} praises",
+    "deducted": "Stars deducted"
   },
   "chore_history": {
     "title": "Confirmed household tasks",

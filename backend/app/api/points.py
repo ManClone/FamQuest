@@ -84,7 +84,20 @@ def member_progress(
     praise_count = db.scalar(
         select(func.count()).select_from(Praise).where(Praise.member_id == member_id)
     )
+    deduction = db.scalar(
+        select(PointTransaction)
+        .where(
+            PointTransaction.member_id == member_id,
+            PointTransaction.kind == "manual",
+            PointTransaction.amount < 0,
+        )
+        .order_by(PointTransaction.id.desc())
+        .limit(1)
+    )
     return {
+        "latest_deduction_id": deduction.id if deduction else 0,
+        "latest_deduction_reason": deduction.reason if deduction else None,
+        "latest_deduction_amount": -deduction.amount if deduction else 0,
         "praise_count": praise_count or 0,
         "latest_praise_id": latest.id if latest else 0,
         "latest_praise_reason": latest.reason if latest else None,
