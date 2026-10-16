@@ -562,7 +562,9 @@ export function TaskEditor({
                   {t('tasks.extra')}
                 </ChoiceTile>
               </div>
-              <p className="text-base text-slate-500">{t('tasks.multiple_times')}</p>
+              <p className="text-base text-slate-500">
+                {t(block === 'extra' ? 'tasks.extra_hint' : 'tasks.multiple_times')}
+              </p>
             </Field>
           </>
         )}

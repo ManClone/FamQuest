@@ -21,6 +21,7 @@ afterEach(() => {
 })
 function setup(path = '/tasks') {
   let redeemed = false
+  let pendingChore = false
   const member = makeMember({ name: 'Tim' })
   const calls = mockApi({
     'GET /api/setup/status': setupDone,
@@ -32,6 +33,36 @@ function setup(path = '/tasks') {
       }),
     ),
     'GET /api/members': Response.json([member]),
+    'GET /api/chores/mine': () =>
+      Response.json([
+        {
+          id: 20,
+          title: 'Clean litter box',
+          icon: 'fluent-emoji-flat:cat',
+          points: 4,
+          repeatable: true,
+          days_left: 0,
+          done_today: false,
+          count: pendingChore ? 1 : 0,
+          pending: pendingChore ? 1 : 0,
+        },
+      ]),
+    'PUT /api/chores/mine/20/done': () => {
+      pendingChore = true
+      return Response.json([
+        {
+          id: 20,
+          title: 'Clean litter box',
+          icon: 'fluent-emoji-flat:cat',
+          points: 4,
+          repeatable: true,
+          days_left: 0,
+          done_today: false,
+          count: 1,
+          pending: 1,
+        },
+      ])
+    },
     'GET /api/today': () =>
       Response.json(
         makeToday({
@@ -131,4 +162,15 @@ it('shows own redemption history and a working back destination for children', a
   expect(await screen.findByRole('heading', { name: 'Tim', level: 1 })).toBeVisible()
   expect(await screen.findByText('Level 2')).toBeVisible()
   expect(screen.getByText('22 stars')).toBeVisible()
+})
+
+it('zeigt automatisch zugeteilte Hausarbeit separat und wartet auf die Eltern', async () => {
+  const user = userEvent.setup()
+  const calls = setup()
+  const household = await screen.findByRole('region', { name: 'Household' })
+  expect(await within(household).findByText('Clean litter box')).toBeVisible()
+  await user.click(within(household).getByRole('button', { name: 'Done!' }))
+  expect(await within(household).findByText('1 completions awaiting approval')).toBeVisible()
+  expect(screen.getByText('32 stars')).toBeVisible()
+  expect(calls.some((call) => call.key === 'GET /api/chores')).toBe(false)
 })

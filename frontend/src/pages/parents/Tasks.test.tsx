@@ -378,3 +378,24 @@ describe('Aufgaben im Elternbereich', () => {
     expect(within(row).getByText('Morning')).toBeVisible()
   })
 })
+
+it('erstellt unabhaengige Durchgaenge fuer mehrere Tageszeiten', async () => {
+  const user = userEvent.setup()
+  const calls = api([], {
+    'POST /api/tasks/schedule': Response.json(makeTask({ id: 99, title: 'Zahnpflege' })),
+  })
+  renderApp('/parents/tasks')
+  await user.click(await screen.findByRole('button', { name: 'Aufgabe hinzuf\u00fcgen' }))
+  await user.type(screen.getByLabelText('Titel'), 'Zahnpflege')
+  await user.click(screen.getByRole('checkbox', { name: /Lena/ }))
+  await user.click(screen.getByRole('checkbox', { name: 'Morgens' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Abends' }))
+  expect(screen.getByRole('checkbox', { name: 'Morgens' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Abends' })).toBeChecked()
+  await user.click(screen.getByRole('button', { name: 'Speichern' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('gespeichert')
+  expect(calls.find((call) => call.key === 'POST /api/tasks/schedule')?.body).toMatchObject({
+    times: ['morning', 'evening'],
+    task: { title: 'Zahnpflege', member_ids: [1] },
+  })
+})

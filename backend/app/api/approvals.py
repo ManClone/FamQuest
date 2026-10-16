@@ -36,7 +36,9 @@ def list_approvals(_: ParentSession, db: DbSession) -> list[ApprovalOut]:
         for completion in completions
     ]
     for completion, chore in db.execute(
-        select(ChoreCompletion, Chore).join(Chore).where(ChoreCompletion.approved.is_(False))
+        select(ChoreCompletion, Chore)
+        .join(Chore)
+        .where(ChoreCompletion.approved.is_(False), ChoreCompletion.member_id.is_not(None))
     ):
         result.append(
             ApprovalOut(
@@ -117,7 +119,13 @@ def approve_chore(completion_id: int, _: ParentSession, db: DbSession) -> None:
     if completion is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "approval.not_found")
     chore = _get_chore(db, completion.chore_id)
-    db.refresh(completion)
+    completion = db.scalar(
+        select(ChoreCompletion)
+        .where(ChoreCompletion.id == completion_id)
+        .execution_options(populate_existing=True)
+    )
+    if completion is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "approval.not_found")
     if completion.approved:
         return
     completion.approved = True
@@ -150,7 +158,13 @@ def reject_chore(completion_id: int, _: ParentSession, db: DbSession) -> None:
     if completion is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "approval.not_found")
     _get_chore(db, completion.chore_id)
-    db.refresh(completion)
+    completion = db.scalar(
+        select(ChoreCompletion)
+        .where(ChoreCompletion.id == completion_id)
+        .execution_options(populate_existing=True)
+    )
+    if completion is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "approval.not_found")
     if not completion.approved:
         db.delete(completion)
         db.commit()

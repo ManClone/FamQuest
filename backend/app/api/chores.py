@@ -848,7 +848,11 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
     today = _today(db)
     completion = db.scalar(
         select(ChoreCompletion)
-        .where(ChoreCompletion.chore_id == chore.id, ChoreCompletion.date == today)
+        .where(
+            ChoreCompletion.chore_id == chore.id,
+            ChoreCompletion.date == today,
+            ChoreCompletion.approved.is_(True),
+        )
         .order_by(ChoreCompletion.id.desc())
         .limit(1)
         .with_for_update()

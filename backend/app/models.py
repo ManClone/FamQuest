@@ -699,7 +699,7 @@ class Chore(Base):
     icon: Mapped[str] = mapped_column(String(100))
     # So viele Tage nach der letzten Erledigung ist sie wieder fällig.
     interval_days: Mapped[int] = mapped_column(SmallInteger)
-    # Metadaten für Erwachsenen-Aufgaben; XP werden noch nicht automatisch gebucht.
+    # Effort and adult XP for each approved household execution.
     estimated_minutes: Mapped[int] = mapped_column(SmallInteger, default=15, server_default="15")
     adult_xp: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
     assignment_mode: Mapped[str] = mapped_column(

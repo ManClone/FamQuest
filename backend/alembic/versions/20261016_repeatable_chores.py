@@ -43,6 +43,12 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     if op.get_bind().scalar(
+        sa.text("SELECT EXISTS (SELECT 1 FROM chore_completions WHERE NOT approved)")
+    ):
+        raise RuntimeError(
+            "Pending household approvals exist; restore a compatible backup instead."
+        )
+    if op.get_bind().scalar(
         sa.text(
             "SELECT EXISTS (SELECT 1 FROM chore_completions "
             "GROUP BY chore_id, date HAVING count(*) > 1)"

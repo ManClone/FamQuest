@@ -161,6 +161,7 @@ def get_today(auth: CurrentSession, db: DbSession) -> TodayOut:
                 .select_from(ChoreCompletion)
                 .where(
                     ChoreCompletion.approved.is_(False),
+                    ChoreCompletion.member_id.is_not(None),
                     *([ChoreCompletion.member_id == own] if own is not None else []),
                 )
             )

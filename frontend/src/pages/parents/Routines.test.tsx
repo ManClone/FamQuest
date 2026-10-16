@@ -340,7 +340,7 @@ describe('Routinen im Elternbereich', () => {
     await user.click(
       screen.getByRole('switch', { name: 'Zeitplan direkt in dieser Aufgabe festlegen' }),
     )
-    expect(screen.getByRole('radio', { name: 'Abends' })).toBeVisible()
+    expect(screen.getByRole('checkbox', { name: 'Abends' })).toBeVisible()
     expect(screen.getByRole('radio', { name: 'Jeden Tag' })).toBeVisible()
   })
 })
