@@ -1126,7 +1126,7 @@
     "back_tasks": "Back to my tasks"
   },
   "praise": {
-    "section": "Praise & stars",
+    "section": "Praise & discipline",
     "count": "{{count}} praises",
     "give": "Give praise",
     "deduct": "Deduct stars",
@@ -1138,5 +1138,16 @@
     "approve_label": "Approve {{title}} by {{name}} and give praise",
     "count_one": "{{count}} praise",
     "count_other": "{{count}} praises"
+  },
+  "chore_history": {
+    "title": "Confirmed household tasks",
+    "intro": "Each execution is separate. Undo removes it and reverses the points originally credited.",
+    "empty": "No confirmed executions yet.",
+    "undo": "Undo",
+    "confirm": "Undo this execution?",
+    "yes": "Yes, undo",
+    "cancel": "Cancel",
+    "more": "Load older",
+    "loading": "Loading …"
   }
 }

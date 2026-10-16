@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 import { api, apiGet } from './client'
 import { useParentMutation } from './mutations'
@@ -47,6 +47,7 @@ export const reject = (item: number | Approval) =>
 export function useApprovalMutation<TVariables>(request: (variables: TVariables) => Promise<void>) {
   return useParentMutation(request, [
     APPROVALS_KEY,
+    CONFIRMED_CHORES_KEY,
     TODAY_KEY,
     POINTS_KEY,
     ['member-progress'],
@@ -54,3 +55,19 @@ export function useApprovalMutation<TVariables>(request: (variables: TVariables)
     ['my-chores'],
   ])
 }
+
+export const CONFIRMED_CHORES_KEY = ['confirmed-chores'] as const
+export function useConfirmedChores(enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: CONFIRMED_CHORES_KEY,
+    queryFn: ({ pageParam }) =>
+      apiGet<{ items: Approval[]; has_more: boolean }>(
+        `/chore-approvals/confirmed${pageParam === null ? '' : `?before=${pageParam}`}`,
+      ),
+    initialPageParam: null as number | null,
+    getNextPageParam: (page) => (page.has_more ? page.items.at(-1)?.id : undefined),
+    enabled,
+  })
+}
+export const undoConfirmedChore = (id: number) =>
+  api<void>('DELETE', `/chore-approvals/${id}/confirmed`)

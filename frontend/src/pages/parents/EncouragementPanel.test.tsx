@@ -39,7 +39,9 @@ it('gives a separate heart and restores reasoned star deductions on the dashboar
     'POST /api/members/1/points': Response.json({ total: 8, transactions: [], has_more: false }),
   })
   renderApp('/')
-  const panel = await screen.findByRole('region', { name: 'Praise & stars' })
+  const panel = await screen.findByRole('region', { name: 'Praise & discipline' })
+  expect(within(panel).queryByLabelText('Reason')).not.toBeInTheDocument()
+  await user.click(within(panel).getByRole('button', { name: 'Give praise' }))
   await user.type(within(panel).getByLabelText('Reason'), 'Great help')
   await user.click(within(panel).getAllByRole('button', { name: 'Give praise' }).at(-1)!)
   expect(await within(panel).findByLabelText('1 praise')).toBeVisible()

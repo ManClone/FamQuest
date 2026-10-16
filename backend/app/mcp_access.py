@@ -4,7 +4,7 @@ import re
 from copy import deepcopy
 
 READ = (
-    r"/api/(members|profile|today|tasks|tasks/week|approvals)",
+    r"/api/(members|profile|today|tasks|tasks/week|approvals|chore-approvals/confirmed)",
     r"/api/members/[0-9]+/(points|progress|praise)",
     r"/api/(chores|chores/weekly-preview|chores/weekly-confirmed)",
     r"/api/(routines|todos|rewards|redemptions)",
@@ -13,6 +13,7 @@ READ = (
 )
 WRITE = (
     r"/api/(?:approvals|chore-approvals)/[0-9]+",
+    r"/api/chore-approvals/[0-9]+/confirmed",
     r"/api/members/[0-9]+/(?:praise|points)",
     r"/api/redemptions/[0-9]+/cancel",
     r"/api/tasks(?:/[0-9]+|/schedule)?",
