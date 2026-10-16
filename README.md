@@ -2,6 +2,8 @@
 
 # FamQuest
 
+> **Family fork / first live test:** See [docs/LIVE-TEST.md](docs/LIVE-TEST.md) for current behavior and release branches. Older sections and screenshots still describe parts of the original PIN and navigation flow.
+
 **English** · [Deutsch](README.de.md)
 
 A self-hosted, bilingual (English/German) family app for a touchscreen display on the fridge:
