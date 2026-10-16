@@ -13,14 +13,13 @@ import {
   choreData,
   updateChore,
   useChoresMutation,
-  useApproveChoreCredit,
   useWeeklyChorePreview,
   useConfirmedWeeklyChores,
   usePublishWeeklyChores,
   type WeeklyChorePreview,
 } from '../../api/chores'
-import { useMembers } from '../../api/members'
 import { LEVEL_COLORS, byUrgency, intervalText, statusText } from '../../chores'
+import { useMembers } from '../../api/members'
 import { TaskIcon } from '../../components/TaskIcon'
 import { Alert, Button, Section, Switch } from '../../components/ui'
 import { errorMessage } from '../../errors'
@@ -47,16 +46,13 @@ export function ChoresSection({
 }: ChoresSectionProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const members = useMembers()
-  const adults = (members.data ?? []).filter((member) => member.role === 'parent')
-  const approve = useApproveChoreCredit()
+  const adults = (useMembers().data ?? []).filter((member) => member.role === 'parent')
   const [showWeeklyPreview, setShowWeeklyPreview] = useState(false)
   const weeklyPreview = useWeeklyChorePreview(showWeeklyPreview)
   const confirmedWeek = useConfirmedWeeklyChores(showWeeklyPreview)
   const publishWeek = usePublishWeeklyChores()
   const [weeklyEdits, setWeeklyEdits] = useState<Record<number, number>>({})
   const [weekPublished, setWeekPublished] = useState(false)
-  const [selectedMembers, setSelectedMembers] = useState<Record<number, number>>({})
   const toggleActive = useChoresMutation((chore: Chore) =>
     updateChore(chore.id, { ...choreData(chore), active: !chore.active }),
   )
@@ -67,7 +63,6 @@ export function ChoresSection({
       <Section title={t('chores.section')}>
         {error ? <Alert>{errorMessage(t, error)}</Alert> : null}
         {toggleActive.isError && <Alert>{errorMessage(t, toggleActive.error)}</Alert>}
-        {approve.isError && <Alert>{errorMessage(t, approve.error)}</Alert>}
         <p className="text-lg text-slate-600">
           {t(rooms.length === 0 ? 'chores.section_empty' : 'chores.section_intro')}
         </p>
@@ -261,45 +256,6 @@ export function ChoresSection({
                         </span>
                       )}
                     </button>
-                    {chore.done_today && chore.adult_xp > 0 && adults.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm font-semibold text-slate-700">
-                          XP für
-                          <select
-                            aria-label={`XP-Empfänger für ${chore.title}`}
-                            value={selectedMembers[chore.id] ?? chore.done_by ?? ''}
-                            onChange={(event) =>
-                              setSelectedMembers((previous) => ({
-                                ...previous,
-                                [chore.id]: Number(event.target.value),
-                              }))
-                            }
-                            className="ml-2 rounded-lg border border-slate-300 p-2"
-                          >
-                            <option value="">Person wählen</option>
-                            {adults.map((member) => (
-                              <option key={member.id} value={member.id}>
-                                {member.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <Button
-                          variant="secondary"
-                          disabled={
-                            approve.isPending || !(selectedMembers[chore.id] ?? chore.done_by)
-                          }
-                          onClick={() =>
-                            approve.mutate({
-                              id: chore.id,
-                              memberId: selectedMembers[chore.id] ?? chore.done_by!,
-                            })
-                          }
-                        >
-                          {chore.adult_xp} XP freigeben
-                        </Button>
-                      </div>
-                    )}
                     <Switch
                       checked={chore.active}
                       onChange={() => toggleActive.mutate(chore)}

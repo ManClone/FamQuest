@@ -21,6 +21,8 @@ import { errorMessage } from '../../errors'
 import { ChildPicker } from './formParts'
 
 interface RewardsSectionProps {
+  audience?: 'parent' | 'child'
+  onAudience?: (audience: 'parent' | 'child') => void
   /** Nur Kinder; Erwachsene bekommen keine Belohnungen. */
   childMembers: Member[]
   rewards: Reward[] | undefined
@@ -37,6 +39,8 @@ interface RewardsSectionProps {
 
 /** Belohnungen je Kind und zuletzt eingelöste Belohnungen. */
 export function RewardsSection({
+  audience = 'child',
+  onAudience,
   childMembers,
   rewards,
   error,
@@ -52,10 +56,28 @@ export function RewardsSection({
     updateReward(reward.id, { ...rewardData(reward), active: !reward.active }),
   )
 
+  const audiencePicker = onAudience && (
+    <div role="group" aria-label={t('rewards.audience')} className="flex flex-wrap gap-2">
+      {(['parent', 'child'] as const).map((role) => (
+        <Button
+          key={role}
+          variant={role === audience ? 'primary' : 'secondary'}
+          aria-pressed={role === audience}
+          onClick={() => onAudience(role)}
+        >
+          {t(`rewards.audience_${role}`)}
+        </Button>
+      ))}
+    </div>
+  )
+
   if (childMembers.length === 0 || !member) {
     return (
       <Section title={t('rewards.section')}>
-        <p className="text-lg text-slate-600">{t('rewards.need_children')}</p>
+        {audiencePicker}
+        <p className="text-lg text-slate-600">
+          {t(audience === 'parent' ? 'rewards.need_parents' : 'rewards.need_children')}
+        </p>
       </Section>
     )
   }
@@ -66,10 +88,11 @@ export function RewardsSection({
 
   return (
     <Section title={t('rewards.section')}>
+      {audiencePicker}
       {error ? <Alert>{errorMessage(t, error)}</Alert> : null}
       {toggleActive.isError && <Alert>{errorMessage(t, toggleActive.error)}</Alert>}
       <ChildPicker
-        label={t('rewards.choose_child')}
+        label={t(audience === 'parent' ? 'rewards.choose_parent' : 'rewards.choose_child')}
         childMembers={childMembers}
         selected={member}
         onSelect={onSelect}
@@ -79,21 +102,21 @@ export function RewardsSection({
         <p className="text-lg text-slate-600">{t('rewards.empty', { name: member.name })}</p>
       )}
       {own.length > 0 && (
-        <ul className="flex flex-col gap-3">
+        <ul className="@container flex flex-col gap-3">
           {own.map((reward) => (
             <li
               key={reward.id}
-              className={`flex flex-wrap items-center justify-end gap-3 rounded-2xl border-2 border-slate-100 p-2 sm:flex-nowrap sm:p-3 ${reward.active ? '' : 'bg-slate-50'}`}
+              className={`flex flex-wrap items-center justify-end gap-3 rounded-2xl border-2 border-slate-100 p-2 @xl:flex-nowrap sm:p-3 ${reward.active ? '' : 'bg-slate-50'}`}
             >
               <button
                 type="button"
                 onClick={() => onEdit(reward)}
                 aria-label={t('rewards.edit_title', { name: reward.name })}
-                className="flex min-w-0 flex-1 basis-full items-center gap-4 rounded-xl p-1 text-left sm:basis-auto transition-colors hover:bg-orange-50 focus-visible:outline-4 focus-visible:outline-orange-400 active:bg-orange-100"
+                className="grid min-w-0 flex-1 basis-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-xl p-1 text-left @xl:basis-auto @xl:grid-cols-[auto_minmax(0,1fr)_auto] transition-colors hover:bg-orange-50 focus-visible:outline-4 focus-visible:outline-orange-400 active:bg-orange-100"
               >
                 <TaskIcon
                   icon={reward.icon}
-                  className={`size-14 ${reward.active ? '' : 'opacity-40'}`}
+                  className={`size-12 shrink-0 @xl:size-14 ${reward.active ? '' : 'opacity-40'}`}
                 />
                 <span className="min-w-0 flex-1 text-lg font-bold break-words text-slate-800">
                   {reward.name}
@@ -103,7 +126,7 @@ export function RewardsSection({
                     </span>
                   )}
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-lg font-extrabold text-slate-700">
+                <span className="col-start-2 inline-flex shrink-0 items-center gap-1 text-lg font-extrabold text-slate-700 @xl:col-start-auto">
                   <StarIcon className="size-6" aria-hidden="true" />
                   <span aria-hidden="true">{reward.cost}</span>
                   <span className="sr-only">{t('tasks.points_count', { count: reward.cost })}</span>

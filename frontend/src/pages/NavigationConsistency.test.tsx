@@ -25,7 +25,10 @@ function setup(path = '/') {
     'GET /api/auth/me': Response.json(
       makeMe({ family: { ...makeMe().family, name: 'Grasser', default_language: 'en' } }),
     ),
-    'GET /api/members': Response.json([makeMember(), makeMember({ id: 2, name: 'Tom' })]),
+    'GET /api/members': Response.json([
+      makeMember({ role: 'parent' }),
+      makeMember({ id: 2, name: 'Tom', role: 'parent' }),
+    ]),
     'GET /api/today': Response.json(makeToday({ points: [{ member_id: 1, today: 0, total: 32 }] })),
     'GET /api/home/layout': Response.json(DEFAULT_LAYOUT),
     'GET /api/approvals': Response.json([]),

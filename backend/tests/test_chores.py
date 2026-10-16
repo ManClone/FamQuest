@@ -133,6 +133,8 @@ def test_create_room_and_chore(client, parent, now):
         "weekly_member_id": None,
         "last_done": None,
         "done_today": False,
+        "completion_count_today": 0,
+        "last_completion_id": None,
         "done_by": None,
         "counted_from": "2026-09-26",
         "due_date": "2026-10-10",

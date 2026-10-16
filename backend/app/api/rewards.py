@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, child_member_id, ensure_member_access
 from app.errors import ApiError
-from app.models import FamilyMember, PointTransaction, Reward, RewardRedemption
+from app.models import PointTransaction, Reward, RewardRedemption
 from app.points import balance, book, lock_member
 from app.schemas import CancelRedemptionIn, RedemptionHistoryOut, RedemptionOut, RewardIn, RewardOut
 
@@ -51,14 +51,8 @@ def get_reward(db: DbSession, reward_id: int) -> Reward:
     return reward
 
 
-def check_child(member: FamilyMember) -> None:
-    """Belohnungen gibt es nur für Kinder; Erwachsene sehen stattdessen ihren Anteil."""
-    if member.role != "child":
-        raise ApiError(status.HTTP_409_CONFLICT, "reward.child_only")
-
-
 def apply_reward(db: DbSession, reward: Reward, body: RewardIn) -> None:
-    check_child(get_member(db, body.member_id))
+    get_member(db, body.member_id)
     reward.member_id, reward.name, reward.icon = body.member_id, body.name, body.icon
     reward.description = body.description or None
     reward.cost, reward.active = body.cost, body.active
@@ -105,7 +99,6 @@ def redeem_reward(reward_id: int, auth: CurrentSession, db: DbSession) -> Redemp
     reward = get_reward(db, reward_id)
     ensure_member_access(db, auth, reward.member_id)
     member = get_member(db, reward.member_id)
-    check_child(member)
     if not reward.active:
         raise ApiError(status.HTTP_409_CONFLICT, "reward.inactive")
     lock_member(db, member.id)

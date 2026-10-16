@@ -43,6 +43,7 @@ def test_approval_requires_completion(client, parent, now):
     item = add_chore(client, parent, room["id"], adult_xp=15)
     assert approve(client, parent, item["id"], flo).status_code == 409
     assert done(client, parent, item["id"], flo).status_code == 200
+    assert total(flo) == 15  # credited immediately, without a separate approval
     assert approve(client, parent, item["id"], flo).status_code == 200
     assert total(flo) == 15
 
@@ -59,14 +60,14 @@ def test_repeated_approval_and_undo(client, parent, now):
     assert total(flo) == 0
 
 
-def test_transfer_requires_approval(client, parent, now):
+def test_parent_can_correct_who_completed_the_chore(client, parent, now):
     flo = parent_member(client, parent, "Flo")
     viola = parent_member(client, parent, "Viola", color="green")
     room = add_room(client, parent)
     item = add_chore(client, parent, room["id"], adult_xp=15)
     done(client, parent, item["id"], flo)
     approve(client, parent, item["id"], flo)
-    assert done(client, parent, item["id"], viola).status_code == 409
+    assert done(client, parent, item["id"], viola).status_code == 200
     assert approve(client, parent, item["id"], viola).status_code == 200
     assert (total(flo), total(viola)) == (0, 15)
 
@@ -185,3 +186,52 @@ def test_legacy_update_validates_fixed_member_changes(client, parent, now):
     assert response.status_code == 422, response.text
     saved = client.get("/api/chores").json()["chores"][0]
     assert saved["fixed_member_id"] == flo
+
+
+def test_repeat_executions_credit_independently_and_undo_exact_execution(client, parent, now):
+    flo = parent_member(client, parent, "Flo")
+    viola = parent_member(client, parent, "Viola", color="green")
+    room = add_room(client, parent)
+    item = add_chore(client, parent, room["id"], adult_xp=10)
+    path = f"/api/chores/{item['id']}/done"
+    first_body = {"member_id": flo, "request_key": "a" * 32}
+    first = client.put(path, json=first_body, headers=csrf(parent)).json()
+    assert first["completion_count_today"] == 1
+    assert total(flo) == 10
+    assert client.put(path, json=first_body, headers=csrf(parent)).status_code == 200
+    assert total(flo) == 10
+    second = client.put(
+        path, json={"member_id": viola, "request_key": "b" * 32}, headers=csrf(parent)
+    ).json()
+    assert second["completion_count_today"] == 2
+    assert (total(flo), total(viola)) == (10, 10)
+    # Retrying the initial unattributed request cannot remove the selected person or XP.
+    client.put(path, json={"request_key": "b" * 32}, headers=csrf(parent))
+    assert total(viola) == 10
+    undo_path = f"{path}?completion_id={second['last_completion_id']}"
+    undone = client.delete(undo_path, headers=csrf(parent)).json()
+    assert undone["completion_count_today"] == 1
+    assert undone["last_completion_id"] == first["last_completion_id"]
+    assert (total(flo), total(viola)) == (10, 0)
+    assert client.delete(undo_path, headers=csrf(parent)).status_code == 200
+    assert total(flo) == 10
+
+
+def test_concurrent_household_request_is_credited_once(client, parent, now):
+    from concurrent.futures import ThreadPoolExecutor
+
+    flo = parent_member(client, parent, "Flo")
+    room = add_room(client, parent)
+    item = add_chore(client, parent, room["id"], adult_xp=10)
+
+    def attempt(_):
+        return client.put(
+            f"/api/chores/{item['id']}/done",
+            json={"member_id": flo, "request_key": "c" * 32},
+            headers=csrf(parent),
+        )
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        responses = list(pool.map(attempt, range(4)))
+    assert [response.status_code for response in responses] == [200] * 4
+    assert total(flo) == 10

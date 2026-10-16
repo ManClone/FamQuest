@@ -568,7 +568,12 @@
     "cancel_hint": "The reward stays in the history. {{count}} stars will be refunded.",
     "cancel_confirm": "Cancel and refund stars",
     "cancelled": "Cancelled on",
-    "refunded": "{{count}} stars refunded"
+    "refunded": "{{count}} stars refunded",
+    "audience": "Manage rewards for",
+    "audience_parent": "Parents",
+    "audience_child": "Children",
+    "need_parents": "Add a parent family member first.",
+    "choose_parent": "Choose a parent"
   },
   "care": {
     "title": "Who did it?",
@@ -1000,7 +1005,10 @@
     "wizard_add_one": "Add {{count}} chore",
     "wizard_add_other": "Add {{count}} chores",
     "wizard_added_one": "{{count}} chore is in the cleaning plan.",
-    "wizard_added_other": "{{count}} chores are in the cleaning plan."
+    "wizard_added_other": "{{count}} chores are in the cleaning plan.",
+    "repeat": "Complete again",
+    "repeat_title": "Complete {{title}} again",
+    "today_count": "Completed {{count}} times today"
   },
   "todos": {
     "title": "To do",

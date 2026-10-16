@@ -72,13 +72,16 @@ def test_rewards_are_per_child(client, parent, lena):
     assert [(r["member_id"], r["cost"]) for r in rewards] == [(lena, 5), (lena, 20), (tom, 10)]
 
 
-def test_adults_get_no_rewards(client, parent):
+def test_adults_have_their_own_rewards(client, parent):
     mama = add_parent_member(client, parent)
 
     response = client.post("/api/rewards", json=reward_data(mama), headers=csrf(parent))
 
-    assert response.status_code == 409
-    assert response.json() == {"code": "reward.child_only"}
+    assert response.status_code == 201
+    assert response.json()["member_id"] == mama
+    book_manually(client, parent, mama, 10)
+    assert redeem(client, parent, response.json()["id"]).status_code == 201
+    assert history(client, mama)["total"] == 5
 
 
 @pytest.mark.parametrize(

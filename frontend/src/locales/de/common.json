@@ -568,7 +568,12 @@
     "cancel_hint": "Die Belohnung bleibt im Verlauf. {{count}} Sterne werden zurückgebucht.",
     "cancel_confirm": "Stornieren und Sterne zurückgeben",
     "cancelled": "Storniert am",
-    "refunded": "{{count}} Sterne zurück"
+    "refunded": "{{count}} Sterne zurück",
+    "audience": "Belohnungen verwalten für",
+    "audience_parent": "Eltern",
+    "audience_child": "Kinder",
+    "need_parents": "Legt zuerst ein Elternteil als Familienmitglied an.",
+    "choose_parent": "Elternteil wählen"
   },
   "care": {
     "title": "Wer hat’s gemacht?",
@@ -1000,7 +1005,10 @@
     "wizard_add_one": "{{count}} Aufgabe übernehmen",
     "wizard_add_other": "{{count}} Aufgaben übernehmen",
     "wizard_added_one": "{{count}} Aufgabe ist im Putzplan.",
-    "wizard_added_other": "{{count}} Aufgaben sind im Putzplan."
+    "wizard_added_other": "{{count}} Aufgaben sind im Putzplan.",
+    "repeat": "Noch einmal erledigen",
+    "repeat_title": "{{title}} noch einmal erledigen",
+    "today_count": "Heute {{count}}-mal erledigt"
   },
   "todos": {
     "title": "Zu erledigen",

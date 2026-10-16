@@ -105,6 +105,7 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   // Neuer Schritt einer Routine (Editor ohne Personen, Tageszeit und Wiederholung).
   const [newStep, setNewStep] = useState<{ routine: Routine; label: string } | null>(null)
   const [routinesChildId, setRoutinesChildId] = useState<number | null>(null)
+  const [rewardAudience, setRewardAudience] = useState<'child' | 'parent'>('child')
   const [rewardsChildId, setRewardsChildId] = useState<number | null>(null)
   const [editingReward, setEditingReward] = useState<{ reward?: Reward; member: Member } | null>(
     null,
@@ -201,8 +202,9 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   }
 
   const childMembers = childrenOf(members.data ?? [])
+  const rewardMembers = (members.data ?? []).filter((member) => member.role === rewardAudience)
   const rewardsChild =
-    childMembers.find((member) => member.id === rewardsChildId) ?? childMembers[0]
+    rewardMembers.find((member) => member.id === rewardsChildId) ?? rewardMembers[0]
   const routinesChild =
     childMembers.find((member) => member.id === routinesChildId) ?? childMembers[0]
 
@@ -447,13 +449,15 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
         {area === 'rewards' && (
           <>
             <RewardsSection
-              childMembers={childMembers}
+              audience={rewardAudience}
+              onAudience={setRewardAudience}
+              childMembers={rewardMembers}
               rewards={rewards.data}
               error={rewards.error}
               member={rewardsChild}
               onSelect={setRewardsChildId}
               onEdit={(reward) => {
-                const member = childMembers.find((child) => child.id === reward.member_id)
+                const member = rewardMembers.find((child) => child.id === reward.member_id)
                 if (!member) return
                 setNotice(undefined)
                 setEditingReward({ reward, member })

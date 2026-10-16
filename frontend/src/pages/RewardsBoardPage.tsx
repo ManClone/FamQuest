@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import GiftIcon from '~icons/fluent-emoji-flat/wrapped-gift'
 import StarIcon from '~icons/fluent-emoji-flat/star'
 import { useMe } from '../api/auth'
-import { childrenOf } from '../api/members'
 import { pointsFor } from '../api/today'
 import { Alert, Button, Section } from '../components/ui'
 import { errorMessage } from '../errors'
@@ -18,8 +17,11 @@ export function RewardsBoardPage() {
   const me = useMe().data
   const family = useFamilyToday()
   const [selected, setSelected] = useState<number | null>(null)
-  const children = childrenOf(family.members ?? [])
-  const member = children.find((child) => child.id === selected) ?? children[0]
+  const children = (family.members ?? []).filter((person) => person.role === 'parent')
+  const member =
+    children.find((child) => child.id === selected) ??
+    children.find((person) => person.id === me?.member_id) ??
+    children[0]
   const total = member && family.today ? pointsFor(family.today, member.id).total : 0
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
@@ -41,11 +43,11 @@ export function RewardsBoardPage() {
           <Button onClick={() => void family.refetch()}>{t('actions.retry')}</Button>
         </>
       ) : !member ? (
-        <p>{t('rewards.no_children')}</p>
+        <p>{t('rewards.need_parents')}</p>
       ) : (
         <>
           <ChildPicker
-            label={t('rewards.choose_child')}
+            label={t('rewards.choose_parent')}
             childMembers={children}
             selected={member}
             onSelect={setSelected}

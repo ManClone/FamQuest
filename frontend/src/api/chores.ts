@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, apiGet } from './client'
+import { TODAY_KEY } from './today'
+import { POINTS_KEY, PROGRESS_KEY } from './points'
 import { useParentMutation } from './mutations'
 
 // Muss zu LEVELS im Backend passen (backend/app/chores.py).
@@ -31,6 +33,8 @@ export interface Chore {
   /** Letzte Erledigung (ISO-Datum); null = seit dem Anlegen noch nie. */
   last_done: string | null
   done_today: boolean
+  completion_count_today?: number
+  last_completion_id?: number | null
   /** Wer die letzte Erledigung übernommen hat, falls angegeben. */
   done_by: number | null
   /** Ab diesem Tag läuft die Uhr: letzte Erledigung oder von den Eltern festgelegt (ISO-Datum). */
@@ -132,14 +136,24 @@ function useDoneMutation<TVariables, TItem extends { id: number }>(
           },
       )
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: CHORES_KEY }),
+    onSettled: () =>
+      Promise.all(
+        [CHORES_KEY, TODAY_KEY, POINTS_KEY, PROGRESS_KEY].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
   })
 }
 
 /** Heute erledigt; ein zweiter Aufruf trägt nach, wer es war (`memberId` null = keine Angabe). */
 export const useMarkDone = () =>
-  useDoneMutation('chores', ({ id, memberId }: { id: number; memberId: number | null }) =>
-    api<Chore>('PUT', `/chores/${id}/done`, { member_id: memberId }),
+  useDoneMutation(
+    'chores',
+    ({ id, memberId, requestKey }: { id: number; memberId: number | null; requestKey?: string }) =>
+      api<Chore>('PUT', `/chores/${id}/done`, {
+        member_id: memberId,
+        ...(requestKey ? { request_key: requestKey } : {}),
+      }),
   )
 
 /** Parent-only: approve adult XP for a completed chore. */
@@ -151,7 +165,14 @@ export const useApproveChoreCredit = () =>
   )
 
 export const useUndoDone = () =>
-  useDoneMutation('chores', (id: number) => api<Chore>('DELETE', `/chores/${id}/done`))
+  useDoneMutation('chores', (item: number | { id: number; completionId?: number | null }) => {
+    const id = typeof item === 'number' ? item : item.id
+    const completionId = typeof item === 'number' ? undefined : item.completionId
+    return api<Chore>(
+      'DELETE',
+      `/chores/${id}/done${completionId ? `?completion_id=${completionId}` : ''}`,
+    )
+  })
 
 /** Wie im Putzplan: abhaken, ein zweiter Aufruf trägt nach, wer es war. */
 export const useTodoDone = () =>

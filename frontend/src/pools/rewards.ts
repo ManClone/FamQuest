@@ -39,6 +39,14 @@ export const REWARD_POOL: readonly RewardTemplate[] = [
   { id: 'big_wish', icon: 'wrapped-gift', cost: 500, tier: 'large' },
 ]
 
+export const PARENT_REWARD_POOL: readonly RewardTemplate[] = [
+  { id: 'parent_break', icon: 'hot-beverage', cost: 20, tier: 'small' },
+  { id: 'parent_read', icon: 'open-book', cost: 40, tier: 'medium' },
+  { id: 'parent_movie', icon: 'clapper-board', cost: 60, tier: 'medium' },
+  { id: 'parent_meal', icon: 'shallow-pan-of-food', cost: 100, tier: 'large' },
+  { id: 'parent_day', icon: 'national-park', cost: 200, tier: 'large' },
+]
+
 export const rewardTemplateName = (t: TFunction, template: RewardTemplate) =>
   t(`rewards.${template.id}`, { ns: 'pool' })
 

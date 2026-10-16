@@ -713,12 +713,20 @@ class Chore(Base):
 class ChoreCompletion(Base):
     """Erledigung einer Hausarbeit an einem Kalendertag der Familie; wer es war, ist freiwillig.
 
-    Rückgängig machen löscht die Zeile. Höchstens eine Erledigung je Tag, auch bei Doppel-Tipps.
+    Separate request keys allow repeated executions; retries reuse the same key.
     """
 
     __tablename__ = "chore_completions"
-    # Der Unique-Constraint (chore_id, date) dient zugleich als Index für chore_id.
-    __table_args__ = (UniqueConstraint("chore_id", "date"),)
+    __table_args__ = (
+        UniqueConstraint("request_key"),
+        Index(
+            "uq_chore_completions_single",
+            "chore_id",
+            "date",
+            unique=True,
+            postgresql_where=text("request_key IS NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))
@@ -726,6 +734,7 @@ class ChoreCompletion(Base):
     member_id: Mapped[int | None] = mapped_column(
         ForeignKey("family_members.id", ondelete="SET NULL"), index=True
     )
+    request_key: Mapped[str | None] = mapped_column(String(32))
     # Kalendertag in der Zeitzone der Familie, nicht in UTC.
     date: Mapped[dt.date] = mapped_column(Date)
     completed_at: Mapped[datetime] = mapped_column(

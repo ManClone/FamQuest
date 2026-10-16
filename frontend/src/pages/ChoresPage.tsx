@@ -44,8 +44,12 @@ export function ChoresPage() {
       chore={chore}
       room={showRoom ? roomOf(chore) : undefined}
       doneBy={members.data?.find((member) => member.id === chore.done_by)}
-      assignedTo={members.data?.find((member) => member.id === (chore.weekly_member_id ?? chore.fixed_member_id))}
+      assignedTo={members.data?.find(
+        (member) => member.id === (chore.weekly_member_id ?? chore.fixed_member_id),
+      )}
       onToggle={() => done.toggle(chore)}
+      onRepeat={() => done.repeat(chore)}
+      busy={done.busy}
     />
   )
 
@@ -118,7 +122,7 @@ export function ChoresPage() {
   )
 }
 
-const LIST_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-3'
+const LIST_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-3'
 
 /** Nach Ampel: erst was fällig ist, dann was bald dran ist, dann der Rest; unten heute Erledigtes. */
 function ByUrgency({ chores, row }: { chores: Chore[]; row: (chore: Chore) => ReactNode }) {
@@ -204,6 +208,8 @@ function ChoreRow({
   doneBy,
   assignedTo,
   onToggle,
+  onRepeat,
+  busy,
 }: {
   chore: Chore
   /** Raum zur Anzeige unter dem Titel; fehlt, wenn die Zeile schon unter ihrem Raum steht. */
@@ -211,15 +217,15 @@ function ChoreRow({
   doneBy?: Member
   assignedTo?: Member
   onToggle: () => void
+  onRepeat: () => void
+  busy: boolean
 }) {
   const { t } = useTranslation()
   const colors = LEVEL_COLORS[chore.level]
   const interval = intervalText(t, chore.interval_days)
 
   return (
-    <li
-      className={`flex min-w-0 rounded-2xl bg-white p-1 shadow-sm ${chore.done_today ? 'opacity-60' : ''}`}
-    >
+    <li className="flex min-w-0 flex-col rounded-2xl bg-white p-1 shadow-sm">
       <button
         type="button"
         aria-pressed={chore.done_today}
@@ -250,10 +256,10 @@ function ChoreRow({
               {chore.weekly_member_id != null && assignedTo
                 ? ` · Diese Woche: ${assignedTo.name}`
                 : chore.assignment_mode === 'fixed' && assignedTo
-                ? ` · Fest: ${assignedTo.name}`
-                : chore.assignment_mode === 'rotate'
-                  ? ' · Wechselnd'
-                  : ' · Flexibel'}
+                  ? ` · Fest: ${assignedTo.name}`
+                  : chore.assignment_mode === 'rotate'
+                    ? ' · Wechselnd'
+                    : ' · Flexibel'}
             </span>
             <span
               className={`text-lg leading-tight font-bold ${chore.done_today ? 'text-slate-500' : colors.text}`}
@@ -280,6 +286,21 @@ function ChoreRow({
           </span>
         )}
       </button>
+      {chore.done_today && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-3">
+          <span className="text-sm font-semibold text-slate-600">
+            {t('chores.today_count', { count: chore.completion_count_today ?? 1 })}
+          </span>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={onRepeat}
+            aria-label={t('chores.repeat_title', { title: chore.title })}
+          >
+            {t('chores.repeat')}
+          </Button>
+        </div>
+      )}
     </li>
   )
 }
