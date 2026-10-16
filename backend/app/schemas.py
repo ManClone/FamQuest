@@ -406,6 +406,7 @@ class RedemptionHistoryOut(BaseModel):
 
 
 class ApprovalOut(BaseModel):
+    source: str = "task"
     """Erledigung, die auf die Kontrolle der Eltern wartet."""
 
     id: int

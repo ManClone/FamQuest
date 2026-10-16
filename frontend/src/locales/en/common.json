@@ -266,7 +266,8 @@
     "kids_only": "Tasks are for the children. Household chores live in the cleaning plan:",
     "kids_only_link": "go to “Household”",
     "repeatable": "Repeat during the day",
-    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately."
+    "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately.",
+    "multiple_times": "Choose multiple times. Each selected period gets its own execution."
   },
   "routines": {
     "section": "Routines",
@@ -503,7 +504,9 @@
       "weekly_invalid": "The weekly assignment is invalid. Please reload the suggestion.",
       "credit_requires_parent": "Only adults can receive chore XP.",
       "not_completed": "This chore has not been completed yet.",
-      "parent_required": "An adult account is required for this action."
+      "parent_required": "An adult account is required for this action.",
+      "request_conflict": "This execution was already saved elsewhere. Please reload.",
+      "not_repeatable": "This task is already completed today or awaiting approval."
     },
     "todo": {
       "not_found": "This entry no longer exists.",
@@ -517,8 +520,7 @@
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
       "not_linked": "This login has not been assigned to a person yet. A parent can assign it under Family."
-    },
-    "chore.request_conflict": "This execution was already saved elsewhere. Please reload."
+    }
   },
   "rewards": {
     "title": "Rewards",
@@ -1011,7 +1013,17 @@
     "wizard_added_other": "{{count}} chores are in the cleaning plan.",
     "repeat": "Complete again",
     "repeat_title": "Complete {{title}} again",
-    "today_count": "Completed {{count}} times today"
+    "today_count": "Completed {{count}} times today",
+    "repeatable": "Can be completed several times a day",
+    "task_settings": "Task",
+    "adult_xp": "Adult XP",
+    "child_enabled": "Available to children",
+    "child_xp": "Child XP",
+    "eligible_children": "Which children may help?",
+    "child_hint": "Assigned household tasks automatically appear for children. Parents confirm their completions.",
+    "future_money": "Money (coming later)",
+    "awaiting": "{{count}} completions awaiting approval",
+    "child_complete": "Done!"
   },
   "todos": {
     "title": "To do",

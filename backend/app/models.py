@@ -685,6 +685,11 @@ class Chore(Base):
     __tablename__ = "chores"
     __table_args__ = (CheckConstraint("interval_days > 0", name="interval_positive"),)
 
+    repeatable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    child_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    child_xp: Mapped[int] = mapped_column(default=0, server_default="0")
+    child_member_ids: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     room_id: Mapped[int] = mapped_column(
         ForeignKey("chore_rooms.id", ondelete="CASCADE"), index=True
@@ -727,6 +732,9 @@ class ChoreCompletion(Base):
             postgresql_where=text("request_key IS NULL"),
         ),
     )
+
+    approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    points: Mapped[int] = mapped_column(default=0, server_default="0")
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))

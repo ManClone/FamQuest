@@ -2,6 +2,7 @@
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision = "e20261016chores"
 down_revision = "d20261015repeat"
@@ -10,6 +11,22 @@ depends_on = None
 
 
 def upgrade() -> None:
+    for name in ("repeatable", "child_enabled"):
+        op.add_column(
+            "chores", sa.Column(name, sa.Boolean(), nullable=False, server_default=sa.false())
+        )
+    op.add_column("chores", sa.Column("child_xp", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "chores",
+        sa.Column("child_member_ids", postgresql.JSONB(), nullable=False, server_default="[]"),
+    )
+    op.add_column(
+        "chore_completions",
+        sa.Column("approved", sa.Boolean(), nullable=False, server_default=sa.true()),
+    )
+    op.add_column(
+        "chore_completions", sa.Column("points", sa.Integer(), nullable=False, server_default="0")
+    )
     op.add_column("chore_completions", sa.Column("request_key", sa.String(32), nullable=True))
     op.create_unique_constraint(
         "uq_chore_completions_request_key", "chore_completions", ["request_key"]
@@ -37,6 +54,10 @@ def downgrade() -> None:
     op.drop_index("uq_chore_completions_single", table_name="chore_completions")
     op.drop_constraint("uq_chore_completions_request_key", "chore_completions", type_="unique")
     op.drop_column("chore_completions", "request_key")
+    op.drop_column("chore_completions", "points")
+    op.drop_column("chore_completions", "approved")
+    for name in ("child_member_ids", "child_xp", "child_enabled", "repeatable"):
+        op.drop_column("chores", name)
     op.create_unique_constraint(
         "uq_chore_completions_chore_id", "chore_completions", ["chore_id", "date"]
     )

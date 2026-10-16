@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from app.api.tasks import get_task
 from app.auth import CurrentSession, DbSession, child_member_id, ensure_member_access, get_family
 from app.errors import ApiError
-from app.models import FamilyMember, Task, TaskCompletion
+from app.models import ChoreCompletion, FamilyMember, Task, TaskCompletion
 from app.money import book_money
 from app.points import book, earned_on, totals
 from app.recurrence import flexible_due
@@ -146,13 +146,26 @@ def get_today(auth: CurrentSession, db: DbSession) -> TodayOut:
             for member_id in db.scalars(select(FamilyMember.id).order_by(FamilyMember.id))
             if own is None or member_id == own
         ],
-        pending_approvals=db.scalar(
-            select(func.count()).where(
-                TaskCompletion.approved_at.is_(None),
-                *([TaskCompletion.member_id == own] if own is not None else []),
+        pending_approvals=(
+            db.scalar(
+                select(func.count()).where(
+                    TaskCompletion.approved_at.is_(None),
+                    *([TaskCompletion.member_id == own] if own is not None else []),
+                )
             )
+            or 0
         )
-        or 0,
+        + (
+            db.scalar(
+                select(func.count())
+                .select_from(ChoreCompletion)
+                .where(
+                    ChoreCompletion.approved.is_(False),
+                    *([ChoreCompletion.member_id == own] if own is not None else []),
+                )
+            )
+            or 0
+        ),
     )
 
 

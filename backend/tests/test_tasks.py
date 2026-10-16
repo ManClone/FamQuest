@@ -330,3 +330,16 @@ def test_tasks_are_only_for_children(client, parent, lena):
 
     assert (response.status_code, response.json()["code"]) == (409, "task.child_only")
     assert client.get("/api/tasks").json() == []
+
+
+def test_multiple_periods_are_saved_atomically_as_independent_executions(client, parent, lena):
+    response = client.post(
+        "/api/tasks/schedule",
+        json={"task": task_data([lena]), "times": ["morning", "evening"]},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 200, response.text
+    tasks = client.get("/api/tasks").json()
+    assert len(tasks) == 2
+    assert {task["time_of_day"] for task in tasks} == {"morning", "evening"}
+    assert len({task["id"] for task in tasks}) == 2

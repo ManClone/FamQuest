@@ -17,6 +17,10 @@ export interface ChoreRoom {
 }
 
 export interface Chore {
+  repeatable?: boolean
+  child_enabled?: boolean
+  child_xp?: number
+  child_member_ids?: number[]
   id: number
   room_id: number
   title: string
@@ -77,6 +81,10 @@ export interface RoomData {
 }
 
 export interface ChoreData {
+  repeatable?: boolean
+  child_enabled?: boolean
+  child_xp?: number
+  child_member_ids?: number[]
   room_id: number
   title: string
   icon: string
@@ -217,6 +225,10 @@ export const updateChore = (id: number, data: ChoreData) => api<Chore>('PUT', `/
 export const deleteChore = (id: number) => api<void>('DELETE', `/chores/${id}`)
 
 export const choreData = (chore: Chore): ChoreData => ({
+  repeatable: chore.repeatable ?? false,
+  child_enabled: chore.child_enabled ?? false,
+  child_xp: chore.child_xp ?? 0,
+  child_member_ids: chore.child_member_ids ?? [],
   room_id: chore.room_id,
   title: chore.title,
   icon: chore.icon,

@@ -29,8 +29,8 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
   const approvals = useApprovals()
   const confirm = useApprovalMutation(approve)
   const decline = useApprovalMutation(reject)
-  const confirmAll = useApprovalMutation(async (ids: number[]) => {
-    for (const id of ids) await approve(id)
+  const confirmAll = useApprovalMutation(async (items: Approval[]) => {
+    for (const item of items) await approve(item)
   })
 
   if (approvals.isError) {
@@ -52,13 +52,13 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
       <ul className="flex flex-col gap-3">
         {approvals.data.map((approval) => (
           <ApprovalRow
-            key={approval.id}
+            key={`${approval.source ?? 'task'}-${approval.id}`}
             approval={approval}
             member={members.find((member) => member.id === approval.member_id)}
             today={today}
             busy={busy}
-            onApprove={() => confirm.mutate(approval.id)}
-            onReject={() => decline.mutate(approval.id)}
+            onApprove={() => confirm.mutate(approval)}
+            onReject={() => decline.mutate(approval)}
           />
         ))}
       </ul>
@@ -66,7 +66,7 @@ export function ApprovalsSection({ members, today }: ApprovalsSectionProps) {
         <Button
           className="self-start"
           disabled={busy}
-          onClick={() => confirmAll.mutate(approvals.data.map((approval) => approval.id))}
+          onClick={() => confirmAll.mutate(approvals.data)}
         >
           <CheckIcon className="size-7" aria-hidden="true" />
           {t('approvals.approve_all', { count: approvals.data.length })}

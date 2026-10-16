@@ -46,7 +46,7 @@ export function ChoresSection({
 }: ChoresSectionProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const adults = (useMembers().data ?? []).filter((member) => member.role === 'parent')
+  const members = useMembers().data ?? []
   const [showWeeklyPreview, setShowWeeklyPreview] = useState(false)
   const weeklyPreview = useWeeklyChorePreview(showWeeklyPreview)
   const confirmedWeek = useConfirmedWeeklyChores(showWeeklyPreview)
@@ -78,7 +78,7 @@ export function ChoresSection({
         </div>
       </Section>
 
-      <Section title="Wochenverteilung für Erwachsene">
+      <Section title="Wochenverteilung">
         <p className="text-base text-slate-600">
           Vorschlag für die laufende Woche. Feste Aufgaben bleiben zugeordnet; andere werden nach
           geschätzter Arbeitszeit verteilt. Erst mit „Wochenplan verbindlich übernehmen“ wird die
@@ -149,11 +149,18 @@ export function ChoresSection({
                                 }}
                                 className="rounded-lg border border-slate-300 p-2"
                               >
-                                {adults.map((member) => (
-                                  <option key={member.id} value={member.id}>
-                                    {member.name}
-                                  </option>
-                                ))}
+                                {members
+                                  .filter(
+                                    (member) =>
+                                      member.role === 'parent' ||
+                                      (chore?.child_enabled &&
+                                        chore.child_member_ids?.includes(member.id)),
+                                  )
+                                  .map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      {member.name}
+                                    </option>
+                                  ))}
                               </select>
                             </label>
                             <p className="text-sm text-slate-600">

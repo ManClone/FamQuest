@@ -116,7 +116,7 @@ describe('Aufgaben im Elternbereich', () => {
     await user.click(screen.getByRole('radio', { name: 'An bestimmten Tagen' }))
     await user.click(screen.getByRole('button', { name: 'Wochenende' }))
     await user.click(screen.getByRole('checkbox', { name: 'Montag' }))
-    await user.click(screen.getByRole('radio', { name: 'Abends' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Abends' }))
     await user.click(screen.getByRole('button', { name: 'Speichern' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('„Zähne putzen“ ist gespeichert.')
@@ -348,7 +348,7 @@ describe('Aufgaben im Elternbereich', () => {
     await user.click(await screen.findByRole('button', { name: 'Aufgabe hinzufügen' }))
     await user.type(screen.getByLabelText('Titel'), 'Tisch abräumen')
     await user.click(screen.getByRole('checkbox', { name: /Lena/ }))
-    await user.click(screen.getByRole('radio', { name: 'Morgens' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Morgens' }))
     await user.click(screen.getByRole('radio', { name: 'Extra' }))
     expect(screen.getByText(/zählt aber nicht zum Tagesfortschritt/)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Speichern' }))

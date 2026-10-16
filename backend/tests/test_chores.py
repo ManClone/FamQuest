@@ -128,6 +128,10 @@ def test_create_room_and_chore(client, parent, now):
         "active": True,
         "estimated_minutes": 15,
         "adult_xp": 0,
+        "repeatable": False,
+        "child_enabled": False,
+        "child_xp": 0,
+        "child_member_ids": [],
         "assignment_mode": "flexible",
         "fixed_member_id": None,
         "weekly_member_id": None,
@@ -256,8 +260,10 @@ def test_done_without_parent_pin_resets_the_clock(client, parent, admin, now):
     response = done(client, admin, created["id"])
 
     assert response.status_code == 200, response.text
-    assert response.json() | {"id": 0} == created | {
+    assert response.json() | {"id": 0, "last_completion_id": 0} == created | {
         "id": 0,
+        "last_completion_id": 0,
+        "completion_count_today": 1,
         "last_done": SATURDAY,
         "done_today": True,
         "counted_from": SATURDAY,

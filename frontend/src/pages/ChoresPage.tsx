@@ -286,7 +286,7 @@ function ChoreRow({
           </span>
         )}
       </button>
-      {chore.done_today && (
+      {chore.done_today && chore.repeatable && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-3">
           <span className="text-sm font-semibold text-slate-600">
             {t('chores.today_count', { count: chore.completion_count_today ?? 1 })}

@@ -30,6 +30,7 @@ const toilet = makeChore({
   id: 1,
   room_id: 1,
   title: 'Toilette putzen',
+  repeatable: true,
   interval_days: 7,
   days_left: -3,
   ratio: 1.43,

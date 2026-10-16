@@ -192,7 +192,7 @@ def test_repeat_executions_credit_independently_and_undo_exact_execution(client,
     flo = parent_member(client, parent, "Flo")
     viola = parent_member(client, parent, "Viola", color="green")
     room = add_room(client, parent)
-    item = add_chore(client, parent, room["id"], adult_xp=10)
+    item = add_chore(client, parent, room["id"], adult_xp=10, repeatable=True)
     path = f"/api/chores/{item['id']}/done"
     first_body = {"member_id": flo, "request_key": "a" * 32}
     first = client.put(path, json=first_body, headers=csrf(parent)).json()
@@ -222,7 +222,7 @@ def test_concurrent_household_request_is_credited_once(client, parent, now):
 
     flo = parent_member(client, parent, "Flo")
     room = add_room(client, parent)
-    item = add_chore(client, parent, room["id"], adult_xp=10)
+    item = add_chore(client, parent, room["id"], adult_xp=10, repeatable=True)
 
     def attempt(_):
         return client.put(

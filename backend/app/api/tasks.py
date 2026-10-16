@@ -1,11 +1,12 @@
 from fastapi import APIRouter, status
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.errors import ApiError
 from app.models import Routine, RoutineStep, Task, TaskAssignment, TaskRecurrence
-from app.schemas import MemberPositionOut, TaskIn, TaskOut, WeeklyRecurrence
+from app.schemas import MemberPositionOut, TaskIn, TaskOut, TimeOfDay, WeeklyRecurrence
 
 router = APIRouter(tags=["tasks"])
 
@@ -125,6 +126,25 @@ def _next_position(db: DbSession, member_id: int) -> int:
         select(func.max(TaskAssignment.position)).where(TaskAssignment.member_id == member_id)
     )
     return 0 if last is None else last + 1
+
+
+class TaskScheduleIn(BaseModel):
+    task_id: int | None = None
+    task: TaskIn
+    times: list[TimeOfDay] = Field(min_length=1, max_length=4)
+
+
+@router.post("/tasks/schedule")
+def save_task_schedule(body: TaskScheduleIn, _: ParentSession, db: DbSession) -> TaskOut:
+    times = list(dict.fromkeys(body.times))
+    first = get_task(db, body.task_id) if body.task_id else Task()
+    for index, period in enumerate(times):
+        task = first if index == 0 else Task()
+        data = body.task.model_copy(update={"time_of_day": period, "extra": False})
+        apply_task(db, task, data)
+        db.add(task)
+    db.commit()
+    return task_out(first)
 
 
 @router.get("/tasks")

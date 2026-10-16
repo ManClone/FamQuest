@@ -11,7 +11,7 @@ import AnytimeIcon from '~icons/fluent-emoji-flat/infinity'
 import ExtraIcon from '~icons/fluent-emoji-flat/flexed-biceps'
 import CheckIcon from '~icons/lucide/check'
 
-import { ApiError } from '../../api/client'
+import { ApiError, api } from '../../api/client'
 import type { Member } from '../../api/members'
 import { useAddRoutineStep, useRoutines } from '../../api/routines'
 import {
@@ -109,6 +109,9 @@ export function TaskEditor({
   const [block, setBlock] = useState<TimeOfDay | null | 'extra'>(
     task?.extra ? 'extra' : (task?.time_of_day ?? null),
   )
+  const [selectedTimes, setSelectedTimes] = useState<TimeOfDay[]>(
+    task?.time_of_day ? [task.time_of_day] : [],
+  )
   const [color, setColor] = useState<MemberColor | null>(task?.color ?? null)
   const [description, setDescription] = useState(task?.description ?? '')
   const [active, setActive] = useState(task?.active ?? true)
@@ -121,7 +124,15 @@ export function TaskEditor({
 
   const icon = chosenIcon ?? suggestIcon(title) ?? DEFAULT_TASK_ICON
   const save = useTasksMutation((data: TaskData) =>
-    task ? updateTask(task.id, data) : createTask(data),
+    selectedTimes.length > 1 && !onlyInRoutines
+      ? api<Task>('POST', '/tasks/schedule', {
+          task_id: task?.id ?? null,
+          task: data,
+          times: selectedTimes,
+        })
+      : task
+        ? updateTask(task.id, data)
+        : createTask(data),
   )
   const remove = useTasksMutation((id: number) => deleteTask(id))
   const addStep = useAddRoutineStep()
@@ -227,6 +238,7 @@ export function TaskEditor({
     setChosenIcon(taskTemplateIcon(template))
     setPoints(template.points)
     setBlock(template.extra ? 'extra' : template.time_of_day)
+    setSelectedTimes(template.time_of_day && !template.extra ? [template.time_of_day] : [])
     setNeedsApproval(template.needs_approval ?? false)
     setKind(template.recurrence.kind)
     if (template.recurrence.kind === 'weekly') setWeekdays(template.recurrence.weekdays)
@@ -509,7 +521,10 @@ export function TaskEditor({
                 <ChoiceTile
                   name="time_of_day"
                   checked={block === null}
-                  onChange={() => setBlock(null)}
+                  onChange={() => {
+                    setBlock(null)
+                    setSelectedTimes([])
+                  }}
                 >
                   <AnytimeIcon className="size-10" aria-hidden="true" />
                   {t('tasks.anytime')}
@@ -520,8 +535,15 @@ export function TaskEditor({
                     <ChoiceTile
                       key={value}
                       name="time_of_day"
-                      checked={block === value}
-                      onChange={() => setBlock(value)}
+                      multiple
+                      checked={selectedTimes.includes(value)}
+                      onChange={() => {
+                        const next = selectedTimes.includes(value)
+                          ? selectedTimes.filter((time) => time !== value)
+                          : [...selectedTimes, value]
+                        setSelectedTimes(next)
+                        setBlock(next[0] ?? null)
+                      }}
                     >
                       <Icon className="size-10" aria-hidden="true" />
                       {t(`times_of_day.${value}`)}
@@ -531,15 +553,16 @@ export function TaskEditor({
                 <ChoiceTile
                   name="time_of_day"
                   checked={block === 'extra'}
-                  onChange={() => setBlock('extra')}
+                  onChange={() => {
+                    setBlock('extra')
+                    setSelectedTimes([])
+                  }}
                 >
                   <ExtraIcon className="size-10" aria-hidden="true" />
                   {t('tasks.extra')}
                 </ChoiceTile>
               </div>
-              <p className="text-base text-slate-500">
-                {t(block === 'extra' ? 'tasks.extra_hint' : 'tasks.routine_hint')}
-              </p>
+              <p className="text-base text-slate-500">{t('tasks.multiple_times')}</p>
             </Field>
           </>
         )}
