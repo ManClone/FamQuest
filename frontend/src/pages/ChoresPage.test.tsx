@@ -17,10 +17,12 @@ import {
 
 beforeEach(async () => {
   await i18n.changeLanguage('de')
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 const mama = makeMember({ id: 3, name: 'Mama', role: 'parent', color: 'blue' })
@@ -208,6 +210,17 @@ describe('Haushalt', () => {
     await user.click(await screen.findByRole('button', { name: /Staubsaugen/, pressed: true }))
 
     expect(calls.map((call) => call.key)).toContain('DELETE /api/chores/4/done')
+  })
+
+  it('asks before undoing and leaves all executions untouched when cancelled', async () => {
+    const user = userEvent.setup()
+    const calls = mockChores()
+    vi.mocked(window.confirm).mockReturnValue(false)
+    renderApp('/household')
+    await user.click(await screen.findByRole('button', { name: /Staubsaugen/, pressed: true }))
+    expect(window.confirm).toHaveBeenCalledWith('„Staubsaugen“ wirklich zurücknehmen?')
+    expect(calls.some((call) => call.key.startsWith('DELETE'))).toBe(false)
+    expect(screen.getByRole('button', { name: /Staubsaugen/, pressed: true })).toBeVisible()
   })
 
   it('zeigt die faire Verteilung aus „Wer war’s?“', async () => {
