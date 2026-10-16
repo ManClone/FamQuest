@@ -465,3 +465,16 @@ it('haelt erledigte Aufgaben mit einer eigenen weiteren Ausfuehrung verfuegbar',
   expect(sent[0].request_key).not.toBe(sent[1].request_key)
   expect(await screen.findByRole('region', { name: 'Wer war\u2019s?' })).toBeVisible()
 })
+
+it('asks for the person before booking a fixed chore', async () => {
+  const user = userEvent.setup()
+  const fixed = { ...toilet, assignment_mode: 'fixed' as const, fixed_member_id: mama.id }
+  const calls = mockChores(makeChorePlan({ ...PLAN, chores: [fixed] }))
+  renderApp('/household')
+  await user.click(await screen.findByRole('button', { name: /Toilette/ }))
+  const who = await screen.findByRole('region', { name: /Wer war/ })
+  expect(bodiesOf(calls, 'PUT /api/chores/1/done')).toHaveLength(0)
+  await user.click(within(who).getByRole('button', { name: mama.name }))
+  await waitFor(() => expect(bodiesOf(calls, 'PUT /api/chores/1/done')).toHaveLength(1))
+  expect(bodiesOf(calls, 'PUT /api/chores/1/done')[0]).toMatchObject({ member_id: mama.id })
+})

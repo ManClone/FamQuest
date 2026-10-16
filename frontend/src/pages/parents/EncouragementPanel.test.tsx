@@ -42,7 +42,7 @@ it('gives a separate heart and restores reasoned star deductions on the dashboar
   const panel = await screen.findByRole('region', { name: 'Praise & stars' })
   await user.type(within(panel).getByLabelText('Reason'), 'Great help')
   await user.click(within(panel).getAllByRole('button', { name: 'Give praise' }).at(-1)!)
-  expect(await within(panel).findByLabelText('1 praises')).toBeVisible()
+  expect(await within(panel).findByLabelText('1 praise')).toBeVisible()
   expect(calls.find((call) => call.key === 'POST /api/members/1/praise')?.body).toMatchObject({
     reason: 'Great help',
   })

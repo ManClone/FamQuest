@@ -1028,7 +1028,8 @@
     "child_hint": "Zugewiesene Haushaltsaufgaben erscheinen automatisch bei den Kindern. Erledigungen bestätigen die Eltern.",
     "future_money": "Geld (später verfügbar)",
     "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
-    "child_complete": "Erledigt!"
+    "child_complete": "Erledigt!",
+    "who_before_completion": "Wer hat {{title}} erledigt?"
   },
   "todos": {
     "title": "Zu erledigen",
@@ -1129,6 +1130,8 @@
     "saved": "Gespeichert.",
     "received": "Du hast ein Lob erhalten!",
     "approve": "Bestätigen + Lob",
-    "approve_label": "{{title}} von {{name}} bestätigen und loben"
+    "approve_label": "{{title}} von {{name}} bestätigen und loben",
+    "count_one": "{{count}} Lob",
+    "count_other": "{{count}} Lobe"
   }
 }
