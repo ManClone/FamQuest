@@ -71,7 +71,7 @@ export function ChildTasksPage({ currentOnly = false }: { currentOnly?: boolean 
           tasks={tasks}
           date={today.date}
           currentTimeOfDay={today.time_of_day}
-          size="lg"
+          size="compact"
         />
       )}
       <ChildHouseholdTasks currentOnly={currentOnly} />

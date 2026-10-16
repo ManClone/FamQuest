@@ -12,7 +12,7 @@ import { errorMessage } from '../../errors'
 import { type MemberColor, colorTokens } from '../../memberColors'
 import { useTaskToggle } from './useTaskToggle'
 
-export type CardSize = 'md' | 'lg'
+export type CardSize = 'md' | 'lg' | 'compact'
 
 const SIZES = {
   // Klein und blass: flexible Aufgaben unter „Demnächst“.
@@ -39,6 +39,14 @@ const SIZES = {
     badge: 'size-12',
     feedback: 'text-4xl',
     points: 'text-lg',
+  },
+  compact: {
+    card: 'min-h-22 gap-3 px-3 py-3',
+    icon: 'size-14',
+    title: 'text-xl',
+    badge: 'size-9',
+    feedback: 'text-2xl',
+    points: 'text-base',
   },
 } as const
 
