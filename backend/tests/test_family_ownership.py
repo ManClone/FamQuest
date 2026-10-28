@@ -48,9 +48,11 @@ def test_new_parent_created_account_is_assigned_to_family(client, parent):
     )
     assert response.status_code == 201, response.text
     with SessionLocal() as db:
-        assert db.scalar(sa.text("SELECT family_id FROM users WHERE email='second@example.org'")) == db.scalar(
-            sa.text("SELECT id FROM families")
+        family_id = db.scalar(sa.text("SELECT id FROM families"))
+        account_family_id = db.scalar(
+            sa.text("SELECT family_id FROM users WHERE email='second@example.org'")
         )
+        assert account_family_id == family_id
 
 
 def test_new_member_login_is_assigned_to_family(client, parent):
@@ -66,9 +68,11 @@ def test_new_member_login_is_assigned_to_family(client, parent):
     )
     assert response.status_code == 201, response.text
     with SessionLocal() as db:
-        assert db.scalar(sa.text("SELECT family_id FROM users WHERE email='tim@example.org'")) == db.scalar(
-            sa.text("SELECT id FROM families")
+        family_id = db.scalar(sa.text("SELECT id FROM families"))
+        account_family_id = db.scalar(
+            sa.text("SELECT family_id FROM users WHERE email='tim@example.org'")
         )
+        assert account_family_id == family_id
 
 
 def test_account_directory_does_not_expose_unassigned_accounts(client, parent):
