@@ -27,4 +27,4 @@ def test_membership_has_unique_identity_tenant_pair():
 def test_superadmin_does_not_require_family_membership():
     identity = Identity(email="root@example.org", password_hash="hash", is_superadmin=True)
     assert identity.is_superadmin is True
-    assert identity not in AuthBase.metadata.tables.values()
+    assert not hasattr(identity, "tenant_id")
