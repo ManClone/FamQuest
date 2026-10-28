@@ -6,7 +6,7 @@ Status: Entwurf; **keine Änderung an der produktiven Datenbank**. Umsetzung in 
 
 - `Family` in `backend/app/models.py` ist durch `CheckConstraint("singleton")` und einen eindeutigen `singleton`-Wert ausdrücklich auf genau eine Familie begrenzt.
 - `auth.get_family(db)` liest ohne Mandantenfilter `select(Family).one_or_none()`.
-- `User` und `FamilyMember` besitzen keine `family_id`. Zahlreiche Endpunkte verwenden globalen Datenzugriff.
+- `User.family_id` wird im Entwurfsbranch additiv eingeführt und für Bestandskonten befüllt; `FamilyMember` und zahlreiche weitere Tabellen besitzen noch keine Mandantenzuordnung. Zahlreiche Endpunkte verwenden weiterhin globalen Datenzugriff.
 - `current_session` erlaubt neben Cookie-Sessions auch MCP-Bearer-Anfragen mit `x-famquest-parent-id`. Auch dieser Weg muss mandantengebunden werden.
 - Die bereits vorhandenen Grasser-Daten (Mitglieder, XP, Aufgaben, Konten, Transaktionen, Belohnungen, Medien) dürfen weder gelöscht noch unbemerkt umgehängt werden.
 
@@ -58,3 +58,13 @@ Status: Entwurf; **keine Änderung an der produktiven Datenbank**. Umsetzung in 
 ## Sofortige Sicherheitsregel
 
 Solange die Mandantenisolierung nicht vollständig implementiert und getestet ist, bleibt die produktive Installation **Single-Family**. Kein zweiter Familien-Datensatz, kein Superadmin in Produktion.
+
+## Beschlossene MCP-Anmeldung (ohne Auth0)
+
+- ChatGPT verwendet **OAuth 2.0 Authorization Code mit PKCE** gegen FamQuest selbst. Der Benutzer meldet sich beim Verknüpfen im FamQuest-Login an; ChatGPT erhält niemals sein Passwort.
+- FamQuest betreibt die für den MCP-Client benötigten Discovery-, Authorization- und Token-Endpunkte mit strikter Redirect-URI-Prüfung, Client-Registrierung nach unterstütztem Verfahren, PKCE-S256, State-Prüfung und TLS über den bestehenden Tunnel. Die exakte ChatGPT-Client-Kompatibilität muss vor Implementierung anhand aktueller Vorgaben verifiziert werden.
+- Access-Tokens sind kurzlebig, widerrufbar und an Benutzer, Familie, Client und Berechtigungen gebunden; Refresh-Tokens werden rotiert und nur gehasht gespeichert. Token-Audience ist ausschließlich der MCP-Resource-Server.
+- MCP-Backend leitet Benutzer und Familie **ausschließlich** aus dem serverseitig geprüften Token ab, niemals aus `X-FamQuest-Parent-ID`, einem Familien-Header oder Tool-Parametern.
+- Jeder MCP-Aufruf nutzt dieselben mandantengeprüften Services wie die Web-App. Schreiboperationen mit Elternfreigabe verlangen weiterhin eine explizite Bestätigung.
+- Der bisherige globale MCP-Service-Token plus `X-FamQuest-Parent-ID` ist **nur ein Legacy-Übergang** und darf nicht für mehrere Familien freigeschaltet werden. Er muss vor dem Mehrfamilien-Rollout deaktiviert/ersetzt werden.
+- Abnahmetests: fremde Familien-IDs und fremde Objekt-IDs, abgelaufene/widerrufene Tokens, falsche Audience, manipulierte Redirect-URIs, fehlende PKCE, Token-Wiederverwendung und Rollentrennung.
