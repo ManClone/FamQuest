@@ -111,6 +111,10 @@ def current_session(request: Request, db: DbSession) -> AuthSession:
         user = db.get(User, int(raw_id)) if raw_id.isdecimal() else None
         if user is None or user.role not in ("admin", "parent"):
             raise ApiError(403, "mcp.parent_required")
+        # MCP identities must belong to a persisted family. Never infer a
+        # tenant from request headers or silently fall back to another family.
+        if user.family_id is None or db.get(Family, user.family_id) is None:
+            raise ApiError(403, "mcp.parent_required")
         logger.info("MCP parent=%s method=%s path=%s", user.id, request.method, request.url.path)
         # Transient principal: no reusable browser session, cookie or CSRF exemption for cookies.
         return AuthSession(user_id=user.id, user=user)
