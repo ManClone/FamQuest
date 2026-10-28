@@ -95,9 +95,7 @@ def list_accounts(auth: ParentSession, db: DbSession) -> list[AccountOut]:
     )
     return [
         AccountOut(id=user.id, email=user.email, role=user.role, member_id=links.get(user.id))
-        for user in db.scalars(
-            select(User).where(User.family_id == family_id).order_by(User.id)
-        )
+        for user in db.scalars(select(User).where(User.family_id == family_id).order_by(User.id))
     ]
 
 
