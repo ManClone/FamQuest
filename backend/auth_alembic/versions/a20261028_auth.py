@@ -21,8 +21,10 @@ def upgrade() -> None:
         sa.Column("database_name", sa.String(63), nullable=False, unique=True),
         sa.Column("status", sa.String(20), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True),
-            server_default=sa.func.now(), nullable=False,
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
         ),
     )
     op.create_table(
@@ -32,20 +34,26 @@ def upgrade() -> None:
         sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column("is_superadmin", sa.Boolean(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True),
-            server_default=sa.func.now(), nullable=False,
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
         ),
     )
     op.create_table(
         "memberships",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column(
-            "identity_id", sa.Integer(),
-            sa.ForeignKey("identities.id", ondelete="CASCADE"), nullable=False,
+            "identity_id",
+            sa.Integer(),
+            sa.ForeignKey("identities.id", ondelete="CASCADE"),
+            nullable=False,
         ),
         sa.Column(
-            "tenant_id", sa.Integer(),
-            sa.ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False,
+            "tenant_id",
+            sa.Integer(),
+            sa.ForeignKey("tenants.id", ondelete="RESTRICT"),
+            nullable=False,
         ),
         sa.Column("role", sa.String(20), nullable=False),
         sa.UniqueConstraint("identity_id", "tenant_id"),
