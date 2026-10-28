@@ -34,8 +34,12 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def get_family(db: Session) -> Family:
-    family = db.scalars(select(Family)).one_or_none()
+def get_family(db: Session, user: User | None = None) -> Family:
+    if user is not None and user.family_id is not None:
+        family = db.get(Family, user.family_id)
+    else:
+        # Legacy single-family callers until every route is tenant-aware.
+        family = db.scalars(select(Family)).one_or_none()
     if family is None:
         raise ApiError(status.HTTP_409_CONFLICT, "setup.required")
     return family
@@ -169,8 +173,8 @@ ParentSession = Annotated[AuthSession, Depends(parent_session)]
 
 
 def me_response(db: Session, auth_session: AuthSession) -> MeResponse:
-    family = get_family(db)
     user = auth_session.user
+    family = get_family(db, user)
     return MeResponse(
         user=UserOut(email=user.email, role=user.role, language=user.language),
         family=FamilyOut(
