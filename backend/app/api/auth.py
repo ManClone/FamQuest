@@ -16,7 +16,7 @@ from app.auth import (
 from app.demo_mode import NotInDemo
 from app.errors import ApiError
 from app.logs import logger
-from app.models import FamilyMember, User
+from app.models import Family, FamilyMember, User
 from app.schemas import Email, MeResponse, Password
 from app.security import hash_secret, login_limiter, needs_rehash, verify_secret
 
@@ -95,10 +95,20 @@ def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
 
 
 @router.post("/accounts", status_code=status.HTTP_201_CREATED, dependencies=[NotInDemo])
-def create_account(body: AccountCreateRequest, _: ParentSession, db: DbSession) -> AccountOut:
+def create_account(body: AccountCreateRequest, auth: ParentSession, db: DbSession) -> AccountOut:
     if body.role not in ("parent", "child"):
         raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "auth.invalid_role")
-    user = User(email=body.email, password_hash=hash_secret(body.password), role=body.role)
+    family_id = auth.user.family_id
+    if family_id is None:
+        family_id = db.scalar(select(Family.id))
+    if family_id is None:
+        raise ApiError(status.HTTP_409_CONFLICT, "setup.required")
+    user = User(
+        email=body.email,
+        password_hash=hash_secret(body.password),
+        role=body.role,
+        family_id=family_id,
+    )
     db.add(user)
     try:
         db.commit()
