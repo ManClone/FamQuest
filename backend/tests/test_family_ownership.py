@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from alembic import command
 
 from app.db import SessionLocal
-from tests.conftest import alembic_config, run_setup
+from tests.conftest import alembic_config, csrf, run_setup
 
 
 def test_existing_users_are_backfilled_to_existing_family():
@@ -36,5 +36,36 @@ def test_initial_admin_has_family_id(client):
     run_setup(client)
     with SessionLocal() as db:
         assert db.scalar(sa.text("SELECT family_id FROM users WHERE role = 'admin'")) == db.scalar(
+            sa.text("SELECT id FROM families")
+        )
+
+
+def test_new_parent_created_account_is_assigned_to_family(client, parent):
+    response = client.post(
+        "/api/auth/accounts",
+        json={"email": "second@example.org", "password": "test-password-123", "role": "parent"},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 201, response.text
+    with SessionLocal() as db:
+        assert db.scalar(sa.text("SELECT family_id FROM users WHERE email='second@example.org'")) == db.scalar(
+            sa.text("SELECT id FROM families")
+        )
+
+
+def test_new_member_login_is_assigned_to_family(client, parent):
+    response = client.post(
+        "/api/members",
+        json={
+            "name": "Tim",
+            "role": "child",
+            "color": "green",
+            "login": {"email": "tim@example.org", "password": "test-password-123"},
+        },
+        headers=csrf(parent),
+    )
+    assert response.status_code == 201, response.text
+    with SessionLocal() as db:
+        assert db.scalar(sa.text("SELECT family_id FROM users WHERE email='tim@example.org'")) == db.scalar(
             sa.text("SELECT id FROM families")
         )
