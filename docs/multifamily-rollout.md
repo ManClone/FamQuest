@@ -1,70 +1,60 @@
-# FamQuest – sichere Mehrfamilienfähigkeit (Implementierungsplan)
+# FamQuest – Mehrfamilienarchitektur: Datenbank pro Familie
 
-Status: Entwurf; **keine Änderung an der produktiven Datenbank**. Umsetzung in überprüfbaren PRs, erst nach erfolgreichen Isolationstests deployen.
+Status: **beschlossene Zielarchitektur, noch nicht implementiert**. Dieser Draft-PR enthält ältere experimentelle `users.family_id`-Änderungen für ein Shared-Table-Modell. Diese dürfen **nicht** als produktive Mehrfamilienlösung ausgerollt werden. Bestehende QNAP-Installation bleibt unverändert.
 
-## Ist-Zustand und Risiko
+## Ziel
 
-- `Family` in `backend/app/models.py` ist durch `CheckConstraint("singleton")` und einen eindeutigen `singleton`-Wert ausdrücklich auf genau eine Familie begrenzt.
-- `auth.get_family(db)` liest ohne Mandantenfilter `select(Family).one_or_none()`.
-- `User.family_id` wird im Entwurfsbranch additiv eingeführt und für Bestandskonten befüllt; `FamilyMember` und zahlreiche weitere Tabellen besitzen noch keine Mandantenzuordnung. Zahlreiche Endpunkte verwenden weiterhin globalen Datenzugriff.
-- `current_session` erlaubt neben Cookie-Sessions auch MCP-Bearer-Anfragen mit `x-famquest-parent-id`. Auch dieser Weg muss mandantengebunden werden.
-- Die bereits vorhandenen Grasser-Daten (Mitglieder, XP, Aufgaben, Konten, Transaktionen, Belohnungen, Medien) dürfen weder gelöscht noch unbemerkt umgehängt werden.
+Ein FamQuest-Backend, ein MCP-Endpunkt, ein PostgreSQL-16-Server mit mehreren logisch getrennten Datenbanken:
 
-**Wichtig:** Den Singleton-Constraint allein zu entfernen ist unsicher. Vor Freischaltung einer zweiten Familie müssen sämtliche Lese- und Schreibpfade tenant-sicher sein.
+- `famquest_auth`: zentrale Benutzerkonten, Passwort-Hashes, Superadmin, Familienregister, DB-Zuordnung, Einladungen, Sessions, OAuth-Clients/-Grants/-Tokens und Audit-Log.
+- `famquest_grasser`: ausschließlich private Fachdaten der Familie Grasser (Mitglieder, Aufgaben, XP, Belohnungen, Taschengeld, Bankzuordnungen, Einstellungen).
+- `famquest_sertl`: ausschließlich private Fachdaten der Familie Sertl; erst nach vollständigen Tests anlegen.
+- Weitere Familien erhalten jeweils eine eigene Datenbank und eigene Datenbankrolle mit minimalen Rechten.
 
-## Zielmodell
+Benutzer-/Familienzuordnung ist ausschließlich in der Auth-Datenbank maßgeblich. Der Familien-DB-Name kommt aus einer serverseitig kontrollierten Registry, **niemals** aus Request-Headern, URL-Parametern oder vom Client gelieferten IDs. DB-Namen sind technische IDs und werden nicht aus frei eingegebenen Familiennamen konstruiert.
 
-1. Eine gemeinsame PostgreSQL-Instanz, eine App, getrennte Familien als Mandanten.
-2. `families.id` bleibt stabil; der bestehende Datensatz ist die Familie Grasser. Migrationen sind additiv, rückwärtskompatibel und idempotent, soweit möglich.
-3. Eigene Superadmin-Rolle zur Verwaltung von Familien und Einladungen, **nicht** als normaler Familien-Admin mit Zugriff auf private Familieninhalte.
-4. Eltern und Kinder gehören einer Familie an. Keine selbstgewählte `family_id` aus Client-Payload, Header oder Query-Parameter akzeptieren. Mandant kommt ausschließlich aus serverseitig authentifizierter Identität.
-5. Datenübergreifende Beziehungen (Mitglieder, Quests, Belohnungen, Freigaben, Zahlungen, Bankkonten, Kalender, Bilder, Konfigurationen) werden auf Familienzugehörigkeit geprüft; auch indirekte IDs.
-6. E-Mail-Logins bleiben eindeutig; eine spätere Mehrfachmitgliedschaft erfordert ein explizites Membership-Modell und Familienwechsel mit neuem Berechtigungskontext.
+## Sicherheitsgrenzen
 
-## Phasen und Abnahmekriterien
+1. Die Authentifizierung liefert eine validierte Benutzer-ID und Familienzugehörigkeit; der Superadmin ist nicht automatisch Mitglied einer Familie und kann keine privaten Familiendaten lesen.
+2. Die API wählt pro Request nach erfolgreicher Authentifizierung die passende Family-DB-Session. Kein globales `get_family(db)` über alle Mandanten. Hintergrundjobs erhalten einen expliziten, serverseitig validierten Tenant-Kontext.
+3. Jede Familiendatenbank besitzt eine eigene PostgreSQL-Loginrolle mit Rechten **nur** auf diese Datenbank; kein gemeinsamer App-Superuser. Provisionierung/Migration erfolgt über einen getrennten privilegierten Prozess, dessen Credentials nicht im normalen Request-Pfad verfügbar sind.
+4. DB-Verbindungen und Pools sind nach Familie getrennt und begrenzt; keine dynamischen Connection-Strings aus Client-Daten. Verbindungen beim Offboarding schließen.
+5. Uploads/Avatare/Exports werden je Familie in getrennten Verzeichnissen mit serverseitig geprüften Pfaden gespeichert. Kein gemeinsamer ungeschützter Dateizugriff.
+6. Die Familiendatenbanken speichern keine Login-Passwörter oder OAuth-Refresh-Tokens. Für Fachdaten benötigte Benutzerreferenzen sind externe IDs; keine Cross-Database-Foreign-Keys voraussetzen.
+7. FamQuest stellt OAuth 2.0 Authorization Code + PKCE für die ChatGPT-MCP-Verbindung selbst bereit (kein Auth0). Tokens sind kurzlebig, widerrufbar und an Benutzer, Familie, Audience, Client und Berechtigungen gebunden. Der globale Legacy-MCP-Service-Token mit `X-FamQuest-Parent-ID` muss **vor** Freigabe einer zweiten Familie deaktiviert werden.
+8. Elternfreigaben bleiben auch bei MCP-Schreiboperationen verpflichtend. Superadmin-Aktionen und Tenant-Provisionierung erhalten Audit-Einträge.
 
-### PR A – Datenmodell und Bestandsmigration
+## Umsetzungsschritte
 
-- Inventar aller Tabellen, Foreign Keys, Indizes, API-Routen und MCP-Aktionen.
-- `family_id` bei `users` und mandantenbezogenen Wurzeltabellen ergänzen; bei abhängigen Tabellen entweder `family_id` oder abgesicherte Parent-Beziehung mit eindeutiger Zugehörigkeit.
-- Vorhandene Zeilen explizit anhand des bestehenden Familien-Datensatzes zuordnen. Keine neue Default-Familie anlegen, wenn bereits eine existiert.
-- Singleton-Einschränkung **erst entfernen, wenn** sämtliche Datenzugriffe mandantenfähig sind.
-- Mehrmandantenfähige Unique-Constraints, insbesondere Mitgliederfarben und familieninterne Namen/Schlüssel, prüfen.
-- Alembic-Migration auf einer Kopie des realen Backups testen; Revisionskette und `alembic check` prüfen.
+### 1. Bestandsaufnahme und Architektur-Refactoring
 
-### PR B – Authentifizierung und Isolation
+- Inventar aller Modelle, Alembic-Migrationen, API-Routen, Hintergrundjobs, Uploads, MCP-Aktionen und DB-Abhängigkeiten.
+- Bestehendes `User`/`AuthSession`/`Family`-Modell in Auth-Registry und Fachdaten aufteilen. Das bisherige `family_id`-Experiment im Draft-PR nicht einfach weiterausbauen.
+- Zwei getrennte SQLAlchemy-Engines/Session-Factories (Auth + Family) definieren; für Family-Engines tenantbezogenen Pool-Lifecycle vorsehen.
+- Alembic-Historien für Auth-DB und Family-DB separat versionieren; niemals automatisch alle bestehenden Revisionen auf einer leeren Auth-DB ausführen.
 
-- `CurrentFamily`-Dependency aus validierter Session/Benutzer-Familienzuordnung.
-- Alle Routen, Services, Jobs und MCP-Aktionen nach Familie filtern; Schreibzugriffe gegen Cross-Tenant-IDs absichern.
-- 403/404 statt Informationen über fremde Datensätze; keine fremden Daten in Fehlertexten oder aggregierten Statistiken.
-- Superadmin erhält getrennte Verwaltungsrouten und Berechtigungen. Keine automatische Familienmitgliedschaft.
-- Hintergrundjobs (z. B. Routinen) explizit pro Familie ausführen.
+### 2. Migration ohne Datenverlust
 
-### PR C – Administration und Benutzeroberfläche
+- **Vorher** PostgreSQL-Dump, Upload-Backup und verifizierte Wiederherstellungsprobe auf Testumgebung.
+- Bestehende produktive `famquest`-Datenbank zunächst unverändert lassen und eine isolierte Testkopie verwenden.
+- Auth-Daten (`users`, `sessions`, benötigte Auth-Konfiguration) in `famquest_auth` übernehmen; Fachdaten bleiben in der künftig `famquest_grasser` genannten bzw. entsprechend registrierten Datenbank.
+- Bestehende IDs und fachliche Referenzen erhalten; Foreign-Key-Abhängigkeiten beim Split explizit behandeln. Keine pauschalen `DROP TABLE`-Schritte, bevor jede Abhängigkeit migriert und getestet ist.
+- Konsistenzprüfungen: Nutzer, Mitglieder, Aufgaben, XP, Bonus, Belohnungen, Bankdaten, Uploads und OAuth-Sessions. Rollback-Plan dokumentieren.
+- Produktions-Cutover nur nach expliziter Freigabe; keine Migration im laufenden Betrieb ohne Wartungsfenster.
 
-- Separate Superadmin-Anmeldung, sichere Einrichtung ohne hartcodiertes Passwort, optional MFA.
-- Familien anlegen/deaktivieren, Eltern einladen, Einladungen zeitlich begrenzen; Audit-Log.
-- Neue Familie Sertl erst nach vollständig grünen Isolationstests anlegen.
-- Kinder-/Eltern-Ansichten bleiben innerhalb ihrer eigenen Familie.
+### 3. Provisionierung und Offboarding
 
-### PR D – Rollout
+- Superadmin legt Familie an; Provisioner erstellt eigene DB + DB-Rolle, führt Family-Migrationen aus, registriert DB-Zuordnung in `famquest_auth` und lädt Eltern ein. Fehlerfall rollt Teilzustände kontrolliert zurück.
+- Offboarding: Familie sperren, Sessions/OAuth-Tokens widerrufen, laufende Jobs stoppen, Pool schließen, optional verschlüsseltes Export-/Backup bereitstellen, DB + DB-Rolle + Uploads entfernen, Registry bereinigen.
+- **Wichtig:** Ein `DROP DATABASE` löscht weder externe Backups noch Dateien, Logs oder Kopien. Aufbewahrungs- und Löschfristen gesondert festlegen; Löschung nur nach expliziter Bestätigung.
 
-- Vor Deployment frischen PostgreSQL-Dump **und** Uploads sichern.
-- Migration zuerst gegen eine Kopie der Bestandsdaten testen; Anzahl/Checksummen relevanter Datensätze vergleichen.
-- Isolationstests mit Grasser und Sertl: alle API-Endpunkte, fremde IDs, MCP, Dateizugriffe, Hintergrundjobs.
-- Kein `down -v`, keine Datenbank-Neuinitialisierung, kein `alembic stamp` zur Fehlerumgehung.
-- QNAP-Deployment erst nach Freigabe; nachher Bestandsdaten (Tim: XP, Aufgaben, Bonus, Konten, Belohnungen) kontrollieren.
+### 4. Abnahmetests
 
-## Sofortige Sicherheitsregel
+- Grasser/Sertl gleichzeitig anmelden: keinerlei Cross-Tenant-Zugriff über API, MCP, fremde Objekt-IDs, Upload-Pfade, Hintergrundjobs oder Exporte.
+- Falsche/abgelaufene OAuth-Tokens, manipulierte Familienzuordnung, Session-Wechsel, Superadmin-Zugriff und fehlende Elternfreigabe.
+- Test der DB-Rollen: Family-A-DB-Credentials können Family-B-DB nicht verbinden/lesen.
+- Migration und Wiederherstellung anhand einer **Kopie** des Grasser-Backups; danach erst Deployment.
 
-Solange die Mandantenisolierung nicht vollständig implementiert und getestet ist, bleibt die produktive Installation **Single-Family**. Kein zweiter Familien-Datensatz, kein Superadmin in Produktion.
+## Rollout-Sperre
 
-## Beschlossene MCP-Anmeldung (ohne Auth0)
-
-- ChatGPT verwendet **OAuth 2.0 Authorization Code mit PKCE** gegen FamQuest selbst. Der Benutzer meldet sich beim Verknüpfen im FamQuest-Login an; ChatGPT erhält niemals sein Passwort.
-- FamQuest betreibt die für den MCP-Client benötigten Discovery-, Authorization- und Token-Endpunkte mit strikter Redirect-URI-Prüfung, Client-Registrierung nach unterstütztem Verfahren, PKCE-S256, State-Prüfung und TLS über den bestehenden Tunnel. Die exakte ChatGPT-Client-Kompatibilität muss vor Implementierung anhand aktueller Vorgaben verifiziert werden.
-- Access-Tokens sind kurzlebig, widerrufbar und an Benutzer, Familie, Client und Berechtigungen gebunden; Refresh-Tokens werden rotiert und nur gehasht gespeichert. Token-Audience ist ausschließlich der MCP-Resource-Server.
-- MCP-Backend leitet Benutzer und Familie **ausschließlich** aus dem serverseitig geprüften Token ab, niemals aus `X-FamQuest-Parent-ID`, einem Familien-Header oder Tool-Parametern.
-- Jeder MCP-Aufruf nutzt dieselben mandantengeprüften Services wie die Web-App. Schreiboperationen mit Elternfreigabe verlangen weiterhin eine explizite Bestätigung.
-- Der bisherige globale MCP-Service-Token plus `X-FamQuest-Parent-ID` ist **nur ein Legacy-Übergang** und darf nicht für mehrere Familien freigeschaltet werden. Er muss vor dem Mehrfamilien-Rollout deaktiviert/ersetzt werden.
-- Abnahmetests: fremde Familien-IDs und fremde Objekt-IDs, abgelaufene/widerrufene Tokens, falsche Audience, manipulierte Redirect-URIs, fehlende PKCE, Token-Wiederverwendung und Rollentrennung.
+**Keine zweite Familie, keine produktive Datenbanktrennung und kein Merge des Draft-PR**, bevor Auth-/Family-Split, Berechtigungen, Tests und Backup-Restore erfolgreich sind. Keine Änderungen an der produktiven QNAP ohne gesonderte Freigabe.
