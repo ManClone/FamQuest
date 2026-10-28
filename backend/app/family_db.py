@@ -39,8 +39,7 @@ class FamilyDatabaseRouter:
         if family.family_id <= 0:
             raise ValueError("Invalid family identifier")
         if not family.database_name.startswith("famquest_") or not all(
-            c.isascii() and (c.islower() or c.isdigit() or c == "_")
-            for c in family.database_name
+            c.isascii() and (c.islower() or c.isdigit() or c == "_") for c in family.database_name
         ):
             raise ValueError("Invalid registered database name")
         with self._lock:
