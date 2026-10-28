@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.demo_mode import forbid_in_demo
 from app.errors import ApiError
-from app.models import AuthSession, FamilyMember, User
+from app.models import AuthSession, Family, FamilyMember, User
 from app.schemas import MemberExistingLogin, MemberLoginCredentials
 from app.security import hash_secret
 
@@ -21,13 +21,16 @@ def save_member_login(
 ) -> None:
     # Do not flush a changed profile until all account validation has passed.
     with db.no_autoflush:
+        family_id = auth.user.family_id
+        if family_id is None:
+            family_id = db.scalar(select(Family.id))
         user = db.scalar(select(User).where(User.id == member.user_id).with_for_update())
         if isinstance(login, MemberExistingLogin):
             forbid_in_demo(request)
             if user is not None and user.id != login.account_id:
                 raise ApiError(409, "auth.login_already_linked")
             user = db.scalar(select(User).where(User.id == login.account_id).with_for_update())
-            if user is None:
+            if user is None or user.family_id not in (None, family_id):
                 raise ApiError(404, "common.not_found")
             owner = db.scalar(select(FamilyMember.id).where(FamilyMember.user_id == user.id))
             if owner is not None and owner != member.id:
@@ -50,6 +53,7 @@ def save_member_login(
                             email=login.email,
                             password_hash=hash_secret(login.password),
                             role=member.role,
+                            family_id=family_id,
                         )
                         .returning(User)
                     )
@@ -64,6 +68,10 @@ def save_member_login(
                     user.password_hash = hash_secret(login.password)
         if user is None:
             return
+        if user.family_id not in (None, family_id):
+            raise ApiError(404, "common.not_found")
+        if user.family_id is None:
+            user.family_id = family_id
         role_changed = user.role != member.role and user.role != "admin"
         if member.role == "child" and (user.role == "admin" or user.id == auth.user_id):
             raise ApiError(409, "auth.login_role_protected")
