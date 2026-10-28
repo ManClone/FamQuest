@@ -4,8 +4,8 @@ Revision ID: a20261028_auth
 Revises:
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "a20261028_auth"
 down_revision = None
@@ -20,7 +20,10 @@ def upgrade() -> None:
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("database_name", sa.String(63), nullable=False, unique=True),
         sa.Column("status", sa.String(20), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True),
+            server_default=sa.func.now(), nullable=False,
+        ),
     )
     op.create_table(
         "identities",
@@ -28,13 +31,22 @@ def upgrade() -> None:
         sa.Column("email", sa.String(254), nullable=False, unique=True),
         sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column("is_superadmin", sa.Boolean(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True),
+            server_default=sa.func.now(), nullable=False,
+        ),
     )
     op.create_table(
         "memberships",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("identity_id", sa.Integer(), sa.ForeignKey("identities.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("tenant_id", sa.Integer(), sa.ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column(
+            "identity_id", sa.Integer(),
+            sa.ForeignKey("identities.id", ondelete="CASCADE"), nullable=False,
+        ),
+        sa.Column(
+            "tenant_id", sa.Integer(),
+            sa.ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False,
+        ),
         sa.Column("role", sa.String(20), nullable=False),
         sa.UniqueConstraint("identity_id", "tenant_id"),
     )
