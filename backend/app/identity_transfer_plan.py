@@ -23,7 +23,4 @@ def build_identity_transfer_plan(db: Session) -> list[IdentityTransfer]:
     users = db.scalars(select(User).order_by(User.id)).all()
     if any(user.family_id != family.id for user in users):
         raise ValueError("User belongs to a different family")
-    return [
-        IdentityTransfer(user.id, user.email, family.id, user.role)
-        for user in users
-    ]
+    return [IdentityTransfer(user.id, user.email, family.id, user.role) for user in users]
