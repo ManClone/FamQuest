@@ -1,7 +1,7 @@
 """Central auth registry tests; no live database needed."""
 
-from sqlalchemy.schema import CreateTable
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.schema import CreateTable
 
 from app.auth_registry import AuthBase, Identity, Membership, Tenant
 
