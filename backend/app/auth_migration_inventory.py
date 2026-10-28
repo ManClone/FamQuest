@@ -33,9 +33,7 @@ def inspect_legacy(db: Session) -> LegacyInventory:
         )
         or 0,
         linked_members=db.scalar(
-            select(func.count())
-            .select_from(FamilyMember)
-            .where(FamilyMember.user_id.is_not(None))
+            select(func.count()).select_from(FamilyMember).where(FamilyMember.user_id.is_not(None))
         )
         or 0,
     )
