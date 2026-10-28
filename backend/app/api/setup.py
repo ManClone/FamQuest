@@ -68,12 +68,12 @@ def run_setup(
         raise ApiError(status.HTTP_409_CONFLICT, "setup.already_done")
 
     family = Family(
-            name=body.family_name,
-            default_language=body.language,
-            timezone=body.timezone,
-            parent_pin_hash=hash_secret(body.pin) if body.pin else None,
-            pin_enabled=False,
-        )
+        name=body.family_name,
+        default_language=body.language,
+        timezone=body.timezone,
+        parent_pin_hash=hash_secret(body.pin) if body.pin else None,
+        pin_enabled=False,
+    )
     db.add(family)
     db.flush()
     user = User(
