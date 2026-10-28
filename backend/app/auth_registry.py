@@ -23,9 +23,7 @@ class Tenant(AuthBase):
     name: Mapped[str] = mapped_column(String(100))
     database_name: Mapped[str] = mapped_column(String(63), unique=True)
     status: Mapped[str] = mapped_column(String(20), default="provisioning")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Identity(AuthBase):
@@ -36,9 +34,7 @@ class Identity(AuthBase):
     password_hash: Mapped[str] = mapped_column(String(255))
     # Only a central superadmin; family roles belong to memberships.
     is_superadmin: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Membership(AuthBase):
