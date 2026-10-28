@@ -82,7 +82,12 @@ class AccountOut(BaseModel):
 
 
 @router.get("/accounts", dependencies=[NotInDemo])
-def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
+def list_accounts(auth: ParentSession, db: DbSession) -> list[AccountOut]:
+    family_id = auth.user.family_id
+    if family_id is None:
+        family_id = db.scalar(select(Family.id))
+    if family_id is None:
+        raise ApiError(status.HTTP_409_CONFLICT, "setup.required")
     links = dict(
         db.execute(
             select(FamilyMember.user_id, FamilyMember.id).where(FamilyMember.user_id.is_not(None))
@@ -90,7 +95,9 @@ def list_accounts(_: ParentSession, db: DbSession) -> list[AccountOut]:
     )
     return [
         AccountOut(id=user.id, email=user.email, role=user.role, member_id=links.get(user.id))
-        for user in db.scalars(select(User).order_by(User.id))
+        for user in db.scalars(
+            select(User).where(User.family_id == family_id).order_by(User.id)
+        )
     ]
 
 
