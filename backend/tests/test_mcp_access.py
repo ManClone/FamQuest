@@ -119,3 +119,20 @@ def test_schema_and_runtime_allowlist_agree_on_sensitive_operations():
     assert allowed("POST", "/api/tasks/schedule")
     assert allowed("POST", "/api/chores/weekly-confirmed")
     assert not allowed("POST", "/api/chores/1/credit")
+
+
+def test_service_rejects_parent_without_family_ownership(client, parent, monkeypatch):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import User
+
+    monkeypatch.setattr(get_settings(), "mcp_service_token", "s" * 40)
+    with SessionLocal() as db:
+        owner = db.scalar(select(User).where(User.role == "admin"))
+        assert owner is not None
+        owner_id = owner.id
+        owner.family_id = None
+        db.commit()
+
+    assert client.get("/api/tasks", headers=service_headers(owner_id)).status_code == 403
