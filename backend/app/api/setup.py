@@ -67,16 +67,21 @@ def run_setup(
     if _setup_done(db) or db.scalar(select(exists().select_from(Family))):
         raise ApiError(status.HTTP_409_CONFLICT, "setup.already_done")
 
-    db.add(
-        Family(
+    family = Family(
             name=body.family_name,
             default_language=body.language,
             timezone=body.timezone,
             parent_pin_hash=hash_secret(body.pin) if body.pin else None,
             pin_enabled=False,
         )
+    db.add(family)
+    db.flush()
+    user = User(
+        email=body.email,
+        password_hash=hash_secret(body.password),
+        role="admin",
+        family_id=family.id,
     )
-    user = User(email=body.email, password_hash=hash_secret(body.password), role="admin")
     db.add(user)
     auth_session = start_session(db, request, response, user)
     db.commit()
