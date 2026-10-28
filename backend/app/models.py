@@ -101,6 +101,11 @@ class FamilyMember(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     highest_level: Mapped[int] = mapped_column(default=1, server_default="1")
+    dragon_name: Mapped[str | None] = mapped_column(String(24))
+    dragon_named_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    dragon_named_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     name: Mapped[str] = mapped_column(String(50))
     # Erweiterbare Werte (siehe schemas.MEMBER_ROLES), bewusst kein Datenbank-Enum.
     role: Mapped[str] = mapped_column(String(20))
