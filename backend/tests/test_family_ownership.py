@@ -69,3 +69,20 @@ def test_new_member_login_is_assigned_to_family(client, parent):
         assert db.scalar(sa.text("SELECT family_id FROM users WHERE email='tim@example.org'")) == db.scalar(
             sa.text("SELECT id FROM families")
         )
+
+
+def test_account_directory_does_not_expose_unassigned_accounts(client, parent):
+    with SessionLocal() as db:
+        db.execute(
+            sa.text(
+                "INSERT INTO users (email, password_hash, role, family_id) "
+                "VALUES ('unassigned@example.org', 'hash', 'parent', NULL)"
+            )
+        )
+        db.commit()
+
+    response = client.get("/api/auth/accounts")
+    assert response.status_code == 200, response.text
+    emails = {account["email"] for account in response.json()}
+    assert "unassigned@example.org" not in emails
+    assert parent["user"]["email"] in emails
