@@ -2,11 +2,17 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
 # Lokal liegt die .env im Repo-Wurzelverzeichnis; im Container kommt alles aus der Umgebung.
 REPO_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
+
+
+class FamilyDatabaseCredentials(BaseModel):
+    username: str = Field(min_length=1)
+    password: str = Field(min_length=32)
 
 
 class Settings(BaseSettings):
@@ -19,6 +25,8 @@ class Settings(BaseSettings):
     postgres_user: str = "famquest"
     postgres_password: str = ""
     postgres_db: str = "famquest"
+    # JSON mapping: database name -> dedicated role username/password. Empty disables routing.
+    family_database_credentials: dict[str, FamilyDatabaseCredentials] = Field(default_factory=dict)
 
     # Verzeichnis mit dem gebauten Frontend; leer = nur API (lokale Entwicklung mit Vite).
     static_dir: Path | None = None
