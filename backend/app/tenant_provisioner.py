@@ -5,10 +5,11 @@ connection and independently generated role passwords. No existing database
 or role is modified.
 """
 
+from psycopg import sql
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from app.tenant_provisioning import provisioning_sql, quoted_identifier
+from app.tenant_provisioning import provisioning_sql
 
 
 def provision_empty_family(admin_engine: Engine, database_name: str, role_password: str) -> None:
@@ -32,10 +33,12 @@ def provision_empty_family(admin_engine: Engine, database_name: str, role_passwo
             raise ValueError("Tenant database or role already exists; refusing to overwrite")
         conn.exec_driver_sql(statements[0])
         try:
-            conn.execute(
-                text(f"ALTER ROLE {quoted_identifier(role_name)} PASSWORD :password"),
-                {"password": role_password},
-            )
+            with conn.connection.driver_connection.cursor() as cursor:
+                cursor.execute(
+                    sql.SQL("ALTER ROLE {} PASSWORD {}").format(
+                        sql.Identifier(role_name), sql.Literal(role_password)
+                    )
+                )
             for statement in statements[1:]:
                 conn.exec_driver_sql(statement)
         except Exception:
