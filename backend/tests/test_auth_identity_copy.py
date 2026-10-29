@@ -5,18 +5,16 @@ from sqlalchemy.orm import Session
 
 from app.auth_identity_copy import stage_identity_copy
 from app.auth_registry import AuthBase, Identity, Membership, Tenant
-from app.db import Base
+from app.db import engine as source_engine
 from app.models import Family, User
 
 
 def test_copy_keeps_ids_hashes_and_roles_without_modifying_source():
-    source_engine = create_engine("sqlite://")
     destination_engine = create_engine("sqlite://")
-    Base.metadata.create_all(source_engine)
     AuthBase.metadata.create_all(destination_engine)
     try:
         with Session(source_engine) as source:
-            source.add(Family(id=1, name="Grasser"))
+            source.add(Family(id=1, name="Grasser", default_language="de"))
             source.add(
                 User(
                     id=42,
@@ -43,5 +41,4 @@ def test_copy_keeps_ids_hashes_and_roles_without_modifying_source():
                 )
             assert source.get(User, 42).password_hash == "existing-hash"
     finally:
-        source_engine.dispose()
         destination_engine.dispose()
