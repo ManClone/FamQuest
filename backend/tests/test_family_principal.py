@@ -16,7 +16,12 @@ def test_family_resolution_requires_single_active_membership():
             session.add_all(
                 [
                     Tenant(id=1, name="Sertl", database_name="famquest_sertl", status="active"),
-                    Tenant(id=2, name="Henning", database_name="famquest_henning", status="disabled"),
+                    Tenant(
+                        id=2,
+                        name="Henning",
+                        database_name="famquest_henning",
+                        status="disabled",
+                    ),
                     Identity(id=10, email="parent@example.org", password_hash="hash"),
                     Identity(
                         id=11,
@@ -52,7 +57,9 @@ def test_disabled_family_cannot_be_accessed():
     AuthBase.metadata.create_all(engine)
     try:
         with Session(engine) as session:
-            session.add(Tenant(id=1, name="Henning", database_name="famquest_henning", status="disabled"))
+            session.add(
+                Tenant(id=1, name="Henning", database_name="famquest_henning", status="disabled")
+            )
             session.add(Identity(id=1, email="test@example.org", password_hash="hash"))
             session.flush()
             session.add(Membership(identity_id=1, tenant_id=1, role="admin"))
