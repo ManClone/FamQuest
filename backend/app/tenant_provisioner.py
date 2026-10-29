@@ -11,9 +11,7 @@ from sqlalchemy.engine import Engine
 from app.tenant_provisioning import provisioning_sql, quoted_identifier
 
 
-def provision_empty_family(
-    admin_engine: Engine, database_name: str, role_password: str
-) -> None:
+def provision_empty_family(admin_engine: Engine, database_name: str, role_password: str) -> None:
     """Create a tenant role and database; refuse partial or existing setups."""
     if admin_engine.dialect.name != "postgresql":
         raise ValueError("PostgreSQL is required")
