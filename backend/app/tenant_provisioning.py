@@ -35,8 +35,6 @@ def provisioning_sql(database_name: str, role_name: str) -> tuple[str, ...]:
 
 def planned_provisioning_sql() -> dict[str, tuple[str, ...]]:
     return {
-        family.name: provisioning_sql(
-            family.database_name, f"{family.database_name}_app"
-        )
+        family.name: provisioning_sql(family.database_name, f"{family.database_name}_app")
         for family in ADDITIONAL_FAMILIES
     }
