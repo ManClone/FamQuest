@@ -5,17 +5,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.config import FamilyDatabaseCredentials, Settings
+from app.family_db import FamilyDatabase, FamilyDatabaseRouter
 
 
 def family_settings():
     return Settings(
         family_database_credentials={
-            name: FamilyDatabaseCredentials(username=f'{name}_app', password='x' * 40)
-            for name in ('famquest_grasser', 'famquest_sertl')
+            name: FamilyDatabaseCredentials(username=f"{name}_app", password="x" * 40)
+            for name in ("famquest_grasser", "famquest_sertl")
         }
     )
-
-from app.family_db import FamilyDatabase, FamilyDatabaseRouter
 
 
 def test_router_reuses_engine_for_same_registered_family():
