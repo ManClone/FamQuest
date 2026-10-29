@@ -58,3 +58,20 @@ Benutzer-/Familienzuordnung ist ausschließlich in der Auth-Datenbank maßgeblic
 ## Rollout-Sperre
 
 **Keine zweite Familie, keine produktive Datenbanktrennung und kein Merge des Draft-PR**, bevor Auth-/Family-Split, Berechtigungen, Tests und Backup-Restore erfolgreich sind. Keine Änderungen an der produktiven QNAP ohne gesonderte Freigabe.
+
+### Zugangsdaten für isolierte Datenbankverbindungen (noch nicht produktiv aktiv)
+
+Die opt-in Router verwenden keine Legacy-PostgreSQL-Zugangsdaten als Fallback.
+Vor dem Start müssen die Rollen mit passenden, getrennten Berechtigungen
+existieren und folgende Umgebungsvariablen gesetzt werden:
+
+```env
+AUTH_DATABASE_CREDENTIALS={"username":"famquest_auth_app","password":"<separates-langes-geheimnis>"}
+FAMILY_DATABASE_CREDENTIALS={"famquest_grasser":{"username":"famquest_grasser_app","password":"<geheimnis-a>"},"famquest_sertl":{"username":"famquest_sertl_app","password":"<geheimnis-b>"},"famquest_henning":{"username":"famquest_henning_app","password":"<geheimnis-c>"}}
+```
+
+Die Platzhalter dürfen nicht unverändert übernommen werden. Secrets gehören
+nicht ins Git-Repository. Fehlende oder nicht zur Datenbank passende Konten
+verhindern den Verbindungsaufbau. Die Rollen-/Rechtevergabe und das sichere
+Provisionieren des Auth-Kontos sind noch offen; dieses Konfigurationsbeispiel
+ist **keine** Aufforderung, die produktive QNAP bereits umzustellen.
