@@ -12,10 +12,7 @@ from app.planned_families import ADDITIONAL_FAMILIES
 
 def stage_planned_families(auth: Session) -> int:
     """Register Sertl and Henning as disabled, never activate automatically."""
-    existing = {
-        tenant.database_name: tenant
-        for tenant in auth.scalars(select(Tenant)).all()
-    }
+    existing = {tenant.database_name: tenant for tenant in auth.scalars(select(Tenant)).all()}
     for family in ADDITIONAL_FAMILIES:
         tenant = existing.get(family.database_name)
         if tenant is not None:
