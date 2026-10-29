@@ -48,8 +48,13 @@ class FamilyDatabaseRouter:
                 if existing[0] != family.database_name:
                     raise ValueError("Family database mapping changed; evict first")
                 return existing[1]
+            credentials = self._settings.family_database_credentials.get(family.database_name)
+            if credentials is None:
+                raise PermissionError("No dedicated credentials configured for family database")
             engine = create_engine(
-                self._settings.database_url(family.database_name),
+                self._settings.database_url(family.database_name).set(
+                    username=credentials.username, password=credentials.password
+                ),
                 pool_pre_ping=True,
                 pool_size=2,
                 max_overflow=0,
