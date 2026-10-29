@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     postgres_db: str = "famquest"
     # JSON mapping: database name -> dedicated role username/password. Empty disables routing.
     family_database_credentials: dict[str, FamilyDatabaseCredentials] = Field(default_factory=dict)
+    # Separate central identity registry login; never fall back to the legacy DB superuser.
+    auth_database_credentials: FamilyDatabaseCredentials | None = None
 
     # Verzeichnis mit dem gebauten Frontend; leer = nur API (lokale Entwicklung mit Vite).
     static_dir: Path | None = None
