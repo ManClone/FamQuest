@@ -12,9 +12,15 @@ from app.config import Settings, get_settings
 class AuthDatabase:
     def __init__(self, settings: Settings | None = None) -> None:
         settings = settings or get_settings()
-        # Intentionally separate from the existing app.db engine.
+        # Fail closed: central identities must not use the legacy database login.
+        credentials = settings.auth_database_credentials
+        if credentials is None or credentials.username != "famquest_auth_app":
+            raise PermissionError("Dedicated auth database credentials are required")
         self.engine: Engine = create_engine(
-            settings.database_url("famquest_auth"), pool_pre_ping=True
+            settings.database_url("famquest_auth").set(
+                username=credentials.username, password=credentials.password
+            ),
+            pool_pre_ping=True,
         )
         self._sessions = sessionmaker(bind=self.engine, expire_on_commit=False)
 
