@@ -81,7 +81,7 @@ def consume_code(
     if (
         record is None
         or record.consumed_at is not None
-        or record.expires_at <= now
+        or (record.expires_at.replace(tzinfo=timezone.utc) if record.expires_at.tzinfo is None else record.expires_at) <= now
         or not secrets.compare_digest(record.client_id, client_id)
         or not secrets.compare_digest(record.redirect_uri, redirect_uri)
         or not verify_s256(verifier, record.code_challenge, "S256")
