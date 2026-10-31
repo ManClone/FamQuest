@@ -74,7 +74,11 @@ def _active_completion(db, entry):
     completion = db.get(model, origin)
     if completion is None or completion.member_id != entry.member_id:
         return None
+    if completion.date != entry.task_date:
+        return None
     if source == "task":
+        if completion.task_id != entry.task_id:
+            return None
         if completion.approved_at is None or completion.points != entry.amount:
             return None
     else:
@@ -191,6 +195,8 @@ def activity_history(db, member_id, cursor=None, limit=50):
         source, origin = row["source"], row["id"]
         if source == "point":
             entry = db.get(PointTransaction, origin)
+            if entry is None:
+                continue
             item = transaction_out(
                 entry, reversals.get(origin), compensations.get(origin)
             ).model_dump()
@@ -200,6 +206,8 @@ def activity_history(db, member_id, cursor=None, limit=50):
             )
         elif source == "money":
             entry = db.get(MoneyTransaction, origin)
+            if entry is None:
+                continue
             c = db.get(TaskCompletion, entry.completion_id) if entry.completion_id else None
             available = (
                 entry.kind == "task_completed"
@@ -222,7 +230,11 @@ def activity_history(db, member_id, cursor=None, limit=50):
         else:
             model = TaskCompletion if source == "task" else ChoreCompletion
             c = db.get(model, origin)
+            if c is None:
+                continue
             definition = c.task if source == "task" else db.get(Chore, c.chore_id)
+            if definition is None:
+                continue
             item = dict(
                 id=-4 * origin - (2 if source == "chore" else 1),
                 amount=0,
