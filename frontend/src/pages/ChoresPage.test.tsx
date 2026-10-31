@@ -227,19 +227,20 @@ describe('Haushalt', () => {
     mockChores({
       ...PLAN,
       shares: [
-        { member_id: 3, count: 3 },
-        { member_id: 1, count: 1 },
+        { member_id: 3, count: 3, estimated_minutes: 45 },
+        { member_id: 1, count: 1, estimated_minutes: 15 },
       ],
     })
     renderApp('/household')
 
-    const share = within(await screen.findByRole('region', { name: /Wer hat’s gemacht/ }))
+    const share = within(await screen.findByRole('region', { name: /Haushalt im Überblick/ }))
     expect(share.getByText('letzte 30 Tage')).toBeVisible()
     // Reihenfolge wie in der Familie; Kinder stehen dabei, wenn sie mitgeholfen haben.
-    expect(share.getAllByText(/-mal\)$/).map((item) => item.textContent)).toEqual([
-      'Lena: 25 % (1-mal)',
-      'Mama: 75 % (3-mal)',
+    expect(share.getAllByText(/Min\. geschätzt/).map((item) => item.textContent)).toEqual([
+      'Mama: 45 Min. geschätzt (100 %)',
     ])
+    expect(share.getByText('Lena: 1 Aufgabe erledigt')).toBeVisible()
+    expect(share.queryByText(/Lena:.*Min/)).not.toBeInTheDocument()
   })
 
   it('zeigt keine Verteilung, solange niemand „Wer war’s?“ angetippt hat', async () => {
@@ -247,7 +248,7 @@ describe('Haushalt', () => {
     renderApp('/household')
 
     await screen.findByRole('button', { name: /Toilette putzen/ })
-    expect(screen.queryByRole('region', { name: /Wer hat’s gemacht/ })).toBeNull()
+    expect(screen.queryByRole('region', { name: /Haushalt im Überblick/ })).toBeNull()
   })
 
   it('lobt, wenn nichts dran ist', async () => {

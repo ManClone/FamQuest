@@ -66,7 +66,7 @@ def test_done_and_who_did_it_afterwards(client, parent, now):
 
     assert second.json() == created | {"done": True, "done_by": lena}
     assert todos(client) == [second.json()]
-    assert plan(client)["shares"] == [{"member_id": lena, "count": 1}]
+    assert plan(client)["shares"] == [{"member_id": lena, "count": 1, "estimated_minutes": 0}]
 
 
 def test_done_by_unknown_member(client, admin, now):
@@ -114,7 +114,7 @@ def test_done_disappears_the_next_day_but_open_stays(client, parent, now):
 
     assert todos(client) == [bulb]
     # Für die faire Verteilung zählt es weiter.
-    assert plan(client)["shares"] == [{"member_id": lena, "count": 1}]
+    assert plan(client)["shares"] == [{"member_id": lena, "count": 1, "estimated_minutes": 0}]
     # Was von der Liste ist, lässt sich nicht mehr zurücknehmen oder nochmal abhaken.
     undo = client.delete(f"/api/todos/{feed['id']}/done", headers=csrf(parent))
     assert undo.status_code == 404
@@ -191,8 +191,8 @@ def test_shares_add_up_with_the_cleaning_plan(client, parent, now):
     done(client, parent, add_todo(client, parent, "Glühbirne wechseln")["id"])
 
     assert plan(client)["shares"] == [
-        {"member_id": lena, "count": 2},
-        {"member_id": tom, "count": 1},
+        {"member_id": lena, "count": 2, "estimated_minutes": 15},
+        {"member_id": tom, "count": 1, "estimated_minutes": 0},
     ]
 
     # Nach 30 Tagen zählt es nicht mehr.
@@ -234,7 +234,7 @@ def test_comes_back_keeps_what_is_already_done(client, parent, now):
     add_chore(client, parent, room["id"], "Paket wegbringen", 30, todo_id=999)
 
     assert todos(client) == [feed | {"done": True, "done_by": lena}]
-    assert plan(client)["shares"] == [{"member_id": lena, "count": 1}]
+    assert plan(client)["shares"] == [{"member_id": lena, "count": 1, "estimated_minutes": 0}]
 
 
 def test_today_follows_the_family_timezone(client, admin, now):

@@ -41,8 +41,8 @@ const householdPlan = makeChorePlan({
     makeChore({ id: 4, title: 'Rasen mähen', level: 'due', active: false }),
   ],
   shares: [
-    { member_id: 3, count: 6 },
-    { member_id: 4, count: 9 },
+    { member_id: 3, count: 6, estimated_minutes: 90 },
+    { member_id: 4, count: 9, estimated_minutes: 135 },
   ],
 })
 
@@ -362,7 +362,7 @@ describe('Familienansicht', () => {
     // Faire Verteilung aus „Wer war's?“ im Putzplan.
     expect(
       household.getByRole('img', {
-        name: 'Wer hat’s gemacht? (letzte 30 Tage): Mama: 40 % (6-mal); Papa: 60 % (9-mal)',
+        name: 'Eltern: geschätzter Zeitaufwand (letzte 30 Tage): Mama: 90 Min. geschätzt (40 %); Papa: 135 Min. geschätzt (60 %)',
       }),
     ).toBeVisible()
     expect(household.getByRole('link', { name: 'Haushalt öffnen' })).toHaveAttribute(

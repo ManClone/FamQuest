@@ -94,6 +94,7 @@ class ChoreOut(BaseModel):
 class ShareOut(BaseModel):
     member_id: int
     count: int
+    estimated_minutes: int = 0
 
 
 class ChoresOut(BaseModel):
@@ -103,8 +104,8 @@ class ChoresOut(BaseModel):
     chores: list[ChoreOut]
     # „Zu erledigen“: Offenes in der Reihenfolge des Eintragens, danach das heute Abgehakte.
     todos: list[TodoOut]
-    # Faire Verteilung: wer in den letzten `share_days` Tagen wie oft etwas erledigt hat, im
-    # Putzplan und von der Liste. Es zählt nur, wozu jemand „Wer war's?“ angetippt hat.
+    # Approved, attributed executions in the last `share_days`; time is estimated.
+    # To-dos retain their compatibility count but have no invented time estimate.
     share_days: int
     shares: list[ShareOut]
 
@@ -275,7 +276,12 @@ def _last_completions(db: DbSession, chore_ids: list[int]) -> dict[int, ChoreCom
 def _shares(db: DbSession, today: dt.date) -> list[ShareOut]:
     since = today - dt.timedelta(days=SHARE_DAYS - 1)
     counts = db.execute(
-        select(ChoreCompletion.member_id, func.count())
+        select(
+            ChoreCompletion.member_id,
+            func.count(),
+            func.sum(func.coalesce(ChoreCompletion.estimated_minutes, Chore.estimated_minutes)),
+        )
+        .join(Chore, Chore.id == ChoreCompletion.chore_id)
         .where(
             ChoreCompletion.member_id.is_not(None),
             ChoreCompletion.approved.is_(True),
@@ -285,9 +291,18 @@ def _shares(db: DbSession, today: dt.date) -> list[ShareOut]:
         .group_by(ChoreCompletion.member_id)
     )
     totals = todo_shares(db, since, today)
-    for member_id, count in counts:
+    minutes = {}
+    for member_id, count, duration in counts:
         totals[member_id] = totals.get(member_id, 0) + count
-    return [ShareOut(member_id=member_id, count=totals[member_id]) for member_id in sorted(totals)]
+        minutes[member_id] = duration
+    return [
+        ShareOut(
+            member_id=member_id,
+            count=totals[member_id],
+            estimated_minutes=minutes.get(member_id, 0),
+        )
+        for member_id in sorted(totals)
+    ]
 
 
 def _reverse_chore_credits(db: DbSession, completions: list[ChoreCompletion], title: str) -> None:
@@ -446,7 +461,10 @@ def weekly_preview(_: ParentSession, db: DbSession) -> WeeklyPreviewOut:
         return WeeklyPreviewOut(week_start=week_start, assignments=[])
     since = today - dt.timedelta(days=29)
     history = db.execute(
-        select(ChoreCompletion.member_id, Chore.estimated_minutes)
+        select(
+            ChoreCompletion.member_id,
+            func.coalesce(ChoreCompletion.estimated_minutes, Chore.estimated_minutes),
+        )
         .join(Chore, Chore.id == ChoreCompletion.chore_id)
         .where(
             ChoreCompletion.date >= since,
@@ -825,7 +843,11 @@ def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> C
         ):
             raise ApiError(status.HTTP_409_CONFLICT, "chore.not_repeatable")
         completion = ChoreCompletion(
-            chore_id=chore.id, date=today, member_id=body.member_id, request_key=body.request_key
+            chore_id=chore.id,
+            date=today,
+            member_id=body.member_id,
+            request_key=body.request_key,
+            estimated_minutes=chore.estimated_minutes,
         )
         db.add(completion)
         try:
@@ -1006,6 +1028,7 @@ def child_chore_done(
             request_key=body.request_key,
             approved=False,
             points=chore.child_xp,
+            estimated_minutes=chore.estimated_minutes,
         )
     )
     db.commit()

@@ -101,3 +101,18 @@ class OAuthToken(AuthBase):
     kind: Mapped[str] = mapped_column(String(10))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BrowserSession(AuthBase):
+    """Central browser login, bound to one authenticated family membership."""
+
+    __tablename__ = "browser_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    identity_id: Mapped[int] = mapped_column(
+        ForeignKey("identities.id", ondelete="CASCADE"), index=True
+    )
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"))
+    csrf_token: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

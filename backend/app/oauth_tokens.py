@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth_registry import OAuthClient, OAuthGrant, OAuthToken
+from app.auth_registry import Identity, OAuthAuthorizationCode, OAuthClient, OAuthGrant, OAuthToken
 from app.family_principal import FamilyPrincipal, resolve_family_principal
 from app.oauth_codes import consume_code
 from app.security import token_hash
@@ -67,6 +67,12 @@ def exchange_code(
     if not audience.startswith("https://"):
         raise ValueError("An HTTPS MCP audience is required")
     with db.begin():
+        record = db.get(OAuthAuthorizationCode, token_hash(code))
+        if record is None:
+            raise PermissionError("Invalid authorization code")
+        # Serialize against password changes, which revoke codes and grants.
+        # Lock order is identity -> code -> grant throughout this exchange.
+        db.scalar(select(Identity).where(Identity.id == record.identity_id).with_for_update())
         identity_id, tenant_id = consume_code(
             db, code=code, client_id=client_id, redirect_uri=redirect_uri, verifier=verifier
         )

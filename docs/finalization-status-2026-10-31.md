@@ -6,6 +6,27 @@ Der bestehende Einfamilienbetrieb ist erreichbar und gesund. Die neue
 Mehrfamilienversion ist **noch nicht deploybar**. Weder Datenmigration noch
 Aktivierung von Sertl/Henning oder Änderungen an Produktivkonten wurden ausgeführt.
 
+## Fortschritt: zentrale Anmeldung
+
+Die erste hochgeladene Änderung hat beide vollständigen CI-Workflows bestanden:
+Predeployment 41195120028 und Security 41195120030, einschließlich 624 Backendtests.
+Danach wurde ein isolierter zentraler Login-Dienst ergänzt. 30 lokale Tests für
+Login, Sessions, Passwortwechsel, Token-Lifecycle und Auth-Migration bestehen.
+Der zusätzliche PostgreSQL-Test für parallele Passwortwechsel und der vollständige
+neue CI-Lauf stehen noch aus. Details in `central-auth-staging.md`.
+
+Der Dienst ist noch nicht mit der produktiven App oder deren Frontend verbunden;
+die nachstehenden Integrations- und Migrationsblocker bleiben bestehen.
+
+## Ergänzung: Haushaltsstatistik
+
+Nach der Präzisierung des Nutzers zeigt die Statistik für Eltern geschätzte
+Minuten und deren zeitlichen Anteil, für Tim und andere Kinder dagegen die
+Erledigungsanzahl ohne gemeinsame Prozentrechnung. Neue Erledigungen speichern
+eine Momentaufnahme der Zeitvorgabe. Die neue additive Family-DB-Migration wurde
+nicht produktiv ausgeführt. Details und historische Einschränkungen stehen in
+`household-statistics.md`; vollständige CI-Prüfungen dieses Updates stehen aus.
+
 ## Verifizierter Ausgangsstand
 
 - Repository: https://github.com/ManClone/FamQuest
