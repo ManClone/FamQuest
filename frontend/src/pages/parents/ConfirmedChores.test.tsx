@@ -44,7 +44,7 @@ it('loads confirmed household executions on demand and removes only the selected
   expect(region.className).toContain('max-h-')
   expect(region.closest('details')?.className).toContain('bg-white')
   const row = screen.getAllByRole('listitem')[1]
-  await user.click(within(row).getByRole('button', { name: /^Undo$/ }))
+  await user.click(within(row).getByRole('button', { name: /Litter box/ }))
   expect(calls.some((call) => call.key.startsWith('DELETE'))).toBe(false)
   await user.click(within(row).getByRole('button', { name: 'Yes, undo' }))
   await waitFor(() => expect(screen.getAllByText('Litter box')).toHaveLength(3))
@@ -89,7 +89,7 @@ it('corrects one child task execution in its scrollable member history', async (
   expect(region.className).toContain('max-h-')
   expect(region.closest('details')?.className).toContain('bg-white')
   const row = screen.getAllByRole('listitem')[1]
-  await user.click(within(row).getByRole('button', { name: /^Undo$/ }))
+  await user.click(within(row).getByRole('button', { name: /Litter box/ }))
   expect(calls.some((call) => call.key.startsWith('DELETE'))).toBe(false)
   await user.click(within(row).getByRole('button', { name: 'Yes, undo' }))
   await waitFor(() => expect(screen.getAllByText('Litter box')).toHaveLength(3))
