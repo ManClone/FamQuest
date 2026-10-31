@@ -237,6 +237,12 @@ def test_tasks_chores_and_database_roles_are_isolated(isolated_databases):
                 )
                 == 500
             )
+            restored_engine = db.get_bind()
+        from app.restore_audit import compare_databases
+
+        comparison = compare_databases(restored_engine, restored_engine)
+        assert comparison["tables_compared"] > 10
+        assert comparison["differences"] == []
 
     # A valid family-A login role cannot even connect to family B's database.
     engine = create_engine(
