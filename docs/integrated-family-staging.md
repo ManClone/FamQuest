@@ -24,6 +24,15 @@ Private Browser-Caches werden bei einem Kontowechsel geleert. Die unabhängige
 Auth-Revision `e20261031_actors` ergänzt die explizite lokale Actor-Zuordnung;
 Bestandszuordnungen werden nicht geraten oder ungeprüft aktiviert.
 
+Eltern können inzwischen Konten anlegen, vorhandene Konten mit Profilen verbinden
+und Logins bzw. Rollen bearbeiten. Passwort-Hashes werden ausschließlich zentral
+geschrieben; lokale User-Zeilen enthalten nur eine nicht anmeldbare Markierung.
+Rollen-/Passwortänderungen widerrufen zentrale Sitzungen und Connector-Freigaben.
+Die Familien-Transaktion wird vor der zentralen Freischaltung abgeschlossen.
+Schlägt der zweite Commit fehl, meldet die API den unvollständigen Zugang und
+aktiviert keine neuen Anmeldedaten. Das sichtbare Profil lässt sich anschließend
+gezielt reparieren, ohne ein zweites Profil anzulegen.
+
 ## Prüfungen und Grenzen
 
 Lokale HTTP-Tests verwenden getrennte Auth-/Sertl-/Henning-Datenbanken und prüfen
@@ -35,7 +44,7 @@ Fachdatenzugriffe sowie die verweigerte Verbindung von Family-A-Rollen auf Famil
 Dieser PostgreSQL-Test benötigt noch den CI-Lauf des neuen Commits.
 
 Der aktuelle Stand ist ein überprüfbarer Integrationszwischenstand, **kein
-Mehrfamilien-Produktivrelease**. Account-/Mitgliedsbearbeitung, Google-Neuanbindung
-und MCP-Schreibzugriffe sind absichtlich gesperrt. Automatische Scheduler werden
+Mehrfamilien-Produktivrelease**. Google-Neuanbindung und MCP-Schreibzugriffe
+sind noch absichtlich gesperrt. Automatische Scheduler werden
 noch nicht gestartet. Die verbleibenden Implementierungen und der Restore-/Cutover-
 Probelauf sind vor einem Deployment abzuschließen. Siehe `legacy-settings-audit.md`.

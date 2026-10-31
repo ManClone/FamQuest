@@ -1,5 +1,6 @@
 """Full PostgreSQL schema, distinct login roles and actual business-route isolation."""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app.auth_identity_copy import align_registry_sequences
 from app.auth_registry import Identity, Membership, Tenant
 from app.config import FamilyDatabaseCredentials, Settings
 from app.family_db import FamilyDatabaseRouter
@@ -64,6 +66,11 @@ def isolated_databases(tmp_path):
                     )
                 )
                 db.commit()
+                for table in ("users", "family_members"):
+                    db.execute(
+                        text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), 1, true)")
+                    )
+                db.commit()
         with Session(engines[0]) as db:
             hashed = hash_secret(PASSWORD)
             for index, name in enumerate(("Sertl", "Henning"), 1):
@@ -80,6 +87,8 @@ def isolated_databases(tmp_path):
                     for index in (1, 2)
                 ]
             )
+            db.commit()
+            align_registry_sequences(db)
             db.commit()
         settings = Settings(
             public_url=ORIGIN,
@@ -119,7 +128,7 @@ def test_tasks_chores_and_database_roles_are_isolated(isolated_databases):
             return {"x-csrf-token": result.json()["csrf_token"]}
 
         headers = login(sertl, "sertl")
-        login(henning, "henning")
+        henning_headers = login(henning, "henning")
         room = sertl.post(
             "/api/chores/rooms",
             json={"name": "Sertl kitchen", "icon": "fluent-emoji-flat:broom"},
@@ -146,6 +155,36 @@ def test_tasks_chores_and_database_roles_are_isolated(isolated_databases):
         assert sertl.get("/api/routines").status_code == 200
         assert henning.get("/api/approvals").json() == []
         assert sertl.get("/api/maintenance/consistency").status_code == 200
+        child = sertl.post(
+            "/api/members",
+            headers=headers,
+            json={
+                "name": "Tim",
+                "role": "child",
+                "color": "purple",
+                "login": {"email": "tim@example.invalid", "password": "child-password-123"},
+            },
+        )
+        assert child.status_code == 201, child.text
+        assert len(sertl.get("/api/auth/accounts").json()) == 2
+        assert len(henning.get("/api/auth/accounts").json()) == 1
+        assert len(henning.get("/api/members").json()) == 1
+        shared = {
+            "name": "Shared",
+            "role": "child",
+            "color": "orange",
+            "login": {"email": "shared@example.invalid", "password": "child-password-123"},
+        }
+
+        def create_person(item):
+            client, csrf_headers = item
+            return client.post("/api/members", json=shared, headers=csrf_headers).status_code
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(create_person, [(sertl, headers), (henning, henning_headers)]))
+        assert sorted(results) == [201, 409]
+        assert len(sertl.get("/api/members").json()) == (3 if results[0] == 201 else 2)
+        assert len(henning.get("/api/members").json()) == (2 if results[1] == 201 else 1)
 
     # A valid family-A login role cannot even connect to family B's database.
     engine = create_engine(

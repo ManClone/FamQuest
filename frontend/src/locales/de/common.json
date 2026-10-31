@@ -398,6 +398,7 @@
     },
     "auth": {
       "central_account_setup_required": "Die Kontoverwaltung ist hier noch nicht freigeschaltet.",
+      "account_save_incomplete": "Das Profil wurde gespeichert, der Zugang aber noch nicht vollständig eingerichtet. Bitte lade die Seite neu und ergänze den Zugang beim vorhandenen Profil.",
       "family_mapping_required": "Dein Konto ist dieser Familie noch nicht vollständig zugeordnet. Bitte wende dich an die Familienverwaltung.",
       "not_authenticated": "Bitte melde dich an",
       "invalid_credentials": "E-Mail oder Passwort ist falsch",

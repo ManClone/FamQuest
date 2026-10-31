@@ -398,6 +398,7 @@
     },
     "auth": {
       "central_account_setup_required": "Account management is not available here yet.",
+      "account_save_incomplete": "The profile was saved, but account setup is incomplete. Please reload the page and finish account setup on the existing profile.",
       "family_mapping_required": "Your account is not fully linked to this family yet. Please contact your family administrator.",
       "not_authenticated": "Please sign in",
       "invalid_credentials": "Email or password is incorrect",
