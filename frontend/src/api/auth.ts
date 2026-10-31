@@ -33,6 +33,21 @@ export interface SetupStatus {
 export const ME_KEY = ['me'] as const
 const SETUP_STATUS_KEY = ['setup-status'] as const
 
+function clearFamilyCache(queryClient: QueryClient) {
+  queryClient.removeQueries({
+    predicate: (query) =>
+      query.queryKey[0] !== ME_KEY[0] && query.queryKey[0] !== SETUP_STATUS_KEY[0],
+  })
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('famquest-praise-seen-') || key.startsWith('famquest-deduction-seen-'))
+        localStorage.removeItem(key)
+    }
+  } catch {
+    // Device display and language preferences are independent of private family data.
+  }
+}
+
 export function useSetupStatus() {
   return useQuery({
     queryKey: SETUP_STATUS_KEY,
@@ -81,18 +96,24 @@ function useMeMutation<TVariables>(
 export const useSetup = () =>
   useMeMutation(
     (data: SetupData) => api<Me>('POST', '/setup', data),
-    (queryClient) =>
+    (queryClient) => {
+      clearFamilyCache(queryClient)
       queryClient.setQueryData<SetupStatus>(SETUP_STATUS_KEY, (status) => ({
         demo: null,
         ...status,
         setup_required: false,
-      })),
+      }))
+    },
   )
 
 export const useLogin = () =>
-  useMeMutation((data: { email: string; password: string }) => api<Me>('POST', '/auth/login', data))
+  useMeMutation(
+    (data: { email: string; password: string }) => api<Me>('POST', '/auth/login', data),
+    clearFamilyCache,
+  )
 
-export const useDemoLogin = () => useMeMutation(() => api<Me>('POST', '/demo/login'))
+export const useDemoLogin = () =>
+  useMeMutation(() => api<Me>('POST', '/demo/login'), clearFamilyCache)
 
 export function useLogout() {
   const queryClient = useQueryClient()
@@ -100,7 +121,8 @@ export function useLogout() {
     mutationFn: () => api<void>('POST', '/auth/logout'),
     onSuccess: () => {
       setCsrfToken(null)
-      queryClient.removeQueries({ queryKey: ME_KEY })
+      clearFamilyCache(queryClient)
+      queryClient.clear()
     },
   })
 }

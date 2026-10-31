@@ -18,6 +18,8 @@ class FamilyPrincipal:
     tenant_id: int
     database_name: str
     role: str
+    family_user_id: int | None = None
+    email: str = ""
 
 
 def resolve_family_principal(auth: Session, identity_id: int) -> FamilyPrincipal:
@@ -44,4 +46,6 @@ def resolve_family_principal(auth: Session, identity_id: int) -> FamilyPrincipal
         tenant_id=tenant.id,
         database_name=tenant.database_name,
         role=membership.role,
+        family_user_id=membership.family_user_id,
+        email=identity.email,
     )

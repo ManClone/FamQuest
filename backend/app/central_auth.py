@@ -4,7 +4,7 @@ No automatic schema creation, provisioning or family-data access occurs here.
 The auth database must be migrated explicitly before this service is used.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 from urllib.parse import urlsplit
@@ -50,7 +50,11 @@ class SessionOut(BaseModel):
 
 
 def create_app(
-    settings: Settings | None = None, *, database: AuthDatabase | None = None
+    settings: Settings | None = None,
+    *,
+    database: AuthDatabase | None = None,
+    session_renderer: Callable | None = None,
+    allow_mcp_bearer: bool = False,
 ) -> FastAPI:
     settings = settings or get_settings()
     parsed = urlsplit(settings.public_url)
@@ -86,9 +90,17 @@ def create_app(
         # Only the configured host/origin can set or use these browser cookies.
         if str(request.url).split("/", 3)[:3] != origin.split("/", 3)[:3]:
             return JSONResponse({"code": "auth.csrf_failed"}, status_code=403)
+        from app.mcp_access import allowed
+
+        mcp_request = (
+            allow_mcp_bearer
+            and request.headers.get("authorization", "").startswith("Bearer ")
+            and allowed(request.method, request.url.path)
+        )
         if (
             request.method not in {"GET", "HEAD", "OPTIONS"}
             and request.headers.get("origin") != origin
+            and not mcp_request
         ):
             return JSONResponse({"code": "auth.csrf_failed"}, status_code=403)
         response = await call_next(request)
@@ -116,6 +128,8 @@ def create_app(
             raise ApiError(401, "auth.not_authenticated") from exc
 
     def session_out(db: Session, session, principal) -> SessionOut:
+        if session_renderer is not None:
+            return session_renderer(db, session, principal)
         return SessionOut(
             email=db.get(Identity, principal.identity_id).email,
             role=principal.role,
@@ -128,7 +142,7 @@ def create_app(
         db.execute(text("SELECT 1"))
         return {"status": "ok", "database": "ok"}
 
-    @app.post("/api/auth/login")
+    @app.post("/api/auth/login", response_model=None)
     def login(body: LoginIn, request: Request, response: Response, db: Db) -> SessionOut:
         keys = (f"ip:{request.client.host if request.client else 'unknown'}", f"email:{body.email}")
         if limiter.is_blocked(*keys):
@@ -154,7 +168,7 @@ def create_app(
         )
         return result
 
-    @app.get("/api/auth/me")
+    @app.get("/api/auth/me", response_model=None)
     def me(request: Request, db: Db) -> SessionOut:
         session, principal = current(request, db)
         return session_out(db, session, principal)

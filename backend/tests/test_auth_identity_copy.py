@@ -34,6 +34,7 @@ def test_copy_keeps_ids_hashes_and_roles_without_modifying_source():
                 assert identity.is_superadmin is False
                 assert destination.get(Tenant, 1).status == "disabled"
                 membership = destination.scalar(select(Membership))
+                assert membership.family_user_id == 42
                 assert (membership.identity_id, membership.tenant_id, membership.role) == (
                     42,
                     1,

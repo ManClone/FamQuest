@@ -127,3 +127,19 @@ def test_concurrent_password_changes_revoke_all_sessions_once(auth_engine):
     with Session(auth_engine) as db:
         assert db.scalar(select(BrowserSession)) is None
         assert verify_secret(db.get(Identity, 1).password_hash, "new-test-password-123")
+
+
+def test_copied_registry_ids_do_not_break_later_account_creation(auth_engine):
+    from app.auth_identity_copy import align_registry_sequences
+
+    with Session(auth_engine) as db:
+        db.add(Identity(id=42, email="copied@example.invalid", password_hash="unused"))
+        db.add(Tenant(id=20, name="Copied", database_name="famquest_copied", status="disabled"))
+        db.flush()
+        align_registry_sequences(db)
+        account = Identity(email="next@example.invalid", password_hash="unused")
+        family = Tenant(name="Next", database_name="famquest_next", status="disabled")
+        db.add_all([account, family])
+        db.flush()
+        assert account.id == 43
+        assert family.id == 21

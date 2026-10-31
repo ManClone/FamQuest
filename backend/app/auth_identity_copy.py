@@ -4,12 +4,24 @@ Only use on a restored source backup and a freshly provisioned destination.
 The caller owns the destination transaction; this function never commits.
 """
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.auth_migration_inventory import assert_single_family_migration_ready, inspect_legacy
 from app.auth_registry import Identity, Membership, Tenant
 from app.models import Family, User
+
+
+def align_registry_sequences(destination: Session) -> None:
+    """Explicit-ID copies must not make the next PostgreSQL insert collide."""
+    if destination.get_bind().dialect.name == "postgresql":
+        for table in ("tenants", "identities"):
+            destination.execute(
+                text(
+                    f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "
+                    f"COALESCE(MAX(id), 1), COUNT(*) > 0) FROM {table}"
+                )
+            )
 
 
 def stage_identity_copy(source: Session, destination: Session, database_name: str) -> int:
@@ -46,6 +58,11 @@ def stage_identity_copy(source: Session, destination: Session, database_name: st
                 created_at=user.created_at,
             )
         )
-        destination.add(Membership(identity_id=user.id, tenant_id=family.id, role=user.role))
+        destination.add(
+            Membership(
+                identity_id=user.id, tenant_id=family.id, role=user.role, family_user_id=user.id
+            )
+        )
     destination.flush()
+    align_registry_sequences(destination)
     return len(users)
