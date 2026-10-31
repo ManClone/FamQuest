@@ -54,6 +54,25 @@ function api(extra: Record<string, Response | ((body: unknown) => Response)> = {
       }),
     ),
     'GET /api/members/1/points': Response.json(history),
+    'GET /api/members/1/criticism': Response.json({
+      date: '2026-10-31',
+      week_start: '2026-10-26',
+      allowance_cents: 0,
+      earned_bonus_cents: 0,
+      money_penalty_cents: 0,
+      payable_bonus_cents: 0,
+      total_cents: 0,
+      closed: false,
+      requires_review: false,
+      spendable_stars: 7,
+      levels: {
+        conversation: { stars: 0, bonus_cents: 0 },
+        light: { stars: 1, bonus_cents: 0 },
+        heavy: { stars: 2, bonus_cents: 50 },
+        severe: { stars: 3, bonus_cents: 100 },
+      },
+    }),
+    'GET /api/members/1/consequences': Response.json([]),
     ...extra,
   })
 }
@@ -118,21 +137,24 @@ describe('Punkte im Elternbereich', () => {
     expect(screen.getByLabelText('Begründung')).toHaveValue('')
   })
 
-  it('zieht Punkte ab und zeigt, wenn nicht genug da sind', async () => {
+  it('nutzt feste Kritikstufen statt frei gewählter Sternabzüge', async () => {
     const calls = api({
-      'POST /api/members/1/points': Response.json({ code: 'points.insufficient' }, { status: 409 }),
+      'POST /api/consequences': Response.json({ id: 1 }, { status: 201 }),
     })
     const user = await openLena()
 
-    await user.click(screen.getByRole('radio', { name: 'Abziehen' }))
-    await user.type(screen.getByLabelText('Begründung'), 'Streit')
-    await user.click(screen.getByRole('button', { name: '1 Punkt abziehen' }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'So viele Punkte sind nicht vorhanden.',
-    )
-    const post = calls.find((call) => call.key === 'POST /api/members/1/points')
-    expect(post?.body).toEqual({ amount: -1, reason: 'Streit' })
+    expect(screen.queryByRole('radio', { name: 'Abziehen' })).toBeNull()
+    await user.selectOptions(await screen.findByRole('combobox'), 'light')
+    await user.type(screen.getByLabelText('Kurze Begründung'), 'Gemeinsame Entscheidung')
+    await user.click(screen.getByRole('checkbox', { name: /konkrete Entscheidung/ }))
+    await user.click(screen.getByRole('button', { name: 'Entscheidung speichern' }))
+    expect(await screen.findByText('Entscheidung gespeichert.')).toBeVisible()
+    expect(calls.find((call) => call.key === 'POST /api/consequences')?.body).toMatchObject({
+      severity: 'light',
+      apply_money: false,
+      confirmed: true,
+    })
+    expect(calls.some((call) => call.key === 'POST /api/members/1/points')).toBe(false)
   })
 
   it('verlangt eine Begründung', async () => {

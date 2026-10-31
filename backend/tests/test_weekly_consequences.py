@@ -4,7 +4,8 @@ import datetime as dt
 
 import pytest
 
-from app.weekly_consequences import DEFAULT_CONSEQUENCES, monday_of, weekly_statement
+from app.criticism_policy import LEVELS
+from app.weekly_consequences import monday_of, weekly_statement
 
 
 def test_monday_to_sunday_and_penalty():
@@ -30,7 +31,7 @@ def test_negative_inputs_rejected(earned, penalty):
 
 
 def test_default_consequence():
-    assert DEFAULT_CONSEQUENCES["Nicht auf Anweisungen gehört"] == {
-        "money_penalty_cents": 50,
-        "xp_penalty": 5,
-    }
+    assert LEVELS["heavy"].stars == 2
+    assert LEVELS["heavy"].bonus_cents == 50
+    assert LEVELS["severe"].stars == 3
+    assert LEVELS["severe"].bonus_cents == 100

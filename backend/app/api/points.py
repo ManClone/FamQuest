@@ -1,7 +1,7 @@
 from datetime import UTC
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -9,7 +9,7 @@ from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, ensure_member_access
 from app.errors import ApiError
 from app.levels import progress
-from app.models import PenaltyReversal, PointTransaction, Praise
+from app.models import ConsequenceEntry, PenaltyReversal, PointTransaction, Praise
 from app.point_reversals import compensation_candidates, reverse_manual
 from app.points import balance, book, lock_member
 from app.schemas import PointBookingIn, PointHistoryOut, PointTransactionOut
@@ -82,10 +82,20 @@ def get_points(
 
 @router.post("/members/{member_id}/points", status_code=status.HTTP_201_CREATED)
 def add_points(
-    member_id: int, body: PointBookingIn, auth_session: ParentSession, db: DbSession
+    member_id: int,
+    body: PointBookingIn,
+    auth_session: ParentSession,
+    db: DbSession,
+    request: Request,
 ) -> PointHistoryOut:
     """Manuelle Gutschrift oder Abzug; der Punktestand darf dabei nicht negativ werden."""
-    get_member(db, member_id)
+    member = get_member(db, member_id)
+    if (
+        getattr(request.app.state, "multitenant", False)
+        and member.role == "child"
+        and body.amount < 0
+    ):
+        raise ApiError(422, "criticism.use_levels")
     lock_member(db, member_id)
     if body.amount < 0 and balance(db, member_id) + body.amount < 0:
         raise ApiError(status.HTTP_409_CONFLICT, "points.insufficient")
@@ -116,13 +126,19 @@ def member_progress(
         select(PointTransaction)
         .where(
             PointTransaction.member_id == member_id,
-            PointTransaction.kind == "manual",
+            PointTransaction.kind.in_(("manual", "consequence")),
             PointTransaction.amount < 0,
             ~select(PenaltyReversal.transaction_id)
             .where(PenaltyReversal.transaction_id == PointTransaction.id)
             .exists(),
             ~select(PenaltyReversal.transaction_id)
             .where(PenaltyReversal.refund_transaction_id == PointTransaction.id)
+            .exists(),
+            ~select(ConsequenceEntry.id)
+            .where(
+                ConsequenceEntry.star_transaction_id == PointTransaction.id,
+                ConsequenceEntry.reversed_at.is_not(None),
+            )
             .exists(),
         )
         .order_by(PointTransaction.id.desc())

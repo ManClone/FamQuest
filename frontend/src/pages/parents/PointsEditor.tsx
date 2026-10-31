@@ -23,6 +23,7 @@ import { TaskIcon } from '../../components/TaskIcon'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { ChoiceTile, Field, NumberStepper } from './formParts'
+import { CriticismPanel } from './CriticismPanel'
 
 const KIND_ICONS: Record<PointKind, typeof ManualIcon> = {
   task_completed: CheckIcon,
@@ -34,6 +35,8 @@ const KIND_ICONS: Record<PointKind, typeof ManualIcon> = {
   chore_undone: UndoIcon,
   penalty_reversed: UndoIcon,
   manual_reversed: UndoIcon,
+  consequence: MinusCircleIcon,
+  consequence_reversed: UndoIcon,
 }
 
 type Direction = 'credit' | 'deduct'
@@ -55,6 +58,7 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
   const [reason, setReason] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [notice, setNotice] = useState<string>()
+  const credit = member.role === 'child' || direction === 'credit'
 
   const total = history.data?.pages[0]?.total
   const transactions = history.data?.pages.flatMap((page) => page.transactions) ?? []
@@ -71,11 +75,11 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
     setNotice(undefined)
     if (!reason.trim()) return
     book.mutate(
-      { amount: direction === 'credit' ? amount : -amount, reason: reason.trim() },
+      { amount: credit ? amount : -amount, reason: reason.trim() },
       {
         onSuccess: () => {
           setNotice(
-            t(direction === 'credit' ? 'points.credited' : 'points.deducted', {
+            t(credit ? 'points.credited' : 'points.deducted', {
               count: amount,
               name: member.name,
             }),
@@ -117,6 +121,7 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
         </p>
       )}
 
+      {member.role === 'child' && <CriticismPanel memberId={member.id} />}
       <form
         className="flex flex-col gap-6 rounded-3xl bg-white p-6 shadow-sm"
         onSubmit={submit}
@@ -126,26 +131,28 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
         {book.isError && !(book.error instanceof ApiError && book.error.fields.reason) && (
           <Alert>{errorMessage(t, book.error)}</Alert>
         )}
-        <Field label={t('points.direction')}>
-          <div className="grid grid-cols-2 gap-3">
-            <ChoiceTile
-              name="direction"
-              checked={direction === 'credit'}
-              onChange={() => setDirection('credit')}
-            >
-              <PlusCircleIcon className="size-10" aria-hidden="true" />
-              {t('points.credit')}
-            </ChoiceTile>
-            <ChoiceTile
-              name="direction"
-              checked={direction === 'deduct'}
-              onChange={() => setDirection('deduct')}
-            >
-              <MinusCircleIcon className="size-10" aria-hidden="true" />
-              {t('points.deduct')}
-            </ChoiceTile>
-          </div>
-        </Field>
+        {member.role !== 'child' && (
+          <Field label={t('points.direction')}>
+            <div className="grid grid-cols-2 gap-3">
+              <ChoiceTile
+                name="direction"
+                checked={direction === 'credit'}
+                onChange={() => setDirection('credit')}
+              >
+                <PlusCircleIcon className="size-10" aria-hidden="true" />
+                {t('points.credit')}
+              </ChoiceTile>
+              <ChoiceTile
+                name="direction"
+                checked={direction === 'deduct'}
+                onChange={() => setDirection('deduct')}
+              >
+                <MinusCircleIcon className="size-10" aria-hidden="true" />
+                {t('points.deduct')}
+              </ChoiceTile>
+            </div>
+          </Field>
+        )}
         <Field label={t('points.amount')}>
           <NumberStepper
             label={t('points.amount')}
@@ -167,7 +174,7 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
           error={reasonError}
         />
         <Button type="submit" className="self-start" disabled={book.isPending}>
-          {t(direction === 'credit' ? 'points.submit_credit' : 'points.submit_deduct', {
+          {t(credit ? 'points.submit_credit' : 'points.submit_deduct', {
             count: amount,
           })}
         </Button>

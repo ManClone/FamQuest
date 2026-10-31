@@ -371,7 +371,9 @@
     "kind_penalty_reversed": "Strafpunkte storniert",
     "kind_manual_reversed": "Manuelle Buchung storniert",
     "reversed": "Storniert · Gegenbuchung #{{id}}",
-    "compensates": "Ausgleich für Buchung #{{id}}"
+    "compensates": "Ausgleich für Buchung #{{id}}",
+    "kind_consequence": "Kritik",
+    "kind_consequence_reversed": "Kritik zurückgenommen"
   },
   "errors": {
     "common": {
@@ -550,6 +552,14 @@
       "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
       "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
       "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
+    },
+    "criticism": {
+      "current_week_required": "Kritik darf nur für die aktuelle Woche erfasst werden; zukünftige Angaben sind nicht möglich.",
+      "bonus_protected": "Dieser Bonusabzug ist nicht zulässig. Ein positiver, noch nicht ausgezahlter Wochenbonus muss erhalten bleiben.",
+      "week_closed": "Diese Woche ist bereits abgeschlossen oder als bezahlt erfasst.",
+      "statement_changed": "Die Abrechnung hat sich geändert. Bitte neu prüfen und bestätigen.",
+      "use_levels": "Bitte für Sternabzüge die festen Kritikstufen verwenden.",
+      "request_conflict": "Diese Anfrage wurde bereits für eine andere Entscheidung verwendet. Bitte den aktuellen Stand prüfen."
     }
   },
   "rewards": {
@@ -1199,5 +1209,37 @@
     "compensation_review": "Spätere Gutschriften könnten diesen Abzug bereits ausgeglichen haben. Vor einer Erstattung prüfen.",
     "compensation_unrelated": "Ich habe geprüft: Diese Gutschriften gehören nicht zu diesem Abzug.",
     "existing_compensation": "Bestehende Ausgleichsbuchung verknüpfen (optional)"
+  },
+  "criticism": {
+    "title": "Kritik und Wochenbonus",
+    "protection": "Sterne, Level-XP und Euro bleiben getrennt. Grundtaschengeld und Bankguthaben werden nicht gekürzt.",
+    "allowance": "Gebuchtes Grundtaschengeld",
+    "earned": "Verdiente Wochenboni",
+    "deductions": "Bestätigte Bonusabzüge",
+    "remaining": "Verbleibender Wochenbonus",
+    "total": "Wochenabrechnung insgesamt",
+    "closed": "Diese Wochenabrechnung ist abgeschlossen. Weitere Geldabzüge sind gesperrt.",
+    "review": "Nach dem Abschluss haben sich Nachweise geändert. Die abgeschlossene Abrechnung bleibt unverändert. Bitte die Änderung separat prüfen; keine automatische Rückforderung oder neue Auszahlung.",
+    "level": "Kritikstufe",
+    "conversation": "Gespräch / Wiedergutmachung – kein Abzug",
+    "light": "Leicht – 1 Stern, kein Geld",
+    "heavy": "Schwer – 2 Sterne, optional 0,50 € Bonusabzug",
+    "severe": "Sehr schwer – 3 Sterne, optional 1,00 € Bonusabzug",
+    "optional_money": "Zusätzlich {{amount}} vom offenen Wochenbonus abziehen (nur mit verbleibendem Restbonus)",
+    "reason": "Kurze Begründung",
+    "preview": "Abzug: {{stars}} Sterne und {{amount}} Bonus. Danach verbleiben {{remaining}} Wochenbonus.",
+    "confirm": "Ich bestätige diese konkrete Entscheidung und Begründung.",
+    "save": "Entscheidung speichern",
+    "saved": "Entscheidung gespeichert.",
+    "close_hint": "Nur eine tatsächlich bestätigte Wochenabrechnung abschließen. Dies startet keine Überweisung. Spätere Änderungen werden zur getrennten Prüfung angezeigt.",
+    "paid_confirm": "Ich bestätige die Abrechnung über {{amount}} als ausgezahlt bzw. abschließend geklärt.",
+    "close": "Wochenabrechnung unveränderlich abschließen",
+    "history": "Entscheidungen und Korrekturen",
+    "record": "{{stars}} Sterne · {{amount}} Bonusabzug",
+    "reversed": "Zurückgenommen",
+    "reverse": "Korrektur vorbereiten",
+    "correction_reason": "Grund der Korrektur",
+    "reverse_confirm": "Ich bestätige die Rücknahme dieser Entscheidung.",
+    "reverse_save": "Rücknahme speichern"
   }
 }

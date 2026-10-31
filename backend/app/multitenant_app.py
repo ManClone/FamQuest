@@ -302,7 +302,10 @@ def create_app(
         todos,
     ):
         for route in module.router.routes:
-            if getattr(route, "path", "") != "/profile/password":
+            if getattr(route, "path", "") not in {
+                "/profile/password",
+                "/weekly-consequences/preview",
+            }:
                 filtered.routes.append(route)
     app.include_router(filtered, prefix="/api")
 
