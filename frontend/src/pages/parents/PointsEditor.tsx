@@ -110,19 +110,21 @@ export function PointsEditor({ member, timeZone, onBack, embedded = false }: Poi
           {t('actions.back')}
         </Button>
       )}
-      <header className="flex flex-wrap items-center gap-4">
-        <Avatar name={member.name} color={member.color} src={member.avatar_url} size="lg" />
-        <Heading className="min-w-0 flex-1 text-3xl font-extrabold break-words text-orange-600">
-          {t('points.open', { name: member.name })}
-        </Heading>
-        <p className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm">
-          <TrophyIcon className="size-10" aria-hidden="true" />
-          <span className="sr-only">{t('points.balance')}: </span>
-          <span className="text-4xl font-extrabold text-slate-800 tabular-nums">
-            {total ?? '–'}
-          </span>
-        </p>
-      </header>
+      {!embedded && (
+        <header className="flex flex-wrap items-center gap-4">
+          <Avatar name={member.name} color={member.color} src={member.avatar_url} size="lg" />
+          <Heading className="min-w-0 flex-1 text-3xl font-extrabold break-words text-orange-600">
+            {t('points.open', { name: member.name })}
+          </Heading>
+          <p className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm">
+            <TrophyIcon className="size-10" aria-hidden="true" />
+            <span className="sr-only">{t('points.balance')}: </span>
+            <span className="text-4xl font-extrabold text-slate-800 tabular-nums">
+              {total ?? '–'}
+            </span>
+          </p>
+        </header>
+      )}
 
       {notice && (
         <p
@@ -141,6 +143,12 @@ export function PointsEditor({ member, timeZone, onBack, embedded = false }: Poi
         <h2 className="text-2xl font-extrabold text-slate-800">
           {t(member.role === 'child' ? 'family_account.credit_title' : 'points.book_title')}
         </h2>
+        {embedded && (
+          <p className="flex items-center gap-2 font-bold text-slate-700">
+            <TrophyIcon className="size-6" aria-hidden="true" />
+            {t('points.balance')}: <span className="tabular-nums">{total ?? '–'}</span>
+          </p>
+        )}
         {book.isError && !(book.error instanceof ApiError && book.error.fields.reason) && (
           <Alert>{errorMessage(t, book.error)}</Alert>
         )}
