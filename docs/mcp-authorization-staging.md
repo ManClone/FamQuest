@@ -27,8 +27,35 @@ Zieladressen, CSRF, Kinderkonten, doppelte Parameter, Körpergrößenlimit,
 Code-Wiederverwendung, Refresh-Replay, Widerruf und Familiensperren. Die
 Frontendtests prüfen erlaubte und abgelehnte Rücksprungziele.
 
-Noch offen: Der eigenständige MCP-Container muss diese Autorisierung tatsächlich
-prüfen und den individuellen Bearer-Zugang weiterreichen. Schreibzugriffe bleiben
-im integrierten Backend gesperrt, bis der Schutz vor doppelten Aktionen und die
-Elternbestätigung vollständig angebunden sind. Dies ist noch kein freigegebener
-produktiver Connector und aktiviert keine neue Verbindung auf dem QNAP.
+Der alternative MCP-Einstieg `mcp/central_server.py` prüft jetzt jeden Zugang über
+den integrierten Server und reicht dessen individuellen Bearer weiter. Es gibt
+keinen Service-Token, keine GitHub-Elternliste und keinen Rückfall auf alte
+Sitzungscookies. Der Server prüft Rolle, Familie, lokale Elternzuordnung,
+Gültigkeit und Ressourcenadresse. Bei Ausfall wird der Zugang abgewiesen.
+
+`/.well-known/famquest-mcp-tools` liefert nur Werkzeugdefinitionen, keine
+Familiendaten. Kontoverwaltung, Banking und Geld bleiben ausgeschlossen.
+Alle 76 Werkzeuge lassen sich aus dem tatsächlichen Schema erzeugen.
+Die Familiendaten bleiben auch beim Abruf dieser öffentlichen Definitionen geschützt.
+
+Schreibaktionen reservieren ihren Auftragsschlüssel vor der Ausführung dauerhaft
+in der jeweiligen Familien-Datenbank. Gleicher Auftrag und gleicher Inhalt liefern
+das gespeicherte Ergebnis; anderer Inhalt mit gleichem Schlüssel wird abgewiesen.
+Parallele Anfragen führen nur eine Mutation aus. Ein Ausfall nach der fachlichen
+Speicherung hinterlässt einen unklaren Ausgang und löst keine automatische
+Wiederholung aus. Authentifizierung und nötige Elternbestätigung erfolgen auch vor
+der Rückgabe gespeicherter Ergebnisse. Schlüssel dürfen nicht für neue Aufträge
+wiederverwendet werden. Es gibt kein automatisches Löschen dieser Nachweise.
+Antworten und Nachweise werden nicht in der zentralen Benutzer-Datenbank gespeichert.
+
+Die additive Family-Revision `m20261031mcpactions` muss explizit migriert sein.
+Die neue Compose-Datei ist nur eine vorbereitete Alternative; sie wurde nicht
+auf dem QNAP gestartet. Der Proxy muss im zentralen Modus ausschließlich `/mcp`
+und dessen Unterpfade zum MCP-Container leiten (`CENTRAL_MCP_PATH_PATTERN`).
+OAuth, Login, Discovery und die übrigen App-Routen gehören zum integrierten
+Webserver. Die öffentliche HTTPS-Adresse muss für den MCP-Container erreichbar
+sein; Weiterleitungen werden bei der Tokenprüfung nicht verfolgt.
+
+Noch offen vor produktiver Aktivierung: vollständige CI mit PostgreSQL,
+Migrations-/Restore-Probe und Freigabe der konkreten Proxy-/Container-Umstellung.
+Der bestehende produktive MCP-Einstieg und QNAP bleiben unverändert.

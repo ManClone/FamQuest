@@ -32,7 +32,7 @@ WRITE = (
 
 
 def allowed(method: str, path: str) -> bool:
-    if method == "GET" and path == "/api/internal/mcp/schema":
+    if method == "GET" and path in {"/api/internal/mcp/schema", "/api/internal/mcp/context"}:
         return True
     patterns = READ if method == "GET" else WRITE if method in {"POST", "PUT", "DELETE"} else ()
     return any(re.fullmatch(pattern, path) for pattern in patterns)

@@ -1,0 +1,12 @@
+# Explicit replacement for the legacy GitHub-provider MCP service; not auto-enabled.
+services:
+  famquest-mcp-central:
+    build: .
+    command: ["python", "central_server.py"]
+    restart: unless-stopped
+    environment:
+      FAMQUEST_PUBLIC_URL: ${FAMQUEST_PUBLIC_URL:?Set the HTTPS origin of the integrated app}
+    ports:
+      - "127.0.0.1:8091:8000"
+    security_opt:
+      - no-new-privileges:true

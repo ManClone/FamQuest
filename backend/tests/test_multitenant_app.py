@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.auth_registry import AuthBase, Identity, Membership, Tenant
 from app.config import Settings
-from app.models import Family, FamilyMember, User
+from app.models import Family, FamilyMember, McpAction, Todo, User
 from app.multitenant_app import create_app
 from app.security import hash_secret
 from tests.test_central_auth import ORIGIN, PASSWORD, TestRegistry
@@ -50,7 +50,7 @@ def environment(tmp_path):
     for tenant_id, name in ((1, "Sertl"), (2, "Henning")):
         family_engine = engine()
         metadata = MetaData()
-        for model in (Family, User, FamilyMember):
+        for model in (Family, User, FamilyMember, McpAction, Todo):
             table = model.__table__.to_metadata(metadata)
             for column in table.columns:
                 if isinstance(column.type, JSONB):
@@ -278,13 +278,41 @@ def test_mcp_token_uses_its_registered_family_and_never_a_parent_header(environm
     headers = {"authorization": "Bearer " + tokens.access_token, "x-famquest-parent-id": "2"}
     with TestClient(app, base_url=ORIGIN, headers=headers) as client:
         assert client.get("/api/members").json()[0]["name"] == "Parent Sertl"
+        context = client.get("/api/internal/mcp/context")
+        assert context.status_code == 200, context.text
+        assert context.json()["identity_id"] == 1
+        assert context.json()["tenant_id"] == 1
+        assert context.json()["parent_user_id"] == 1
+        assert context.json()["resource"] == ORIGIN + "/mcp"
+        assert "email" not in context.json()
         assert client.post("/api/chore-approvals/1").status_code == 409
         assert (
             client.post(
                 "/api/chore-approvals/1", headers={"x-mcp-parent-confirmed": "true"}
             ).status_code
-            == 503
+            == 422
         )
+        from app.auth_registry import Tenant
+
+        with registry.session() as db:
+            db.get(Tenant, 1).status = "disabled"
+            db.commit()
+        assert client.get("/api/internal/mcp/context").status_code == 401
+
+
+def test_public_mcp_definitions_exclude_account_and_money_tools(environment):
+    app, _, _, _ = environment
+    with TestClient(app, base_url=ORIGIN) as client:
+        response = client.get("/.well-known/famquest-mcp-tools")
+        assert response.status_code == 200
+        paths = response.json()["paths"]
+        assert "/api/members" in paths
+        assert "post" in paths["/api/todos"]
+        assert not any(
+            any(part in path for part in ("/auth/", "/money", "/internal/", "/bank"))
+            for path in paths
+        )
+        assert client.get("/api/internal/mcp/context").status_code == 401
 
 
 def test_calendar_operation_keeps_explicit_family_engine_and_checks_deactivation(

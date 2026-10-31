@@ -186,6 +186,26 @@ def test_tasks_chores_and_database_roles_are_isolated(isolated_databases):
         assert len(sertl.get("/api/members").json()) == (3 if results[0] == 201 else 2)
         assert len(henning.get("/api/members").json()) == (2 if results[1] == 201 else 1)
 
+        from tests.test_mcp_actions import BODY, bearer
+
+        mcp_headers = bearer(app.state.auth_registry, 1)
+        mcp_headers["x-mcp-request-key"] = "postgres-action-" + "a" * 32
+
+        def create_once(_):
+            return sertl.post("/api/todos", json=BODY, headers=mcp_headers).status_code
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(create_once, range(2)))
+        assert 201 in outcomes
+        assert set(outcomes) <= {201, 409}
+        assert sertl.post("/api/todos", json=BODY, headers=mcp_headers).status_code == 201
+        assert len(sertl.get("/api/chores").json()["todos"]) == 1
+        assert henning.get("/api/chores").json()["todos"] == []
+        henning_mcp = bearer(app.state.auth_registry, 2)
+        henning_mcp["x-mcp-request-key"] = mcp_headers["x-mcp-request-key"]
+        assert henning.post("/api/todos", json=BODY, headers=henning_mcp).status_code == 201
+        assert len(henning.get("/api/chores").json()["todos"]) == 1
+
     # A valid family-A login role cannot even connect to family B's database.
     engine = create_engine(
         Settings().database_url(names[2]).set(username=names[1] + "_app", password=password)

@@ -18,15 +18,15 @@ from mcp.types import ToolAnnotations
 
 
 class ParentBoundary(Middleware):
-    def __init__(self, mapping):
-        self.mapping = mapping
+    def __init__(self, resolve_parent):
+        self.resolve_parent = resolve_parent
 
     async def on_call_tool(self, context, call_next):
-        parent_id(self.mapping)
+        self.resolve_parent()
         return await call_next(context)
 
     async def on_list_tools(self, context, call_next):
-        parent_id(self.mapping)
+        self.resolve_parent()
         return await call_next(context)
 
 
@@ -40,7 +40,8 @@ def tool_metadata(route, component):
     )
 
 
-def build_server(spec, client, mapping, auth=None):
+def build_server(spec, client, mapping, auth=None, *, resolve_parent=None):
+    resolve_parent = resolve_parent or (lambda: parent_id(mapping))
     names = {}
     for path, operations in spec["paths"].items():
         for method, operation in operations.items():
@@ -67,14 +68,14 @@ def build_server(spec, client, mapping, auth=None):
             "The Household category is populated by household chores, never create it as a routine."
         ),
     )
-    server.add_middleware(ParentBoundary(mapping))
+    server.add_middleware(ParentBoundary(resolve_parent))
 
     @server.tool(annotations={"readOnlyHint": True, "openWorldHint": False})
     async def get_connected_parent() -> dict:
         """Show the linked parent profile; use this to verify which account is connected."""
         response = await client.get("/api/profile")
         response.raise_for_status()
-        return {"parent_user_id": parent_id(mapping), "profile": response.json()}
+        return {"parent_user_id": resolve_parent(), "profile": response.json()}
 
     @server.tool(annotations={"readOnlyHint": True, "openWorldHint": False})
     async def get_pending_notifications() -> dict:
