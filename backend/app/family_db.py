@@ -4,7 +4,6 @@ This module does not modify the legacy single-family SessionLocal or its
 Alembic history. Never derive a database name from untrusted request input.
 """
 
-import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -14,6 +13,7 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings, get_settings
+from app.tenant_provisioning import validate_family_database_name
 
 
 @dataclass(frozen=True)
@@ -39,11 +39,7 @@ class FamilyDatabaseRouter:
     def _engine(self, family: FamilyDatabase) -> Engine:
         if family.family_id <= 0:
             raise ValueError("Invalid family identifier")
-        if (
-            family.database_name == "famquest_auth"
-            or re.fullmatch(r"famquest_[a-z0-9_]{1,50}", family.database_name) is None
-        ):
-            raise ValueError("Invalid registered database name")
+        validate_family_database_name(family.database_name)
         with self._lock:
             existing = self._engines.get(family.family_id)
             if existing is not None:
