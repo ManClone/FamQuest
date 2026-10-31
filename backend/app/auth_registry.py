@@ -51,3 +51,28 @@ class Membership(AuthBase):
     role: Mapped[str] = mapped_column(String(20))
     identity: Mapped[Identity] = relationship()
     tenant: Mapped[Tenant] = relationship()
+
+
+class OAuthClient(AuthBase):
+    """Registered public client; redirect URIs are exact-match only."""
+
+    __tablename__ = "oauth_clients"
+
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    redirect_uri: Mapped[str] = mapped_column(String(2048))
+    enabled: Mapped[bool] = mapped_column(default=False)
+
+
+class OAuthAuthorizationCode(AuthBase):
+    """Persist only the hash of the short-lived, single-use authorization code."""
+
+    __tablename__ = "oauth_authorization_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("oauth_clients.id"))
+    identity_id: Mapped[int] = mapped_column(ForeignKey("identities.id"))
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"))
+    redirect_uri: Mapped[str] = mapped_column(String(2048))
+    code_challenge: Mapped[str] = mapped_column(String(43))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
