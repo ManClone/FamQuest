@@ -59,6 +59,9 @@ gesperrt. Der alternative zentrale MCP-Dienst und die family-lokale
 Auftragsreservierung sind jetzt integriert; die vollständige PostgreSQL-CI
 dieser zusätzlichen Änderungen steht noch aus. Der integrierte Server kann
 das konfigurierte gebaute Frontend samt Login ohne Legacy-App-Import ausliefern.
-Automatische Scheduler werden
-noch nicht gestartet. Die verbleibenden Implementierungen und der Restore-/Cutover-
+Familiengebundene Hintergrundprüfungen sind jetzt ausdrücklich zuschaltbar und
+standardmäßig aus; Kalenderjobs benötigen eine zusätzliche Freischaltung.
+Ein alternativer zentraler Containerstart prüft nur lesend die Schemata und
+Kontozuordnungen und führt keine automatische Migration durch. Siehe
+`central-deployment-preflight.md`. Die verbleibenden Implementierungen und der Restore-/Cutover-
 Probelauf sind vor einem Deployment abzuschließen. Siehe `legacy-settings-audit.md`.

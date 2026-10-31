@@ -179,7 +179,7 @@ def credit_configured_allowances(db: Session, today) -> list[int]:
     return due_weekly_allowances(db, configured, monday)
 
 
-def run_weekly_allowance_check() -> list[int]:
+def run_weekly_allowance_check(*, database_engine=None) -> list[int]:
     """One transactional check; safe for concurrent app workers and restarts."""
     import datetime as dt
     from zoneinfo import ZoneInfo
@@ -187,7 +187,8 @@ def run_weekly_allowance_check() -> list[int]:
     from app.db import engine
     from app.models import Family
 
-    with Session(engine) as db:
+    selected = database_engine if database_engine is not None else engine
+    with Session(selected) as db:
         family = db.scalar(select(Family))
         if family is None:
             return []

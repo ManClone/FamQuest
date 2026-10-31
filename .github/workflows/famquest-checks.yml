@@ -63,7 +63,8 @@ jobs:
           'test "$(id -u)" != 0;
           test -r /app/alembic.ini;
           test -x /app/docker-entrypoint.sh;
-          python -c "import app.main"'
+          test -r /app/docker-entrypoint.central.sh;
+          python -c "import app.main; import app.deployment_check"'
   mcp:
     runs-on: ubuntu-latest
     steps:

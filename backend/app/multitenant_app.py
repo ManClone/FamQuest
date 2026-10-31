@@ -4,8 +4,9 @@ Not selected by the production entrypoint yet. MCP transport integration,
 write deduplication and per-family schedulers remain explicit release gates.
 """
 
+import asyncio
 from collections.abc import Iterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -115,10 +116,19 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(application):
+        jobs = None
         try:
             async with original_lifespan(application):
+                if settings.central_background_jobs:
+                    from app.family_jobs import run_periodically
+
+                    jobs = asyncio.create_task(run_periodically(registry, router, settings))
                 yield
         finally:
+            if jobs is not None:
+                jobs.cancel()
+                with suppress(asyncio.CancelledError):
+                    await jobs
             if family_router is None:
                 router.close()
             if database is None:

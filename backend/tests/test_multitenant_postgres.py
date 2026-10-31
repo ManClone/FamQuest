@@ -206,6 +206,38 @@ def test_tasks_chores_and_database_roles_are_isolated(isolated_databases):
         assert henning.post("/api/todos", json=BODY, headers=henning_mcp).status_code == 201
         assert len(henning.get("/api/chores").json()["todos"]) == 1
 
+        from sqlalchemy import func, select
+
+        from app.deployment_check import migration_head, verify
+        from app.family_db import FamilyDatabase
+        from app.family_jobs import run_once
+        from app.models import MoneyTransaction
+
+        root = Path(__file__).resolve().parents[1]
+        assert verify(
+            app.state.auth_registry,
+            app.state.family_router,
+            auth_head=migration_head(root / "auth_alembic"),
+            family_head=migration_head(root / "alembic"),
+        ) == [1, 2]
+        family = FamilyDatabase(1, names[1])
+        with app.state.family_router.session(family) as db:
+            db.get(FamilyMember, child.json()["id"]).weekly_allowance_cents = 500
+            db.commit()
+        for _ in range(2):
+            run_once(
+                app.state.auth_registry, app.state.family_router, allowances=True, calendar=False
+            )
+        with app.state.family_router.session(family) as db:
+            assert (
+                db.scalar(
+                    select(func.sum(MoneyTransaction.amount_cents)).where(
+                        MoneyTransaction.kind == "allowance"
+                    )
+                )
+                == 500
+            )
+
     # A valid family-A login role cannot even connect to family B's database.
     engine = create_engine(
         Settings().database_url(names[2]).set(username=names[1] + "_app", password=password)
