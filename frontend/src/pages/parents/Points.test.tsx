@@ -81,7 +81,7 @@ async function openLena() {
   const user = userEvent.setup()
   renderApp('/parents/family')
   await user.click(await screen.findByRole('button', { name: 'Lena bearbeiten' }))
-  await screen.findByRole('heading', { name: 'Punkte von Lena' })
+  await screen.findByRole('heading', { name: 'Punkte gutschreiben und korrigieren' })
   return user
 }
 
@@ -97,7 +97,11 @@ describe('Punkte im Elternbereich', () => {
   it('öffnet die Punkteverwaltung direkt beim Kind unter Familie', async () => {
     api()
     await openLena()
-    expect(await screen.findByRole('heading', { name: 'Punkte von Lena' })).toBeVisible()
+    expect(
+      await screen.findByRole('heading', { name: 'Punkte gutschreiben und korrigieren' }),
+    ).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Punkte von Lena' })).toBeNull()
+    expect(screen.getByText(/Punktestand:/)).toHaveTextContent('7')
     expect(screen.queryByRole('button', { name: /^Zurück$/ })).toBeNull()
   })
 
