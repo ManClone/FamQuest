@@ -6,7 +6,7 @@ issuance are implemented and tested.
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -58,7 +58,7 @@ def issue_code(
             tenant_id=tenant_id,
             redirect_uri=redirect_uri,
             code_challenge=code_challenge,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+            expires_at=datetime.now(UTC) + timedelta(minutes=5),
         )
     )
     db.flush()
@@ -77,11 +77,11 @@ def consume_code(
         .where(OAuthAuthorizationCode.code_hash == digest)
         .with_for_update()
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if (
         record is None
         or record.consumed_at is not None
-        or (record.expires_at.replace(tzinfo=timezone.utc) if record.expires_at.tzinfo is None else record.expires_at) <= now
+        or (record.expires_at.replace(tzinfo=UTC) if record.expires_at.tzinfo is None else record.expires_at) <= now
         or not secrets.compare_digest(record.client_id, client_id)
         or not secrets.compare_digest(record.redirect_uri, redirect_uri)
         or not verify_s256(verifier, record.code_challenge, "S256")
