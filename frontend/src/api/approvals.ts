@@ -48,6 +48,9 @@ export function useApprovalMutation<TVariables>(request: (variables: TVariables)
   return useParentMutation(request, [
     APPROVALS_KEY,
     CONFIRMED_CHORES_KEY,
+    ['confirmed-tasks'],
+    ['money'],
+    ['criticism'],
     TODAY_KEY,
     POINTS_KEY,
     ['member-progress'],
@@ -57,12 +60,15 @@ export function useApprovalMutation<TVariables>(request: (variables: TVariables)
 }
 
 export const CONFIRMED_CHORES_KEY = ['confirmed-chores'] as const
-export function useConfirmedChores(enabled: boolean) {
+export function useConfirmedChores(enabled: boolean, memberId?: number) {
   return useInfiniteQuery({
-    queryKey: CONFIRMED_CHORES_KEY,
+    queryKey: [...CONFIRMED_CHORES_KEY, memberId],
     queryFn: ({ pageParam }) =>
       apiGet<{ items: Approval[]; has_more: boolean }>(
-        `/chore-approvals/confirmed${pageParam === null ? '' : `?before=${pageParam}`}`,
+        `/chore-approvals/confirmed?${new URLSearchParams({
+          ...(memberId === undefined ? {} : { member_id: String(memberId) }),
+          ...(pageParam === null ? {} : { before: String(pageParam) }),
+        })}`,
       ),
     initialPageParam: null as number | null,
     getNextPageParam: (page) => (page.has_more ? page.items.at(-1)?.id : undefined),
@@ -71,3 +77,20 @@ export function useConfirmedChores(enabled: boolean) {
 }
 export const undoConfirmedChore = (id: number) =>
   api<void>('DELETE', `/chore-approvals/${id}/confirmed`)
+
+export function useConfirmedTasks(enabled: boolean, memberId?: number) {
+  return useInfiniteQuery({
+    queryKey: ['confirmed-tasks', memberId],
+    queryFn: ({ pageParam }) =>
+      apiGet<{ items: Approval[]; has_more: boolean }>(
+        `/approvals/confirmed?${new URLSearchParams({
+          ...(memberId === undefined ? {} : { member_id: String(memberId) }),
+          ...(pageParam === null ? {} : { before: String(pageParam) }),
+        })}`,
+      ),
+    initialPageParam: null as number | null,
+    getNextPageParam: (page) => (page.has_more ? page.items.at(-1)?.id : undefined),
+    enabled,
+  })
+}
+export const undoConfirmedTask = (id: number) => api<void>('DELETE', `/approvals/${id}/confirmed`)

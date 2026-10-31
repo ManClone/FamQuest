@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -79,9 +79,9 @@ function api(extra: Record<string, Response | ((body: unknown) => Response)> = {
 
 async function openLena() {
   const user = userEvent.setup()
-  renderApp('/parents/review')
-  await user.click(await screen.findByRole('button', { name: 'Punkte von Lena' }))
-  await screen.findByRole('heading', { name: 'Punkte von Lena', level: 1 })
+  renderApp('/parents/family')
+  await user.click(await screen.findByRole('button', { name: 'Lena bearbeiten' }))
+  await screen.findByRole('heading', { name: 'Punkte von Lena' })
   return user
 }
 
@@ -94,15 +94,11 @@ afterEach(() => {
 })
 
 describe('Punkte im Elternbereich', () => {
-  it('zeigt die Punktestände aller Personen', async () => {
+  it('öffnet die Punkteverwaltung direkt beim Kind unter Familie', async () => {
     api()
-    renderApp('/parents/review')
-
-    const section = within(
-      (await screen.findByRole('heading', { name: 'Punkte' })).closest('section')!,
-    )
-    expect(await section.findByRole('button', { name: 'Punkte von Lena' })).toHaveTextContent('7')
-    expect(section.getByRole('button', { name: 'Punkte von Tom' })).toHaveTextContent('0')
+    await openLena()
+    expect(await screen.findByRole('heading', { name: 'Punkte von Lena' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: /^Zurück$/ })).toBeNull()
   })
 
   it('zeigt Punktestand und Buchungshistorie einer Person', async () => {
@@ -112,7 +108,7 @@ describe('Punkte im Elternbereich', () => {
     expect(await screen.findByText('Beim Aufräumen geholfen')).toBeVisible()
     const rows = screen.getAllByRole('listitem').map((row) => row.textContent)
     expect(rows).toEqual([
-      expect.stringMatching(/Beim Aufräumen geholfen.*Von Eltern gebucht.*\+5$/),
+      expect.stringMatching(/Beim Aufräumen geholfen.*Von Eltern gebucht.*\+5/),
       expect.stringMatching(/Zähne putzen.*Erledigung zurückgenommen.*−2$/),
       expect.stringMatching(/Zähne putzen.*Aufgabe erledigt.*\+2$/),
     ])
@@ -137,24 +133,40 @@ describe('Punkte im Elternbereich', () => {
     expect(screen.getByLabelText('Begründung')).toHaveValue('')
   })
 
-  it('nutzt feste Kritikstufen statt frei gewählter Sternabzüge', async () => {
+  it('bietet beim Kind nur Gutschriften und keine parallele Kritik- oder Geldverwaltung an', async () => {
+    api()
+    await openLena()
+    expect(screen.queryByRole('radio', { name: 'Abziehen' })).toBeNull()
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.queryByText('Grundtaschengeld einstellen')).toBeNull()
+  })
+
+  it('nimmt eine einzelne manuelle Gutschrift mit Begründung zurück', async () => {
+    let reversed = false
     const calls = api({
-      'POST /api/consequences': Response.json({ id: 1 }, { status: 201 }),
+      'GET /api/members/1/points': () =>
+        Response.json({
+          ...history,
+          transactions: [
+            { ...history.transactions[0], reversed_at: reversed ? '2026-10-31T12:00:00Z' : null },
+          ],
+        }),
+      'POST /api/members/1/points/3/reverse': () => {
+        reversed = true
+        return Response.json({ transaction_id: 3 })
+      },
     })
     const user = await openLena()
-
-    expect(screen.queryByRole('radio', { name: 'Abziehen' })).toBeNull()
-    await user.selectOptions(await screen.findByRole('combobox'), 'light')
-    await user.type(screen.getByLabelText('Kurze Begründung'), 'Gemeinsame Entscheidung')
-    await user.click(screen.getByRole('checkbox', { name: /konkrete Entscheidung/ }))
-    await user.click(screen.getByRole('button', { name: 'Entscheidung speichern' }))
-    expect(await screen.findByText('Entscheidung gespeichert.')).toBeVisible()
-    expect(calls.find((call) => call.key === 'POST /api/consequences')?.body).toMatchObject({
-      severity: 'light',
-      apply_money: false,
-      confirmed: true,
+    await user.click(await screen.findByRole('button', { name: 'Gutschrift korrigieren' }))
+    const confirm = screen.getByRole('button', { name: 'Gutschrift mit Begründung zurücknehmen' })
+    expect(confirm).toBeDisabled()
+    await user.type(screen.getByLabelText('Grund der Korrektur'), 'Versehentlich gebucht')
+    await user.click(confirm)
+    await screen.findByText(/Storniert/)
+    expect(calls.find((call) => call.key.endsWith('/points/3/reverse'))?.body).toEqual({
+      reason: 'Versehentlich gebucht',
     })
-    expect(calls.some((call) => call.key === 'POST /api/members/1/points')).toBe(false)
+    expect(screen.queryByRole('button', { name: 'Gutschrift korrigieren' })).toBeNull()
   })
 
   it('verlangt eine Begründung', async () => {

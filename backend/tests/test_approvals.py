@@ -145,3 +145,43 @@ def test_approvals_require_parent_account(client, parent, lena, now):
     assert reject(client, child, pending["id"]).status_code == 403
     # An unlinked child cannot see another member's pending approvals.
     assert today(client)["pending_approvals"] == 0
+
+
+def test_confirmed_history_filters_member_and_undoes_original_credit(client, parent, lena, now):
+    from tests.test_tasks import add_member, task_data
+
+    tom = add_member(client, parent, "Tom", "green")
+    task = add_task(client, parent, [lena, tom], points=5, money_cents=50)
+    assert complete(client, parent, task, lena).status_code == 204
+    assert complete(client, parent, task, tom).status_code == 204
+    url = f"/api/approvals/confirmed?member_id={lena}"
+    response = client.get(url)
+    assert response.status_code == 200, response.text
+    [item] = response.json()["items"]
+    assert item["member_id"] == lena
+    assert item["points"] == 5
+    original = task_data([lena, tom], points=9, money_cents=100)
+    assert client.put(f"/api/tasks/{task}", json=original, headers=csrf(parent)).status_code == 200
+    undo_url = f"/api/approvals/{item['id']}/confirmed"
+    assert client.delete(undo_url, headers=csrf(parent)).status_code == 204
+    assert client.delete(undo_url, headers=csrf(parent)).status_code == 204
+    assert points_of(client, lena)["total"] == 0
+    assert points_of(client, tom)["total"] == 5
+    assert client.get(f"/api/members/{lena}/money").json()["bonus_cents"] == 0
+    assert client.get(f"/api/members/{tom}/money").json()["bonus_cents"] == 50
+    assert client.get(url).json()["items"] == []
+    assert complete(client, parent, task, lena).status_code == 204
+    assert points_of(client, lena)["total"] == 9
+    assert client.get(f"/api/members/{lena}/money").json()["bonus_cents"] == 100
+
+
+def test_pending_completion_is_not_in_confirmed_history(client, parent, lena, now):
+    task = room_task(client, parent, [lena])
+    complete(client, parent, task, lena)
+    [pending] = approvals(client)
+    assert client.get("/api/approvals/confirmed").json()["items"] == []
+    assert (
+        client.delete(f"/api/approvals/{pending['id']}/confirmed", headers=csrf(parent)).status_code
+        == 409
+    )
+    assert len(approvals(client)) == 1

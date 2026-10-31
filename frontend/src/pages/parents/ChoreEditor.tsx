@@ -76,10 +76,10 @@ export function ChoreEditor({
   const [minutes, setMinutes] = useState(chore?.estimated_minutes ?? 15)
   const [repeatable, setRepeatable] = useState(chore?.repeatable ?? false)
   const [childEnabled, setChildEnabled] = useState(chore?.child_enabled ?? false)
-  const [childXp, setChildXp] = useState(chore?.child_xp ?? 0)
+  const [childXp, setChildXp] = useState(String(chore?.child_xp ?? 0))
   const [childIds, setChildIds] = useState<number[]>(chore?.child_member_ids ?? [])
   const children = (members.data ?? []).filter((member) => member.role === 'child')
-  const [adultXp, setAdultXp] = useState(chore?.adult_xp ?? 0)
+  const [adultXp, setAdultXp] = useState(String(chore?.adult_xp ?? 0))
   const [assignmentMode, setAssignmentMode] = useState<'fixed' | 'rotate' | 'flexible'>(
     chore?.assignment_mode ?? 'flexible',
   )
@@ -99,10 +99,10 @@ export function ChoreEditor({
       active,
       repeatable,
       child_enabled: childEnabled,
-      child_xp: childXp,
+      child_xp: Number(childXp),
       child_member_ids: childEnabled ? childIds : [],
       estimated_minutes: minutes,
-      adult_xp: adultXp,
+      adult_xp: Number(adultXp),
       assignment_mode: assignmentMode,
       fixed_member_id: assignmentMode === 'fixed' ? fixedMemberId : null,
     }
@@ -268,7 +268,7 @@ export function ChoreEditor({
               max={1000}
               required
               value={adultXp}
-              onChange={(event) => setAdultXp(Number(event.target.value))}
+              onChange={(event) => setAdultXp(event.target.value)}
               className="min-h-12 rounded-xl border border-slate-300 bg-white p-3"
             />
           </label>
@@ -290,7 +290,7 @@ export function ChoreEditor({
                 max={1000}
                 label={t('chores.child_xp')}
                 value={childXp}
-                onChange={(event) => setChildXp(Number(event.target.value))}
+                onChange={(event) => setChildXp(event.target.value)}
               />
               <Field label={t('chores.eligible_children')}>
                 <div className="flex flex-wrap gap-2">

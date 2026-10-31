@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useId, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
@@ -9,7 +9,6 @@ import { TODAY_KEY } from '../../api/today'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { newRequestKey } from '../../request-key'
-import { AllowanceSettings } from './AllowanceSettings'
 
 type Level = 'conversation' | 'light' | 'heavy' | 'severe'
 type Context = {
@@ -36,8 +35,15 @@ type Entry = {
 }
 const KEY = ['criticism'] as const
 
-export function CriticismPanel({ memberId }: { memberId: number }) {
+export function CriticismPanel({
+  memberId,
+  mode = 'all',
+}: {
+  memberId: number
+  mode?: 'all' | 'money' | 'criticism'
+}) {
   const { t, i18n } = useTranslation()
+  const descriptionId = useId()
   const [severity, setSeverity] = useState<Level>('conversation')
   const [money, setMoney] = useState(false)
   const [reason, setReason] = useState('')
@@ -52,7 +58,7 @@ export function CriticismPanel({ memberId }: { memberId: number }) {
     queryKey: [...KEY, memberId],
     queryFn: () => apiGet<Context>(`/members/${memberId}/criticism`),
   })
-  const invalidates = [KEY, POINTS_KEY, TODAY_KEY, PROGRESS_KEY]
+  const invalidates = [KEY, POINTS_KEY, TODAY_KEY, PROGRESS_KEY, ['money']]
   const history = useQuery({
     queryKey: [...KEY, memberId, 'history'],
     queryFn: () => apiGet<Entry[]>(`/members/${memberId}/consequences`),
@@ -114,89 +120,99 @@ export function CriticismPanel({ memberId }: { memberId: number }) {
     )
   }
   return (
-    <Section title={t('criticism.title')}>
+    <Section title={t(mode === 'money' ? 'family_account.week' : 'family_account.criticism')}>
       {state.isPending && <p role="status">{t('common.loading')}</p>}
       {state.isError && <Alert>{errorMessage(t, state.error)}</Alert>}
       {data && (
         <>
-          <p>{t('criticism.protection')}</p>
-          <dl className="grid grid-cols-2 gap-2">
-            <dt>{t('criticism.allowance')}</dt>
-            <dd>{euro(data.allowance_cents)}</dd>
-            <dt>{t('criticism.earned')}</dt>
-            <dd>{euro(data.earned_bonus_cents)}</dd>
-            <dt>{t('criticism.deductions')}</dt>
-            <dd>{euro(data.money_penalty_cents)}</dd>
-            <dt>{t('criticism.remaining')}</dt>
-            <dd>{euro(data.payable_bonus_cents)}</dd>
-            <dt>{t('criticism.total')}</dt>
-            <dd>{euro(data.total_cents)}</dd>
-          </dl>
+          {mode !== 'criticism' && (
+            <>
+              <p>{t('criticism.protection')}</p>
+              <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 break-words">
+                <dt>{t('criticism.allowance')}</dt>
+                <dd>{euro(data.allowance_cents)}</dd>
+                <dt>{t('criticism.earned')}</dt>
+                <dd>{euro(data.earned_bonus_cents)}</dd>
+                <dt>{t('criticism.deductions')}</dt>
+                <dd>{euro(data.money_penalty_cents)}</dd>
+                <dt>{t('criticism.remaining')}</dt>
+                <dd>{euro(data.payable_bonus_cents)}</dd>
+                <dt>{t('criticism.total')}</dt>
+                <dd>{euro(data.total_cents)}</dd>
+              </dl>
+            </>
+          )}
           {data.closed && <p>{t('criticism.closed')}</p>}
           {data.requires_review && <Alert>{t('criticism.review')}</Alert>}
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <label className="font-bold">
-              {t('criticism.level')}
-              <select
-                className="ml-2 rounded-lg border p-2"
-                value={severity}
+          {mode !== 'money' && (
+            <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
+              <label className="flex min-w-0 flex-col gap-2 font-bold">
+                {t('criticism.level')}
+                <select
+                  className="min-h-12 w-full min-w-0 max-w-full rounded-lg border p-2"
+                  aria-describedby={descriptionId}
+                  value={severity}
+                  onChange={(event) => {
+                    setSeverity(event.target.value as Level)
+                    setMoney(false)
+                    setConfirmed(false)
+                  }}
+                >
+                  {(['conversation', 'light', 'heavy', 'severe'] as const).map((value) => (
+                    <option key={value} value={value}>
+                      {t(`family_account.levels.${value}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p id={descriptionId} className="break-words text-sm text-slate-600">
+                {t(`criticism.${severity}`)}
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={money && mayDeductMoney}
+                  disabled={!mayDeductMoney}
+                  onChange={(event) => {
+                    setMoney(event.target.checked)
+                    setConfirmed(false)
+                  }}
+                />{' '}
+                {t('criticism.optional_money', { amount: euro(level?.bonus_cents ?? 0) })}
+              </label>
+              <TextField
+                label={t('criticism.reason')}
+                value={reason}
+                maxLength={100}
                 onChange={(event) => {
-                  setSeverity(event.target.value as Level)
-                  setMoney(false)
+                  setReason(event.target.value)
                   setConfirmed(false)
                 }}
-              >
-                {(['conversation', 'light', 'heavy', 'severe'] as const).map((value) => (
-                  <option key={value} value={value}>
-                    {t(`criticism.${value}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={money && mayDeductMoney}
-                disabled={!mayDeductMoney}
-                onChange={(event) => {
-                  setMoney(event.target.checked)
-                  setConfirmed(false)
-                }}
-              />{' '}
-              {t('criticism.optional_money', { amount: euro(level?.bonus_cents ?? 0) })}
-            </label>
-            <TextField
-              label={t('criticism.reason')}
-              value={reason}
-              maxLength={100}
-              onChange={(event) => {
-                setReason(event.target.value)
-                setConfirmed(false)
-              }}
-              required
-            />
-            <p>
-              {t('criticism.preview', {
-                stars,
-                amount: euro(deduct),
-                remaining: euro(data.payable_bonus_cents - deduct),
-              })}
-            </p>
-            <label>
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-              />{' '}
-              {t('criticism.confirm')}
-            </label>
-            {save.isError && <Alert>{errorMessage(t, save.error)}</Alert>}
-            {notice && <p role="status">{t('criticism.saved')}</p>}
-            <Button type="submit" disabled={save.isPending || !confirmed || !reason.trim()}>
-              {t('criticism.save')}
-            </Button>
-          </form>
-          {!data.closed && (
+                required
+              />
+              <p>
+                {t('criticism.preview', {
+                  stars,
+                  amount: euro(deduct),
+                  remaining: euro(data.payable_bonus_cents - deduct),
+                })}
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(event) => setConfirmed(event.target.checked)}
+                />{' '}
+                {t('criticism.confirm')}
+              </label>
+              {save.isError && <Alert>{errorMessage(t, save.error)}</Alert>}
+              {notice && <p role="status">{t('criticism.saved')}</p>}
+              <Button type="submit" disabled={save.isPending || !confirmed || !reason.trim()}>
+                {t('criticism.save')}
+              </Button>
+            </form>
+          )}
+          {mode !== 'criticism' && !data.closed && (
             <div className="mt-6 flex flex-col gap-3 border-t pt-4">
               <p>{t('criticism.close_hint')}</p>
               <label>
@@ -224,77 +240,78 @@ export function CriticismPanel({ memberId }: { memberId: number }) {
               </Button>
             </div>
           )}
-          <details className="mt-6 border-t pt-4">
-            <summary className="cursor-pointer font-bold">{t('criticism.history')}</summary>
-            {history.isError && <Alert>{errorMessage(t, history.error)}</Alert>}
-            <ul className="flex flex-col gap-4 pt-3">
-              {history.data?.map((entry) => (
-                <li key={entry.id}>
-                  <p>
-                    {entry.effective_date} · {entry.title}
-                  </p>
-                  <p>
-                    {t('criticism.record', {
-                      stars: entry.xp_penalty_applied,
-                      amount: euro(entry.money_penalty_cents),
-                    })}
-                  </p>
-                  {entry.reversed ? (
+          {mode !== 'money' && (
+            <details className="mt-6 border-t pt-4">
+              <summary className="cursor-pointer font-bold">{t('criticism.history')}</summary>
+              {history.isError && <Alert>{errorMessage(t, history.error)}</Alert>}
+              <ul className="flex flex-col gap-4 pt-3">
+                {history.data?.map((entry) => (
+                  <li key={entry.id}>
                     <p>
-                      {t('criticism.reversed')} · {entry.reversal_note}
+                      {entry.effective_date} · {entry.title}
                     </p>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setReversing(entry.id)
-                        setCorrection('')
-                        setReversalConfirmed(false)
-                      }}
-                    >
-                      {t('criticism.reverse')}
-                    </Button>
-                  )}
-                  {reversing === entry.id && !entry.reversed && (
-                    <div className="flex flex-col gap-3 pt-2">
-                      <TextField
-                        label={t('criticism.correction_reason')}
-                        value={correction}
-                        maxLength={500}
-                        onChange={(event) => {
-                          setCorrection(event.target.value)
+                    <p>
+                      {t('criticism.record', {
+                        stars: entry.xp_penalty_applied,
+                        amount: euro(entry.money_penalty_cents),
+                      })}
+                    </p>
+                    {entry.reversed ? (
+                      <p>
+                        {t('criticism.reversed')} · {entry.reversal_note}
+                      </p>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setReversing(entry.id)
+                          setCorrection('')
                           setReversalConfirmed(false)
                         }}
-                      />
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={reversalConfirmed}
-                          onChange={(event) => setReversalConfirmed(event.target.checked)}
-                        />{' '}
-                        {t('criticism.reverse_confirm')}
-                      </label>
-                      {reverse.isError && <Alert>{errorMessage(t, reverse.error)}</Alert>}
-                      <Button
-                        disabled={!reversalConfirmed || !correction.trim() || reverse.isPending}
-                        onClick={() =>
-                          reverse.mutate(
-                            { id: entry.id, reason: correction.trim() },
-                            {
-                              onSuccess: () => setReversing(null),
-                            },
-                          )
-                        }
                       >
-                        {t('criticism.reverse_save')}
+                        {t('criticism.reverse')}
                       </Button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </details>
-          <AllowanceSettings memberId={memberId} />
+                    )}
+                    {reversing === entry.id && !entry.reversed && (
+                      <div className="flex flex-col gap-3 pt-2">
+                        <TextField
+                          label={t('criticism.correction_reason')}
+                          value={correction}
+                          maxLength={500}
+                          onChange={(event) => {
+                            setCorrection(event.target.value)
+                            setReversalConfirmed(false)
+                          }}
+                        />
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={reversalConfirmed}
+                            onChange={(event) => setReversalConfirmed(event.target.checked)}
+                          />{' '}
+                          {t('criticism.reverse_confirm')}
+                        </label>
+                        {reverse.isError && <Alert>{errorMessage(t, reverse.error)}</Alert>}
+                        <Button
+                          disabled={!reversalConfirmed || !correction.trim() || reverse.isPending}
+                          onClick={() =>
+                            reverse.mutate(
+                              { id: entry.id, reason: correction.trim() },
+                              {
+                                onSuccess: () => setReversing(null),
+                              },
+                            )
+                          }
+                        >
+                          {t('criticism.reverse_save')}
+                        </Button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </>
       )}
     </Section>

@@ -140,6 +140,28 @@ describe('Putzplan im Elternbereich', () => {
     expect(calls.map((call) => call.key)).toContain('DELETE /api/chores/rooms/1')
   })
 
+  it('lässt XP vollständig löschen und durch eine neue Zahl ersetzen', async () => {
+    const user = userEvent.setup()
+    const calls = api()
+    renderApp('/parents/household')
+
+    await user.click(await screen.findByRole('button', { name: 'Toilette putzen bearbeiten' }))
+    const adult = screen.getByRole('spinbutton', { name: 'Erwachsenen-XP' })
+    await user.clear(adult)
+    expect(adult).toHaveValue(null)
+    await user.type(adult, '5')
+    expect(adult).toHaveValue(5)
+    await user.click(screen.getByRole('switch', { name: 'Für Kinder verfügbar' }))
+    const child = screen.getByRole('spinbutton', { name: 'Kinder-XP' })
+    await user.clear(child)
+    expect(child).toHaveValue(null)
+    await user.type(child, '5')
+    expect(child).toHaveValue(5)
+    await user.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(await screen.findByText('„Toilette putzen“ ist gespeichert.')).toBeVisible()
+    expect(bodyOf(calls, 'PUT /api/chores/1')).toMatchObject({ adult_xp: 5, child_xp: 5 })
+  })
+
   it('legt eine Aufgabe mit eigenem Abstand und Stand an', async () => {
     const user = userEvent.setup()
     const calls = api()

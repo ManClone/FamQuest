@@ -1,25 +1,42 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useConfirmedChores, undoConfirmedChore, useApprovalMutation } from '../../api/approvals'
+import {
+  useConfirmedChores,
+  useConfirmedTasks,
+  undoConfirmedTask,
+  undoConfirmedChore,
+  useApprovalMutation,
+} from '../../api/approvals'
 import type { Member } from '../../api/members'
 import { TaskIcon } from '../../components/TaskIcon'
 import { Alert, Button } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { formatLongDate } from '../../weekdays'
 
-export function ConfirmedChores({ members }: { members: Member[] }) {
+export function ConfirmedChores({
+  members,
+  memberId,
+  source = 'chore',
+}: {
+  members: Member[]
+  memberId?: number
+  source?: 'chore' | 'task'
+}) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<number>()
-  const history = useConfirmedChores(open)
-  const undo = useApprovalMutation(undoConfirmedChore)
+  const chores = useConfirmedChores(open && source === 'chore', memberId)
+  const tasks = useConfirmedTasks(open && source === 'task', memberId)
+  const history = source === 'task' ? tasks : chores
+  const undo = useApprovalMutation(source === 'task' ? undoConfirmedTask : undoConfirmedChore)
+  const title = t(source === 'task' ? 'family_account.completed_tasks' : 'chore_history.title')
   const items = history.data?.pages.flatMap((page) => page.items) ?? []
   return (
     <details
       onToggle={(event) => setOpen(event.currentTarget.open)}
       className="rounded-2xl border border-slate-200 bg-white p-3"
     >
-      <summary className="cursor-pointer py-2 font-bold">{t('chore_history.title')}</summary>
+      <summary className="cursor-pointer py-2 font-bold">{title}</summary>
       {open && (
         <div className="mt-2 flex flex-col gap-3">
           <p className="text-sm text-slate-500">{t('chore_history.intro')}</p>
@@ -29,7 +46,7 @@ export function ConfirmedChores({ members }: { members: Member[] }) {
           {history.isSuccess && items.length === 0 && <p>{t('chore_history.empty')}</p>}
           <div
             role="region"
-            aria-label={t('chore_history.title')}
+            aria-label={title}
             tabIndex={0}
             className="max-h-[min(60dvh,24rem)] overflow-y-auto overscroll-contain pr-2 [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:outline-orange-400"
           >
@@ -62,7 +79,7 @@ export function ConfirmedChores({ members }: { members: Member[] }) {
                     </Button>
                   ) : (
                     <div className="w-full">
-                      <p className="mb-2 font-semibold">{t('chore_history.confirm')}</p>
+                      <p className="mb-2 font-semibold">{t('family_account.undo_confirm')}</p>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="danger"

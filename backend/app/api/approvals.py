@@ -199,6 +199,7 @@ def confirmed_chores(
     _: ParentSession,
     db: DbSession,
     before: int | None = Query(default=None, ge=1),
+    member_id: int | None = Query(default=None, ge=1),
 ) -> dict:
     """Confirmed household executions, newest first, including earlier days."""
     query = (
@@ -211,6 +212,8 @@ def confirmed_chores(
     )
     if before is not None:
         query = query.where(ChoreCompletion.id < before)
+    if member_id is not None:
+        query = query.where(ChoreCompletion.member_id == member_id)
     rows = list(db.execute(query))
     return {
         "items": [
@@ -251,5 +254,90 @@ def undo_confirmed_chore(completion_id: int, auth: ParentSession, db: DbSession)
     if not completion.approved:
         raise ApiError(status.HTTP_409_CONFLICT, "approval.not_found")
     _reverse_chore_credits(db, [completion], chore.title)
+    db.delete(completion)
+    db.commit()
+
+
+@router.get("/approvals/confirmed")
+def confirmed_tasks(
+    _: ParentSession,
+    db: DbSession,
+    before: int | None = Query(default=None, ge=1),
+    member_id: int | None = Query(default=None, ge=1),
+) -> dict:
+    """Confirmed child tasks, paginated and filtered before applying the limit."""
+    query = (
+        select(TaskCompletion, Task)
+        .join(Task)
+        .where(TaskCompletion.approved_at.is_not(None))
+        .order_by(TaskCompletion.id.desc())
+        .limit(51)
+    )
+    if before is not None:
+        query = query.where(TaskCompletion.id < before)
+    if member_id is not None:
+        query = query.where(TaskCompletion.member_id == member_id)
+    rows = list(db.execute(query))
+    return {
+        "items": [
+            ApprovalOut(
+                id=c.id,
+                task_id=task.id,
+                title=task.title,
+                icon=task.icon,
+                points=c.points,
+                member_id=c.member_id,
+                date=c.date,
+                completed_at=c.completed_at,
+            )
+            for c, task in rows[:50]
+        ],
+        "has_more": len(rows) > 50,
+    }
+
+
+@router.delete("/approvals/{completion_id}/confirmed", status_code=204)
+def undo_confirmed_task(completion_id: int, auth: ParentSession, db: DbSession) -> None:
+    """Reverse exactly one execution using its original point and bonus snapshots."""
+    from app.points import lock_member
+
+    old = db.get(TaskCompletion, completion_id)
+    if old is None:
+        return
+    # Same task lock as completion creation; refresh after waiting for concurrent actions.
+    task_id = old.task_id
+    task = db.scalar(select(Task).where(Task.id == task_id).with_for_update())
+    completion = db.scalar(
+        select(TaskCompletion)
+        .where(TaskCompletion.id == completion_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if completion is None:
+        return
+    if completion.approved_at is None:
+        raise ApiError(409, "approval.not_found")
+    if db.info.get("mcp_request") and completion.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
+    lock_member(db, completion.member_id)
+    title = task.title if task else "Aufgabe"
+    book(
+        db,
+        completion.member_id,
+        -completion.points,
+        "task_undone",
+        reason=title,
+        task_id=task_id,
+        task_date=completion.date,
+        user_id=auth.user_id,
+    )
+    book_money(
+        db,
+        completion.member_id,
+        -completion.money_cents,
+        "task_undone",
+        title,
+        completion.id,
+    )
     db.delete(completion)
     db.commit()
