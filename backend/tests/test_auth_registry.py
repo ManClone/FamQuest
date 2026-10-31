@@ -16,6 +16,8 @@ def test_auth_registry_is_separate_from_legacy_metadata():
         "memberships",
         "oauth_clients",
         "oauth_authorization_codes",
+        "oauth_grants",
+        "oauth_tokens",
     }
     assert not set(AuthBase.metadata.tables).intersection(Base.metadata.tables)
 
