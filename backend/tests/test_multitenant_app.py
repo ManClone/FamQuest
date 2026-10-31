@@ -127,6 +127,31 @@ def login(client, name):
     return result.json()
 
 
+def test_oauth_consent_requires_current_family_local_actor(environment):
+    from app.auth_registry import OAuthClient
+    from tests.test_oauth_http import parameters
+
+    app, registry, router, _ = environment
+    with registry.session() as db:
+        db.add(
+            OAuthClient(
+                id="registered",
+                redirect_uri="https://client.example.invalid/callback",
+                enabled=True,
+            )
+        )
+        db.commit()
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as client:
+        login(client, "Sertl")
+        assert client.get("/authorize", params=parameters()).status_code == 200
+        with Session(router.engines["famquest_sertl"]) as db:
+            db.get(User, 1).role = "child"
+            db.commit()
+        denied = client.get("/authorize", params=parameters())
+        assert denied.status_code == 403
+        assert "location" not in denied.headers
+
+
 def test_login_matches_existing_frontend_and_binds_family_local_actor(environment):
     app, _, _, _ = environment
     with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as client:

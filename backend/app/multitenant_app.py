@@ -1,7 +1,7 @@
 """Integrated staging app: central authentication selects every business DB.
 
-Not selected by the production entrypoint yet. OAuth HTTP, write deduplication
-and per-family schedulers remain explicit release gates.
+Not selected by the production entrypoint yet. MCP transport integration,
+write deduplication and per-family schedulers remain explicit release gates.
 """
 
 from collections.abc import Iterator
@@ -108,6 +108,9 @@ def create_app(
     app.state.auth_registry = registry
     app.state.family_router = router
     app.state.multitenant = True
+    from app.oauth_http import install_oauth_routes
+
+    install_oauth_routes(app, registry, settings, validate_family=render_me)
     original_lifespan = app.router.lifespan_context
 
     @asynccontextmanager

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     quest_import_token: str = ""
     mcp_service_token: str = ""
+    oauth_dynamic_registration: bool = False
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "famquest"

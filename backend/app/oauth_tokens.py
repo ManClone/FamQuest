@@ -1,4 +1,4 @@
-"""MCP token lifecycle, not yet exposed through HTTP or legacy MCP.
+"""MCP token lifecycle used by the integrated staging authorization server.
 
 All mutations own their auth-DB transaction. In particular refresh-token reuse
 must persist revocation even though the caller receives an authorization error.
