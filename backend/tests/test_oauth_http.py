@@ -2,12 +2,14 @@
 
 import base64
 import hashlib
+from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
-from app.auth_registry import OAuthClient, Tenant
+from app.auth_registry import BrowserSession, OAuthClient, Tenant
 from app.central_auth import create_app
 from app.config import Settings
 from app.oauth_http import install_oauth_routes
@@ -178,6 +180,19 @@ def test_disabled_family_and_malformed_requests(client, registry):
         )
         assert response.status_code == 400
     assert client.post("/token", json={}).status_code == 400
+
+
+def test_expired_browser_session_can_sign_in_again_without_losing_client_state(client, registry):
+    login(client)
+    with registry.session() as db:
+        db.scalar(select(BrowserSession)).expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.commit()
+    response = client.get("/authorize", params=parameters())
+    assert response.status_code == 303
+    target = parse_qs(urlsplit(response.headers["location"]).query)["next"][0]
+    assert parse_qs(urlsplit(target).query)["state"] == [parameters()["state"]]
+    login(client)
+    assert client.get("/authorize", params=parameters()).status_code == 200
 
 
 def test_dynamic_registration_is_explicit_and_exact(registry):

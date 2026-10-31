@@ -23,6 +23,10 @@ SCOPE = "famquest:parent"
 HEADERS = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 
 
+class ParentConsentDenied(PermissionError):
+    pass
+
+
 def oauth_error(code: str, status: int = 400):
     return JSONResponse({"error": code}, status_code=status, headers=HEADERS)
 
@@ -178,7 +182,7 @@ def install_oauth_routes(app, registry, settings, *, validate_family=None):
             db, request.cookies.get(COOKIE_NAME), csrf_token=csrf, writing=writing
         )
         if principal.role not in {"admin", "parent"}:
-            raise PermissionError("Parent required")
+            raise ParentConsentDenied("Parent required")
         if validate_family is not None:
             validate_family(db, session, principal)
         return session, principal
@@ -195,9 +199,9 @@ def install_oauth_routes(app, registry, settings, *, validate_family=None):
                 return oauth_error("invalid_request")
             try:
                 session, principal = browser(db, request)
+            except ParentConsentDenied:
+                return oauth_error("access_denied", 403)
             except PermissionError:
-                if request.cookies.get(COOKIE_NAME):
-                    return oauth_error("access_denied", 403)
                 return RedirectResponse(
                     "/login?" + urlencode({"next": "/authorize?" + urlencode(values)}),
                     status_code=303,
