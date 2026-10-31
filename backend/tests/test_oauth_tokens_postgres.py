@@ -10,11 +10,13 @@ from alembic.config import Config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.auth_registry import Identity, Membership, OAuthClient, Tenant
+from app.auth_registry import BrowserSession, Identity, Membership, OAuthClient, Tenant
+from app.browser_sessions import change_browser_password, login_browser
 from app.config import Settings
 from app.oauth_codes import consume_code, issue_code
 from app.oauth_pkce import s256_challenge
 from app.oauth_tokens import authenticate_access, rotate_refresh
+from app.security import hash_secret, verify_secret
 from tests.test_oauth_tokens import AUDIENCE, REDIRECT, pair
 
 
@@ -95,3 +97,33 @@ def test_refresh_replay_revokes_concurrent_winner(auth_engine):
     assert len(winners) == 1
     with Session(auth_engine) as db, pytest.raises(PermissionError):
         authenticate_access(db, winners[0].access_token, audience=AUDIENCE)
+
+
+def test_concurrent_password_changes_revoke_all_sessions_once(auth_engine):
+    from sqlalchemy import select
+
+    password = "old-test-password-123"
+    with Session(auth_engine) as db:
+        db.get(Identity, 1).password_hash = hash_secret(password)
+        db.commit()
+        credentials = []
+        for _ in range(2):
+            raw, session = login_browser(db, "parent@example.invalid", password)
+            credentials.append((raw, session.csrf_token))
+            db.commit()
+
+    def change(credential):
+        raw, csrf = credential
+        with Session(auth_engine) as db:
+            try:
+                change_browser_password(db, raw, csrf, password, "new-test-password-123")
+                db.commit()
+                return True
+            except PermissionError:
+                return False
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert list(pool.map(change, credentials)).count(True) == 1
+    with Session(auth_engine) as db:
+        assert db.scalar(select(BrowserSession)) is None
+        assert verify_secret(db.get(Identity, 1).password_hash, "new-test-password-123")

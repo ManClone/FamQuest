@@ -20,17 +20,25 @@ interface ChoreShareProps {
  */
 export function ChoreShare({ shares, days, compact = false }: ChoreShareProps) {
   const { t } = useTranslation()
+  const parents = shares.filter((share) => share.member.role === 'parent')
+  const hasTime = parents.some((share) => share.minutes > 0)
   const legend = (share: CareSegment) =>
-    t('care.legend', { name: share.member.name, percent: share.percent, count: share.done })
+    share.member.role !== 'parent'
+      ? t('care.child_legend', { name: share.member.name, count: share.count })
+      : t('care.time_legend', {
+          name: share.member.name,
+          percent: share.percent,
+          minutes: share.minutes,
+        })
   const period = t('care.period', { days })
 
   const bar = (
     <span
       role="img"
-      aria-label={`${t('care.title')} (${period}): ${shares.map(legend).join('; ')}`}
+      aria-label={`${t('care.parent_time')} (${period}): ${parents.map(legend).join('; ')}`}
       className={`flex w-full overflow-hidden rounded-full bg-slate-200 shadow-inner ${compact ? 'h-3' : 'h-6'}`}
     >
-      {shares.map((share) => (
+      {parents.map((share) => (
         <span
           key={share.member.id}
           className="block h-full transition-[width] duration-500 motion-reduce:transition-none"
@@ -45,8 +53,12 @@ export function ChoreShare({ shares, days, compact = false }: ChoreShareProps) {
 
   if (compact) {
     return (
-      <div className="flex w-full max-w-72 flex-col gap-1">
-        {bar}
+      <div
+        className="flex w-full max-w-72 flex-col gap-1"
+        role="group"
+        aria-label={`${t('care.title')} (${period}): ${shares.map(legend).join('; ')}`}
+      >
+        {hasTime && bar}
         <ul
           aria-hidden="true"
           className="flex h-9 flex-wrap justify-center gap-x-3 overflow-hidden"
@@ -60,7 +72,9 @@ export function ChoreShare({ shares, days, compact = false }: ChoreShareProps) {
                 size="xs"
               />
               <span className="text-base font-extrabold text-slate-700 tabular-nums">
-                {t('care.percent', { percent: share.percent })}
+                {share.member.role === 'parent'
+                  ? t('care.minutes', { minutes: share.minutes })
+                  : t('care.child_count', { count: share.count })}
               </span>
             </li>
           ))}
@@ -78,7 +92,8 @@ export function ChoreShare({ shares, days, compact = false }: ChoreShareProps) {
         <span className="text-2xl font-extrabold text-slate-800">{t('care.title')}</span>
         <span className="text-lg font-bold text-slate-500">{period}</span>
       </h2>
-      {bar}
+      {hasTime && <p className="text-sm font-semibold text-slate-600">{t('care.parent_time')}</p>}
+      {hasTime && bar}
       <ul className="flex flex-wrap gap-x-6 gap-y-2">
         {shares.map((share) => (
           <li key={share.member.id} className="flex items-center gap-2">
@@ -92,13 +107,20 @@ export function ChoreShare({ shares, days, compact = false }: ChoreShareProps) {
             <span aria-hidden="true" className="flex flex-col leading-tight">
               <span className="text-lg font-extrabold text-slate-800">{share.member.name}</span>
               <span className="text-base font-bold text-slate-600 tabular-nums">
-                {t('care.percent', { percent: share.percent })} ·{' '}
-                {t('care.count', { count: share.done })}
+                {share.member.role === 'parent' ? (
+                  <>
+                    {t('care.minutes', { minutes: share.minutes })} ·{' '}
+                    {t('care.percent', { percent: share.percent })}
+                  </>
+                ) : (
+                  t('care.child_count', { count: share.count })
+                )}
               </span>
             </span>
           </li>
         ))}
       </ul>
+      {hasTime && <p className="text-sm text-slate-500">{t('care.time_basis')}</p>}
     </section>
   )
 }

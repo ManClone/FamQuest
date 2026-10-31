@@ -744,6 +744,8 @@ class ChoreCompletion(Base):
 
     approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     points: Mapped[int] = mapped_column(default=0, server_default="0")
+    # Snapshot; NULL for historical executions whose old time estimate is unknown.
+    estimated_minutes: Mapped[int | None] = mapped_column(SmallInteger)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))

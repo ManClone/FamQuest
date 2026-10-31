@@ -604,7 +604,15 @@
     "choose_member": "Choose a family member"
   },
   "care": {
-    "title": "Who did it?",
+    "time_legend": "{{name}}: {{minutes}} estimated min ({{percent}}%)",
+    "minutes": "{{minutes}} min",
+    "time_basis": "Estimated time from household task durations. Older executions use today's task estimate. One-off to-dos without a duration are not included.",
+    "title": "Household overview",
+    "parent_time": "Parents: estimated time",
+    "child_legend_one": "{{name}}: {{count}} task completed",
+    "child_legend_other": "{{name}}: {{count}} tasks completed",
+    "child_count_one": "{{count}} task",
+    "child_count_other": "{{count}} tasks",
     "period": "last {{days}} days",
     "legend_one": "{{name}}: {{percent}}% ({{count}} time)",
     "legend_other": "{{name}}: {{percent}}% ({{count}} times)",
