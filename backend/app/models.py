@@ -855,6 +855,17 @@ class ConsequenceEntry(Base):
 
     __tablename__ = "consequence_entries"
     __table_args__ = (
+        CheckConstraint(
+            "severity IS NULL OR "
+            "(severity = 'conversation' AND xp_penalty_requested = 0 "
+            "AND money_penalty_cents = 0) OR "
+            "(severity = 'light' AND xp_penalty_requested = 1 AND money_penalty_cents = 0) OR "
+            "(severity = 'heavy' AND xp_penalty_requested = 2 "
+            "AND money_penalty_cents IN (0,50)) OR "
+            "(severity = 'severe' AND xp_penalty_requested = 3 AND money_penalty_cents IN (0,100))",
+            name="criticism_fixed_levels",
+        ),
+        UniqueConstraint("created_by_user_id", "request_key", name="uq_criticism_actor_request"),
         CheckConstraint("money_penalty_cents >= 0", name="consequence_entry_money_nonnegative"),
         CheckConstraint("xp_penalty_requested >= 0", name="consequence_entry_xp_nonnegative"),
         CheckConstraint("xp_penalty_applied >= 0", name="consequence_entry_applied_nonnegative"),
@@ -872,6 +883,11 @@ class ConsequenceEntry(Base):
         ForeignKey("consequence_presets.id", ondelete="SET NULL")
     )
     title: Mapped[str] = mapped_column(String(100))
+    severity: Mapped[str | None] = mapped_column(String(20))
+    request_key: Mapped[str | None] = mapped_column(String(32))
+    star_transaction_id: Mapped[int | None] = mapped_column(
+        ForeignKey("point_transactions.id", ondelete="SET NULL")
+    )
     note: Mapped[str | None] = mapped_column(String(500))
     effective_date: Mapped[dt.date] = mapped_column(Date, index=True)
     money_penalty_cents: Mapped[int]
@@ -886,6 +902,33 @@ class ConsequenceEntry(Base):
     )
     reversal_note: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BonusWeekClose(Base):
+    """Immutable parent-confirmed weekly statement; never an instruction to a bank."""
+
+    __tablename__ = "bonus_week_closes"
+    __table_args__ = (
+        CheckConstraint(
+            "allowance_cents >= 0 AND earned_bonus_cents >= 0 AND penalty_cents >= 0 "
+            "AND payable_bonus_cents >= 0",
+            name="closed_week_nonnegative",
+        ),
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), primary_key=True
+    )
+    week_start: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    allowance_cents: Mapped[int]
+    earned_bonus_cents: Mapped[int]
+    penalty_cents: Mapped[int]
+    payable_bonus_cents: Mapped[int]
+    confirmed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    confirmed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class Praise(Base):

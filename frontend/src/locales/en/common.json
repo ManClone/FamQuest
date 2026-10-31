@@ -371,7 +371,9 @@
     "kind_penalty_reversed": "Star deduction reversed",
     "kind_manual_reversed": "Manual booking reversed",
     "reversed": "Reversed · correction #{{id}}",
-    "compensates": "Compensation for booking #{{id}}"
+    "compensates": "Compensation for booking #{{id}}",
+    "kind_consequence": "Criticism",
+    "kind_consequence_reversed": "Criticism reversed"
   },
   "errors": {
     "common": {
@@ -550,6 +552,14 @@
       "operation_forbidden": "This operation is not available through MCP.",
       "parent_confirmation_required": "This decision requires explicit parent confirmation.",
       "parent_required": "MCP must be linked to an existing parent account."
+    },
+    "criticism": {
+      "current_week_required": "Record criticism only for the current week; future dates are not permitted.",
+      "bonus_protected": "This deduction is not allowed. A positive unpaid weekly bonus must remain.",
+      "week_closed": "This week is already closed or recorded as paid.",
+      "statement_changed": "The statement changed. Review and confirm it again.",
+      "use_levels": "Use the fixed criticism levels for star deductions.",
+      "request_conflict": "This request was already used for a different decision. Check the current state."
     }
   },
   "rewards": {
@@ -1199,5 +1209,37 @@
     "compensation_review": "Later credits may already compensate this deduction. Review before refunding.",
     "compensation_unrelated": "I checked: these credits are unrelated to this deduction.",
     "existing_compensation": "Link an existing compensation (optional)"
+  },
+  "criticism": {
+    "title": "Criticism and weekly bonus",
+    "protection": "Stars, level XP and euros remain separate. Base allowance and bank balances are never reduced.",
+    "allowance": "Booked base allowance",
+    "earned": "Earned weekly bonuses",
+    "deductions": "Confirmed bonus deductions",
+    "remaining": "Remaining weekly bonus",
+    "total": "Total weekly statement",
+    "closed": "This weekly statement is closed. Further monetary deductions are blocked.",
+    "review": "Supporting records changed after closure. The confirmed statement stays unchanged. Review the change separately; no automatic repayment claim or additional payment is created.",
+    "level": "Criticism level",
+    "conversation": "Conversation / making amends – no deduction",
+    "light": "Light – 1 star, no money",
+    "heavy": "Serious – 2 stars, optional €0.50 bonus deduction",
+    "severe": "Very serious – 3 stars, optional €1.00 bonus deduction",
+    "optional_money": "Also deduct {{amount}} from the unpaid weekly bonus (a positive remainder is required)",
+    "reason": "Brief reason",
+    "preview": "Deduction: {{stars}} stars and {{amount}} bonus. The remaining weekly bonus is {{remaining}}.",
+    "confirm": "I confirm this specific decision and reason.",
+    "save": "Save decision",
+    "saved": "Decision saved.",
+    "close_hint": "Only close an actually confirmed weekly statement. This does not initiate a transfer. Later changes are shown for separate review.",
+    "paid_confirm": "I confirm the {{amount}} statement as paid or conclusively settled.",
+    "close": "Permanently close weekly statement",
+    "history": "Decisions and corrections",
+    "record": "{{stars}} stars · {{amount}} bonus deduction",
+    "reversed": "Reversed",
+    "reverse": "Prepare correction",
+    "correction_reason": "Reason for correction",
+    "reverse_confirm": "I confirm reversing this decision.",
+    "reverse_save": "Save reversal"
   }
 }

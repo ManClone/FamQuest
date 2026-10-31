@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -43,6 +45,8 @@ jobs:
       POSTGRES_DB: famquest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
         working-directory: backend
@@ -50,12 +54,16 @@ jobs:
         working-directory: backend
       - run: uv run alembic heads
         working-directory: backend
+      - run: uv run ruff check . && uv run ruff format --check .
+        working-directory: backend
       - run: uv run pytest
         working-directory: backend
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - run: docker build --target runtime -t famquest:ci .
       - name: Verify non-root runtime permissions
         run: >-
@@ -69,6 +77,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: astral-sh/setup-uv@v6
       - run: uv python install 3.12
       - run: uv venv --python 3.12 mcp/.venv
@@ -76,3 +86,40 @@ jobs:
       - run: .venv/bin/python -m unittest discover -s tests -v
         working-directory: mcp
       - run: docker build -t famquest-mcp:ci mcp
+  publish-test-images:
+    # Only this repository's explicitly authorized draft branch may publish test
+    # images. Fork PRs cannot reach package credentials. Never touch :latest.
+    needs: [frontend, backend, docker, mcp]
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'feature/multifamily-foundation'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish verified application test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          push: true
+          tags: ghcr.io/manclone/famquest:test-${{ github.event.pull_request.head.sha }}
+          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+      - name: Publish verified central MCP test image
+        uses: docker/build-push-action@v6
+        with:
+          context: mcp
+          push: true
+          tags: ghcr.io/manclone/famquest-mcp:test-${{ github.event.pull_request.head.sha }}
+          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}

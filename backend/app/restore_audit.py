@@ -20,8 +20,7 @@ def business_columns(table):
         column.name
         for column in table.columns
         if not any(part in column.name.lower() for part in ("password", "token", "secret"))
-        and not column.name.lower().startswith("pin_")
-        and not column.name.lower().endswith("_pin")
+        and "pin" not in column.name.lower().split("_")
     ]
 
 

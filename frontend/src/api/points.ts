@@ -15,6 +15,8 @@ export type PointKind =
   | 'chore_undone'
   | 'penalty_reversed'
   | 'manual_reversed'
+  | 'consequence'
+  | 'consequence_reversed'
 
 export interface PointTransaction {
   id: number
