@@ -44,3 +44,28 @@ werden. Die bisherige produktive Kalenderkonfiguration wurde nicht verändert.
 Die Migrations-/Restore-Probe, der Datenvergleich und die Bonusregel-Abnahme
 bleiben vor dem produktiven Einsatz erforderlich. Diese Dateien sind eine
 Vorbereitung und kein Nachweis einer bereits erfolgten QNAP-Umstellung.
+
+## Wiederhergestellte Kopien vergleichen
+
+`python -m app.restore_audit` vergleicht zwei isolierte Familien-Datenbanken und
+ihre Upload-Verzeichnisse. Die Verbindungen kommen aus `SOURCE_DATABASE_URL`
+und `TARGET_DATABASE_URL`, die Verzeichnisse aus `SOURCE_UPLOAD_DIR` und
+`TARGET_UPLOAD_DIR`. Keine Verbindungsgeheimnisse als Prozessargumente übergeben.
+PostgreSQL-Vergleiche verwenden nur lesende, wiederholbare Transaktionen.
+
+Bestehende fachliche Spalten und Zeilen werden vollständig verglichen;
+zusätzliche Migrationsspalten sind zulässig. Sitzungen, Auftragsergebnisse und
+lokale Passwort-/Token-/PIN-Felder sind ausdrücklich ausgeschlossen. Deren
+korrekte zentrale Übernahme und Entfernung muss separat geprüft werden.
+Dateien werden nach relativem Pfad, Größe und Inhalts-Hash verglichen;
+symbolische Verknüpfungen werden verweigert. Der Bericht enthält keine
+privaten Zeileninhalte, Dateiinhalte, Hashes von Zugangsdaten oder URLs.
+Er ersetzt weder einen erfolgreichen pg_restore-Lauf noch eine konsistente
+Sicherung. Beide Kopien müssen während der Prüfung unverändert bleiben.
+
+Lesender NAS-Befund über Home-MCP-Hub: Im FamQuest-Ordner liegt die Datei
+`famquest-backup-before-ghcr.dump` vom 28. Oktober. Ein passendes
+`uploads-…`-Archiv wurde bei der gezielten rekursiven Suche in diesem Ordner
+nicht gefunden. Der vorhandene Upload-Ordner ist eine Live-Ablage und kein
+Nachweis einer zum Dump passenden Sicherung. Inhalt, Wiederherstellbarkeit und
+Vollständigkeit des Dumps sind noch ungeprüft. Es wurde nichts am NAS verändert.
