@@ -144,9 +144,6 @@ def create_app(
                     and request.headers.get("x-mcp-parent-confirmed") != "true"
                 ):
                     raise ApiError(409, "mcp.parent_confirmation_required")
-                if request.method != "GET":
-                    # Enable only after central gateway write deduplication is integrated.
-                    raise ApiError(503, "mcp.central_gateway_required")
                 return principal, ""
             session, principal = authenticate_browser(
                 db,
@@ -158,6 +155,10 @@ def create_app(
 
     @app.middleware("http")
     async def bind_family(request: Request, call_next):
+        # This middleware may replay a stored result without entering the inner
+        # browser boundary, so enforce the configured host before reservation/replay.
+        if f"{request.url.scheme}://{request.url.netloc}" != settings.public_url.rstrip("/"):
+            return JSONResponse({"code": "auth.csrf_failed"}, status_code=403)
         path = request.url.path
         if not path.startswith("/api/") or path in {
             "/api/auth/login",
@@ -183,7 +184,15 @@ def create_app(
         storage = settings.upload_dir / "families" / str(principal.tenant_id)
         token = tenant_upload_root.set(storage)
         try:
+            if request.headers.get("authorization", "").startswith("Bearer ") and (
+                request.method not in auth.SAFE_METHODS
+            ):
+                from app.mcp_actions import execute
+
+                return await execute(request, call_next, family_session, principal, local_actor)
             return await call_next(request)
+        except ApiError as exc:
+            return JSONResponse({"code": exc.code}, status_code=exc.status_code)
         finally:
             tenant_upload_root.reset(token)
 
@@ -297,5 +306,55 @@ def create_app(
     @app.get("/api/internal/mcp/schema", include_in_schema=False)
     def mcp_schema(_: auth.ParentSession):
         return tool_schema(app.openapi())
+
+    @app.get("/.well-known/famquest-mcp-tools", include_in_schema=False)
+    def public_mcp_schema():
+        # Definitions only: no family records, accounts, credentials or internal routes.
+        spec = tool_schema(app.openapi())
+        return spec
+
+    @app.get("/api/internal/mcp/context", include_in_schema=False)
+    def mcp_context(request: Request, _: auth.ParentSession):
+        from datetime import UTC
+
+        from app.auth_registry import OAuthGrant, OAuthToken
+        from app.security import token_hash
+
+        authorization = request.headers.get("authorization", "")
+        if not authorization.startswith("Bearer "):
+            raise ApiError(401, "auth.not_authenticated")
+        with registry.session() as control:
+            principal = authenticate_access(
+                control, authorization[7:], audience=settings.public_url.rstrip("/") + "/mcp"
+            )
+            token = control.get(OAuthToken, token_hash(authorization[7:]))
+            grant = control.get(OAuthGrant, token.grant_id)
+            expires = token.expires_at
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=UTC)
+            return {
+                "identity_id": principal.identity_id,
+                "tenant_id": principal.tenant_id,
+                "parent_user_id": principal.family_user_id,
+                "role": principal.role,
+                "client_id": grant.client_id,
+                "resource": grant.audience,
+                "expires_at": int(expires.timestamp()),
+                "scopes": ["famquest:parent"],
+            }
+
+    # Register before the SPA fallback, so unknown API requests never return HTML.
+    @app.api_route(
+        "/api/{path:path}",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        include_in_schema=False,
+    )
+    def api_not_found(path: str):
+        return JSONResponse({"code": "common.not_found"}, status_code=404)
+
+    if settings.static_dir is not None:
+        from app.frontend import mount_frontend
+
+        mount_frontend(app, settings.static_dir)
 
     return app

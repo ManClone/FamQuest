@@ -1,13 +1,10 @@
 import asyncio
-import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from datetime import timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from app.api import (
     approvals,
@@ -44,6 +41,7 @@ from app.calendar_sync import run_periodically
 from app.config import Settings, get_settings
 from app.demo_mode import block_while_resetting, run_resets
 from app.errors import register_error_handlers
+from app.frontend import mount_frontend as _mount_frontend
 from app.logs import configure_logging
 from app.money import run_weekly_allowance_scheduler
 
@@ -131,24 +129,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _mount_frontend(app, settings.static_dir)
 
     return app
-
-
-# Python 3.12 kennt `.webp` nur, wenn das System eine mime.types mitbringt; im schlanken Image
-# fehlt sie, und das Logo käme sonst als `application/octet-stream`.
-mimetypes.add_type("image/webp", ".webp")
-
-
-def _mount_frontend(app: FastAPI, static_dir: Path) -> None:
-    """Liefert das gebaute Frontend aus; unbekannte Pfade gehen an index.html (SPA-Routing)."""
-    index = static_dir / "index.html"
-    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
-
-    @app.get("/{path:path}", include_in_schema=False)
-    def spa(path: str) -> FileResponse:
-        candidate = (static_dir / path).resolve()
-        if path and candidate.is_file() and candidate.is_relative_to(static_dir.resolve()):
-            return FileResponse(candidate)
-        return FileResponse(index)
 
 
 app = create_app()

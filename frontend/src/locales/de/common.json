@@ -542,6 +542,10 @@
       "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
     },
     "mcp": {
+      "request_key_required": "Für diese Aktion fehlt ein eindeutiger Auftragsschlüssel.",
+      "request_key_reused": "Dieser Auftragsschlüssel wurde bereits für eine andere Aktion verwendet.",
+      "request_too_large": "Die Assistenten-Anfrage ist zu groß.",
+      "outcome_unknown_check_state": "Das Ergebnis ist unklar. Bitte den aktuellen Stand prüfen, bevor die Aktion erneut beauftragt wird.",
       "central_gateway_required": "Schreibaktionen über den Assistenten sind hier noch nicht freigeschaltet.",
       "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
       "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",

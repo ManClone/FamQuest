@@ -54,7 +54,11 @@ Es werden keine fremden Client-Metadatenadressen abgerufen. Siehe
 `mcp-authorization-staging.md` für Grenzen und Prüfungen dieses zusätzlichen Standes.
 
 Der aktuelle Stand ist ein überprüfbarer Integrationszwischenstand, **kein
-Mehrfamilien-Produktivrelease**. Google-Neuanbindung und MCP-Schreibzugriffe
-sind noch absichtlich gesperrt. Automatische Scheduler werden
+Mehrfamilien-Produktivrelease**. Google-Neuanbindung ist noch absichtlich
+gesperrt. Der alternative zentrale MCP-Dienst und die family-lokale
+Auftragsreservierung sind jetzt integriert; die vollständige PostgreSQL-CI
+dieser zusätzlichen Änderungen steht noch aus. Der integrierte Server kann
+das konfigurierte gebaute Frontend samt Login ohne Legacy-App-Import ausliefern.
+Automatische Scheduler werden
 noch nicht gestartet. Die verbleibenden Implementierungen und der Restore-/Cutover-
 Probelauf sind vor einem Deployment abzuschließen. Siehe `legacy-settings-audit.md`.

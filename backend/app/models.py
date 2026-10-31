@@ -10,6 +10,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    LargeBinary,
     SmallInteger,
     String,
     Text,
@@ -22,6 +23,21 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+
+class McpAction(Base):
+    """Family-local retry record; central identity IDs are references, not credentials."""
+
+    __tablename__ = "mcp_actions"
+    identity_id: Mapped[int] = mapped_column(primary_key=True)
+    request_key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    status_code: Mapped[int | None] = mapped_column(SmallInteger)
+    response_body: Mapped[bytes | None] = mapped_column(LargeBinary)
+    content_type: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Family(Base):

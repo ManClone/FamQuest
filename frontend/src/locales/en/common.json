@@ -542,6 +542,10 @@
       "request_conflict": "This praise was already saved differently. Please reload."
     },
     "mcp": {
+      "request_key_required": "This action requires a unique request key.",
+      "request_key_reused": "This request key was already used for a different action.",
+      "request_too_large": "The assistant request is too large.",
+      "outcome_unknown_check_state": "The outcome is uncertain. Check the current state before requesting this action again.",
       "central_gateway_required": "Changes through the assistant are not available here yet.",
       "operation_forbidden": "This operation is not available through MCP.",
       "parent_confirmation_required": "This decision requires explicit parent confirmation.",
