@@ -10,7 +10,7 @@ def test_auth_registry_is_separate_from_legacy_metadata():
     from app.db import Base
 
     assert AuthBase.metadata is not Base.metadata
-    assert set(AuthBase.metadata.tables) == {"tenants", "identities", "memberships"}
+    assert set(AuthBase.metadata.tables) == {"tenants", "identities", "memberships", "oauth_clients", "oauth_authorization_codes"}
     assert not set(AuthBase.metadata.tables).intersection(Base.metadata.tables)
 
 
