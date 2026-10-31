@@ -397,6 +397,8 @@
       "password_mismatch": "The passwords don't match"
     },
     "auth": {
+      "central_account_setup_required": "Account management is not available here yet.",
+      "family_mapping_required": "Your account is not fully linked to this family yet. Please contact your family administrator.",
       "not_authenticated": "Please sign in",
       "invalid_credentials": "Email or password is incorrect",
       "email_taken": "This email address is already in use.",
@@ -465,6 +467,7 @@
       "not_found": "This has already been checked or undone."
     },
     "calendar": {
+      "central_oauth_required": "New calendar connections are not available in this version yet.",
       "not_configured": "Google Calendar is not set up yet",
       "state_invalid": "The Google sign-in expired or is invalid. Please try again.",
       "access_denied": "The Google sign-in was cancelled",
@@ -538,6 +541,7 @@
       "request_conflict": "This praise was already saved differently. Please reload."
     },
     "mcp": {
+      "central_gateway_required": "Changes through the assistant are not available here yet.",
       "operation_forbidden": "This operation is not available through MCP.",
       "parent_confirmation_required": "This decision requires explicit parent confirmation.",
       "parent_required": "MCP must be linked to an existing parent account."
