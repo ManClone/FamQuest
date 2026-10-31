@@ -268,7 +268,9 @@
     "kids_only_link": "zum Bereich „Haushalt“",
     "repeatable": "Mehrmals täglich",
     "repeatable_hint": "Nach jeder Elternbestätigung wieder verfügbar. Jede Ausführung wird einzeln geprüft und vergütet.",
-    "multiple_times": "Mehrere Tageszeiten möglich. Jeder gewählte Abschnitt bekommt einen eigenen Durchgang."
+    "multiple_times": "Mehrere Tageszeiten möglich. Jeder gewählte Abschnitt bekommt einen eigenen Durchgang.",
+    "euro_bonus": "Optionaler Euro-Bonus pro Erledigung",
+    "euro_bonus_hint": "0,00 bedeutet kein Euro-Bonus. Gilt zusätzlich zu Sternen und getrennt vom Grundtaschengeld."
   },
   "routines": {
     "section": "Routinen",
@@ -533,7 +535,8 @@
     "money": {
       "child_required": "Diese Funktion ist nur für Kinder verfügbar",
       "invalid_allowance": "Ungültiger Taschengeldbetrag",
-      "invalid_pagination": "Ungültige Seitennummerierung"
+      "invalid_pagination": "Ungültige Seitennummerierung",
+      "task_history_protected": "Für diese Aufgabe gibt es Bonus-Nachweise. Bitte die Aufgabe deaktivieren, statt diese Nachweise zu löschen."
     },
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
@@ -1240,6 +1243,11 @@
     "reverse": "Korrektur vorbereiten",
     "correction_reason": "Grund der Korrektur",
     "reverse_confirm": "Ich bestätige die Rücknahme dieser Entscheidung.",
-    "reverse_save": "Rücknahme speichern"
+    "reverse_save": "Rücknahme speichern",
+    "allowance_settings": "Grundtaschengeld einstellen",
+    "allowance_hint": "Ein fester Wochenbetrag, unabhängig von Aufgaben und Kritik. Bereits gebuchte Wochen werden nicht verändert. 0,00 beendet nur künftige automatische Buchungen. Es erfolgt keine Überweisung.",
+    "allowance_amount": "Wöchentliches Grundtaschengeld in Euro",
+    "allowance_save": "Grundtaschengeld speichern",
+    "allowance_saved": "Einstellung gespeichert."
   }
 }

@@ -8,6 +8,8 @@ import { POINTS_KEY, PROGRESS_KEY } from '../../api/points'
 import { TODAY_KEY } from '../../api/today'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
+import { newRequestKey } from '../../request-key'
+import { AllowanceSettings } from './AllowanceSettings'
 
 type Level = 'conversation' | 'light' | 'heavy' | 'severe'
 type Context = {
@@ -42,7 +44,7 @@ export function CriticismPanel({ memberId }: { memberId: number }) {
   const [confirmed, setConfirmed] = useState(false)
   const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [notice, setNotice] = useState(false)
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID().replaceAll('-', ''))
+  const [requestKey, setRequestKey] = useState(newRequestKey)
   const [reversing, setReversing] = useState<number | null>(null)
   const [correction, setCorrection] = useState('')
   const [reversalConfirmed, setReversalConfirmed] = useState(false)
@@ -106,7 +108,7 @@ export function CriticismPanel({ memberId }: { memberId: number }) {
           setConfirmed(false)
           setMoney(false)
           setNotice(true)
-          setRequestKey(crypto.randomUUID().replaceAll('-', ''))
+          setRequestKey(newRequestKey())
         },
       },
     )
@@ -292,6 +294,7 @@ export function CriticismPanel({ memberId }: { memberId: number }) {
               ))}
             </ul>
           </details>
+          <AllowanceSettings memberId={memberId} />
         </>
       )}
     </Section>

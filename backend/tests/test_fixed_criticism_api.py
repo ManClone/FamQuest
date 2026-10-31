@@ -169,3 +169,12 @@ def test_reversal_restores_only_applied_stars_and_keeps_reason(client, parent, l
     assert client.get(f"/api/members/{lena}/progress").json()["latest_deduction_id"] == 0
     with Session(engine) as db:
         assert db.get(ConsequenceEntry, response.json()["id"]).reversal_note == correction["reason"]
+
+
+def test_deleting_task_definition_cannot_remove_earned_bonus_sources(client, parent, lena, now):
+    task = add_task(client, parent, [lena], money_cents=350)
+    assert complete(client, parent, task, lena).status_code == 204
+    response = client.delete(f"/api/tasks/{task}", headers=csrf(parent))
+    assert response.status_code == 409
+    assert response.json()["code"] == "money.task_history_protected"
+    assert client.get(f"/api/members/{lena}/criticism").json()["earned_bonus_cents"] == 350

@@ -120,6 +120,7 @@ def current_session(request: Request, db: DbSession) -> AuthSession:
         if user.family_id is None or db.get(Family, user.family_id) is None:
             raise ApiError(403, "mcp.parent_required")
         logger.info("MCP parent=%s method=%s path=%s", user.id, request.method, request.url.path)
+        db.info["mcp_request"] = True
         # Transient principal: no reusable browser session, cookie or CSRF exemption for cookies.
         return AuthSession(user_id=user.id, user=user)
 

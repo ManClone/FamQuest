@@ -215,6 +215,9 @@ def create_app(
             with registry.session() as control:
                 db.info["central_control"] = control
                 db.info["family_principal"] = principal
+                db.info["mcp_request"] = request.headers.get("authorization", "").startswith(
+                    "Bearer "
+                )
                 yield db
 
     def current_family_session(request: Request, db: auth.DbSession):
