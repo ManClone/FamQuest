@@ -22,7 +22,7 @@ import { TasksWeekPage } from './pages/TasksWeekPage'
 import { ChildTasksPage } from './pages/ChildTasksPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
-import { oauthReturnPath } from './oauth-return'
+import { oauthReturnPath, resumeOAuth } from './oauth-return'
 
 function Loading() {
   const { t } = useTranslation()
@@ -86,7 +86,7 @@ function RequireAuth() {
 
 function ResumeOAuth({ target }: { target: string }) {
   useEffect(() => {
-    window.location.replace(target)
+    resumeOAuth(target)
   }, [target])
   return <Loading />
 }
