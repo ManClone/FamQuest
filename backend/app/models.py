@@ -418,6 +418,9 @@ class PointTransaction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Stable origin survives deleting a completion; never infer a repeat execution by title.
+    completion_source: Mapped[str | None] = mapped_column(String(10))
+    completion_id: Mapped[int | None]
     member_id: Mapped[int] = mapped_column(
         ForeignKey("family_members.id", ondelete="CASCADE"), index=True
     )

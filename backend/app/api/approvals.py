@@ -95,6 +95,8 @@ def approve(
         task_id=approved.task_id,
         task_date=approved.date,
         user_id=auth_session.user_id,
+        completion_source="task",
+        completion_id=approved.id,
     )
     book_money(
         db,
@@ -165,6 +167,8 @@ def approve_chore(
             reason=chore.title,
             task_date=completion.date,
             user_id=_.user_id,
+            completion_source="chore",
+            completion_id=completion.id,
         )
         db.add(
             ChoreCredit(

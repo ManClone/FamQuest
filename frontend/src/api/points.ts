@@ -20,6 +20,9 @@ export type PointKind =
 
 export interface PointTransaction {
   id: number
+  money_cents?: number
+  undo_source?: 'task' | 'chore' | null
+  undo_id?: number | null
   amount: number
   kind: PointKind
   /** Aufgabentitel zum Buchungszeitpunkt bzw. Begründung der Eltern. */
@@ -38,6 +41,7 @@ export interface PointHistory {
   total: number
   transactions: PointTransaction[]
   has_more: boolean
+  next_cursor?: string | null
 }
 
 export interface PointBooking {
@@ -57,10 +61,10 @@ export function usePointHistory(memberId: number) {
     queryKey: [...POINTS_KEY, memberId],
     queryFn: ({ pageParam }) =>
       apiGet<PointHistory>(
-        `/members/${memberId}/points${pageParam === null ? '' : `?before=${pageParam}`}`,
+        `/members/${memberId}/activity${pageParam === null ? '' : `?cursor=${encodeURIComponent(pageParam)}`}`,
       ),
-    initialPageParam: null as number | null,
-    getNextPageParam: (page) => (page.has_more ? (page.transactions.at(-1)?.id ?? null) : null),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
   })
 }
 

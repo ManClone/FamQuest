@@ -1,3 +1,4 @@
+import { useApprovalMutation, undoConfirmedTask, undoConfirmedChore } from '../../api/approvals'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CheckIcon from '~icons/fluent-emoji-flat/check-mark-button'
@@ -249,6 +250,10 @@ function TransactionRow({
 }) {
   const { t, i18n } = useTranslation()
   const [correcting, setCorrecting] = useState(false)
+  const [undoing, setUndoing] = useState(false)
+  const undo = useApprovalMutation((id: number) =>
+    transaction.undo_source === 'task' ? undoConfirmedTask(id) : undoConfirmedChore(id),
+  )
   const [correction, setCorrection] = useState('')
   const reverse = useParentMutation(
     () =>
@@ -266,8 +271,11 @@ function TransactionRow({
   }).format(new Date(transaction.created_at))
   const positive = transaction.amount > 0
 
-  return (
-    <li className="flex flex-wrap items-center gap-3 py-3">
+  const manualCredit =
+    transaction.kind === 'manual' && transaction.amount > 0 && !transaction.reversed_at
+  const canUndo = !!transaction.undo_source && transaction.undo_id != null
+  const content = (
+    <>
       <span className="shrink-0">
         {transaction.icon ? (
           <TaskIcon icon={transaction.icon} className="size-12" />
@@ -296,39 +304,77 @@ function TransactionRow({
       <span
         className={`shrink-0 rounded-full px-3 py-1 text-xl font-extrabold tabular-nums ${positive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}
       >
-        {positive ? `+${transaction.amount}` : `−${Math.abs(transaction.amount)}`}
+        {transaction.amount === 0
+          ? transaction.money_cents
+            ? new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' }).format(
+                transaction.money_cents / 100,
+              )
+            : '0'
+          : positive
+            ? `+${transaction.amount}`
+            : `−${Math.abs(transaction.amount)}`}
       </span>
-      {transaction.kind === 'manual' && transaction.amount > 0 && !transaction.reversed_at && (
-        <div className="w-full">
-          {!correcting ? (
-            <Button variant="secondary" size="compact" onClick={() => setCorrecting(true)}>
-              {t('family_account.correct_credit')}
+    </>
+  )
+  return (
+    <li className="flex flex-wrap items-center gap-3 py-3">
+      {canUndo || manualCredit ? (
+        <button
+          type="button"
+          className="flex w-full min-w-0 items-center gap-3 rounded-xl p-2 text-left hover:bg-orange-50 focus-visible:outline-2 focus-visible:outline-orange-400"
+          disabled={undo.isPending || reverse.isPending}
+          aria-expanded={canUndo ? undoing : correcting}
+          onClick={() => (canUndo ? setUndoing(true) : setCorrecting(true))}
+        >
+          {content}
+        </button>
+      ) : (
+        <div className="flex w-full min-w-0 items-center gap-3">{content}</div>
+      )}
+      {canUndo && undoing && (
+        <div className="flex w-full flex-col gap-3 rounded-xl bg-orange-50 p-3">
+          <p>{t('family_account.undo_confirm')}</p>
+          {undo.isError && <Alert>{errorMessage(t, undo.error)}</Alert>}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={undo.isPending}
+              onClick={() =>
+                undo.mutate(transaction.undo_id!, { onSuccess: () => setUndoing(false) })
+              }
+            >
+              {t('chore_history.yes')}
             </Button>
-          ) : (
-            <div className="flex flex-col gap-3 rounded-xl bg-orange-50 p-3">
-              <p>{t('family_account.credit_hint', { count: transaction.amount })}</p>
-              <TextField
-                label={t('criticism.correction_reason')}
-                value={correction}
-                maxLength={200}
-                onChange={(event) => setCorrection(event.target.value)}
-              />
-              {reverse.isError && <Alert>{errorMessage(t, reverse.error)}</Alert>}
-              <Button
-                disabled={!correction.trim() || reverse.isPending}
-                onClick={() => reverse.mutate(undefined, { onSuccess: () => setCorrecting(false) })}
-              >
-                {t('family_account.confirm_credit')}
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={reverse.isPending}
-                onClick={() => setCorrecting(false)}
-              >
-                {t('actions.cancel')}
-              </Button>
-            </div>
-          )}
+            <Button variant="secondary" disabled={undo.isPending} onClick={() => setUndoing(false)}>
+              {t('actions.cancel')}
+            </Button>
+          </div>
+        </div>
+      )}
+      {manualCredit && correcting && (
+        <div className="w-full">
+          <div className="flex flex-col gap-3 rounded-xl bg-orange-50 p-3">
+            <p>{t('family_account.credit_hint', { count: transaction.amount })}</p>
+            <TextField
+              label={t('criticism.correction_reason')}
+              value={correction}
+              maxLength={200}
+              onChange={(event) => setCorrection(event.target.value)}
+            />
+            {reverse.isError && <Alert>{errorMessage(t, reverse.error)}</Alert>}
+            <Button
+              disabled={!correction.trim() || reverse.isPending}
+              onClick={() => reverse.mutate(undefined, { onSuccess: () => setCorrecting(false) })}
+            >
+              {t('family_account.confirm_credit')}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={reverse.isPending}
+              onClick={() => setCorrecting(false)}
+            >
+              {t('actions.cancel')}
+            </Button>
+          </div>
         </div>
       )}
     </li>

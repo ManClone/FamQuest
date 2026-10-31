@@ -39,7 +39,7 @@ it('configures automatic pocket money without offering a manual credit', async (
   expect(screen.queryByText('Grundtaschengeld einstellen')).not.toBeInTheDocument()
   expect(screen.getAllByLabelText('Wochenbetrag in Euro')).toHaveLength(1)
   expect(screen.queryByRole('button', { name: /^Zurück$/ })).toBeNull()
-  expect(screen.getByText('Erledigte Kinderaufgaben')).toBeVisible()
+  expect(screen.queryByText('Erledigte Kinderaufgaben')).toBeNull()
   expect(await screen.findByText(/Zahlungseingang ist noch nicht bestätigt/)).toBeVisible()
   await user.type(screen.getByLabelText('Wochenbetrag in Euro'), '5,00')
   await user.click(screen.getByRole('button', { name: 'Wochenbetrag speichern' }))

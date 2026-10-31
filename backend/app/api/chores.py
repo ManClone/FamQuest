@@ -812,7 +812,14 @@ def _credit_completion(
         db.flush()
     if amount and member is not None:
         book(
-            db, member.id, amount, "chore_completed", reason=chore.title, task_date=completion.date
+            db,
+            member.id,
+            amount,
+            "chore_completed",
+            reason=chore.title,
+            task_date=completion.date,
+            completion_source="chore",
+            completion_id=completion.id,
         )
         db.add(ChoreCredit(completion_id=completion.id, member_id=member.id, amount=amount))
 
@@ -901,7 +908,16 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
         db.delete(old)
         db.flush()
     if amount > 0:
-        book(db, member.id, amount, "chore_completed", reason=chore.title, task_date=today)
+        book(
+            db,
+            member.id,
+            amount,
+            "chore_completed",
+            reason=chore.title,
+            task_date=today,
+            completion_source="chore",
+            completion_id=completion.id,
+        )
         db.add(ChoreCredit(completion_id=completion.id, member_id=member.id, amount=amount))
     completion.member_id = member.id
     db.commit()
