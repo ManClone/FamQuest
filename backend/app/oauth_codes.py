@@ -90,6 +90,7 @@ def consume_code(
         or not verify_s256(verifier, record.code_challenge, "S256")
     ):
         raise PermissionError("Invalid authorization code")
+    client = db.get(OAuthClient, record.client_id)
     tenant = db.get(Tenant, record.tenant_id)
     membership = db.scalar(
         select(Membership).where(
@@ -97,7 +98,13 @@ def consume_code(
             Membership.tenant_id == record.tenant_id,
         )
     )
-    if tenant is None or tenant.status != "active" or membership is None:
+    if (
+        client is None
+        or not client.enabled
+        or tenant is None
+        or tenant.status != "active"
+        or membership is None
+    ):
         raise PermissionError("Authorization revoked")
     record.consumed_at = now
     db.flush()
