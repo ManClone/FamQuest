@@ -25,11 +25,14 @@ def test_provisioning_rejects_weak_password_before_connecting():
     engine.connect.assert_not_called()
 
 
-def test_provisioning_rejects_unsafe_identifier_before_connecting():
+@pytest.mark.parametrize(
+    "database", ["famquest_bad;drop", "famquest_auth", "famquest_", "famquest_" + "x" * 51]
+)
+def test_provisioning_rejects_unsafe_identifier_before_connecting(database):
     from unittest.mock import Mock
 
     engine = Mock()
     engine.dialect.name = "postgresql"
     with pytest.raises(ValueError, match="identifier"):
-        provision_empty_family(engine, "famquest_bad;drop", "x" * 40)
+        provision_empty_family(engine, database, "x" * 40)
     engine.connect.assert_not_called()

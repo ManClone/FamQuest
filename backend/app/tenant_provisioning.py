@@ -11,6 +11,11 @@ from app.planned_families import ADDITIONAL_FAMILIES
 SAFE_IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 
 
+def validate_family_database_name(name: str) -> None:
+    if name == "famquest_auth" or re.fullmatch(r"famquest_[a-z0-9_]{1,50}", name) is None:
+        raise ValueError("Invalid registered database name (family identifier)")
+
+
 def quoted_identifier(name: str) -> str:
     if not SAFE_IDENTIFIER.fullmatch(name):
         raise ValueError("Invalid PostgreSQL identifier")
@@ -19,10 +24,9 @@ def quoted_identifier(name: str) -> str:
 
 def provisioning_sql(database_name: str, role_name: str) -> tuple[str, ...]:
     """DDL to review, not execute. Role password must be set separately."""
+    validate_family_database_name(database_name)
     database = quoted_identifier(database_name)
     role = quoted_identifier(role_name)
-    if not database_name.startswith("famquest_"):
-        raise ValueError("Family database name must start with famquest_")
     if role_name != f"{database_name}_app":
         raise ValueError("Family role must match its database")
     return (

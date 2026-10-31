@@ -1,96 +1,69 @@
-# FamQuest: Abschlussprüfung vom 31.10.2026
+# FamQuest: geprüfter Integrationsstand vom 31.10.2026
 
 ## Ergebnis
 
-Der bestehende Einfamilienbetrieb ist erreichbar und gesund. Die neue
-Mehrfamilienversion ist **noch nicht deploybar**. Weder Datenmigration noch
-Aktivierung von Sertl/Henning oder Änderungen an Produktivkonten wurden ausgeführt.
+Der Entwurf ist erheblich weiter als der ursprüngliche Einfamilienstand, aber
+noch kein freigegebenes Mehrfamilien-Produktivrelease. Keine Migration, keine
+Aktivierung von Sertl/Henning und keine Änderungen am QNAP wurden ausgeführt.
+Der historische Healthcheck war erfolgreich; das aktuelle laufende Image,
+dessen Digest und die produktive Kalenderkonfiguration sind nicht verifiziert.
 
-## Fortschritt: zentrale Anmeldung
+## Implementiert
 
-Die erste hochgeladene Änderung hat beide vollständigen CI-Workflows bestanden:
-Predeployment 41195120028 und Security 41195120030, einschließlich 624 Backendtests.
-Danach wurde ein isolierter zentraler Login-Dienst ergänzt. 30 lokale Tests für
-Login, Sessions, Passwortwechsel, Token-Lifecycle und Auth-Migration bestehen.
-Der zusätzliche PostgreSQL-Test für parallele Passwortwechsel und der vollständige
-neue CI-Lauf stehen noch aus. Details in `central-auth-staging.md`.
+- Zentrale Benutzer-Datenbank mit Browser-Anmeldung, Sitzungen, Passwortwechsel,
+  Rollen und familienlokaler Kontozuordnung. Lokale User-Zeilen enthalten keine
+  anmeldbaren Passwort-Hashes. Kontoänderungen und Fehler zwischen den beiden
+  Datenbank-Commits sind explizit behandelt und reparierbar.
+- Integrierter Testserver: Authentifizierte Familie bestimmt die Datenbank aller
+  eingebundenen Fachrouten. Getrennte Datenbankrollen und Bildordner; keine
+  Auswahl über unzuverlässige Request-Header. Gleichzeitige Familien mit gleichen
+  lokalen IDs und Bilddateinamen sind gegeneinander getestet.
+- Haushaltsstatistik: Eltern vergleichen geschätzte Minuten, Kinder Erledigungen.
+  Neue Erledigungen speichern ihre damalige Zeitvorgabe. Historische Einträge ohne
+  Momentaufnahme verwenden die heutige Vorgabe und sind entsprechend bezeichnet.
+- OAuth-Discovery, ausdrückliche Elternzustimmung, PKCE, einmalige Codes,
+  Zugangstoken, Refresh-Rotation und Widerruf im integrierten Testserver.
+  Registrierung ist standardmäßig geschlossen. Der Browser setzt nach Login
+  ausschließlich den lokalen Zustimmungsdialog fort.
+- Altlasten: private Browser-Caches werden beim Kontowechsel gelöscht, PIN-Reste
+  sperren Eltern nicht aus, Demo-Modus wird im integrierten Betrieb abgelehnt.
+  Kalenderoperationen verwenden explizite Familienverbindungen und prüfen Sperren.
+- Der Einrichtungsweg verwendet dieselbe Namensprüfung wie das Familienrouting:
+  Die zentrale Benutzer-Datenbank, leere und überlange Namen werden abgewiesen,
+  bevor eine Datenbankverbindung geöffnet wird.
 
-Der Dienst ist noch nicht mit der produktiven App oder deren Frontend verbunden;
-die nachstehenden Integrations- und Migrationsblocker bleiben bestehen.
+## Nachweise
 
-## Ergänzung: Haushaltsstatistik
+Der Kontenstand 49df099a27c8f5224f4dcfe5dc5176301c0e9c0a besteht beide vollständigen
+GitHub-Workflows: Predeployment 41217993981 und Security 41217993919. Dabei werden
+vollständige PostgreSQL-Migrationen, Familienisolation, getrennte Datenbankrollen,
+parallele Anmeldungen und konkurrierende Kontoanlage geprüft.
 
-Nach der Präzisierung des Nutzers zeigt die Statistik für Eltern geschätzte
-Minuten und deren zeitlichen Anteil, für Tim und andere Kinder dagegen die
-Erledigungsanzahl ohne gemeinsame Prozentrechnung. Neue Erledigungen speichern
-eine Momentaufnahme der Zeitvorgabe. Die neue additive Family-DB-Migration wurde
-nicht produktiv ausgeführt. Details und historische Einschränkungen stehen in
-`household-statistics.md`; vollständige CI-Prüfungen dieses Updates stehen aus.
+Der zusätzliche OAuth-HTTP-Stand 245167cdff0990318cbf6191a46012495de4fa6e besteht
+lokal 39 gemeinsame Anmelde-/Familien-/Fehlercodetests plus den Test gegen eine
+widersprüchliche lokale Elternrolle. Alle 322 Frontendtests, Typprüfung und
+Produktions-Build sind grün. Die vollständigen GitHub-Läufe 41219154961 und
+41219154987 sind beim Erstellen dieses Dokuments noch nicht abgeschlossen.
+Die anschließende Absicherung des Einrichtungswegs besteht 39 lokale Tests mit
+Familienrouting und integrierten HTTP-Anfragen. Verbindlicher aktueller CI-Status:
+https://github.com/ManClone/FamQuest/pull/34/checks
 
-## Verifizierter Ausgangsstand
-
-- Repository: https://github.com/ManClone/FamQuest
-- `main`: `0d44fc52e63401a08e1634e6209c82d113da5731`.
-- `develop`: `2c91da56c556bb7eac4e8f098ff3a361bc186620`.
-- Offener Draft-PR #34: `feature/multifamily-foundation`,
-  `c1017e30e1f62ef6d1904b2b91073ca565dd1411`.
-- main-Workflows: Predeployment 40709807987 und Security 40709808007 erfolgreich.
-- main-Docker-Veröffentlichung 40710178691 erfolgreich. Workflow veröffentlicht
-  `ghcr.io/manclone/famquest:latest` und den vollständigen SHA-Tag.
-  Das tatsächlich laufende QNAP-Image und dessen Digest wurden nicht ermittelt.
-- Draft-Predeployment 41193378743 erfolgreich; Security 41193378636 scheitert
-  an Ruff in `tests/test_oauth_codes.py`.
-- Lesender QNAP-Healthcheck an Port 11900: `status=ok`, `database=ok`.
-
-## Änderungen in dieser Arbeitskopie
-
-- Ruff-Formatfehler behoben.
-- Issue #31: Wiederholungsaktion samt Tageszähler und Speichersperre auch in
-  der Familienübersicht. Rücknahme bleibt eine getrennte Aktion.
-- MCP-Authorization-Codes verweigern Kinder, ungültige Rollen und Superadmins.
-  Gesperrte Codes werden beim Austausch aus der Datenbank neu geladen.
-- Neue Auth-DB-Revision `c20261031_tokens`: OAuth-Grants und ausschließlich
-  gehashte Access-/Refresh-Tokens; keine Änderung der Familien-Alembic-Historie.
-- Access-Tokens laufen nach 10 Minuten ab, Refresh-Tokens nach 30 Tagen.
-  Client, Familie und MCP-Audience werden geprüft. Mitgliedschaft, Familienstatus,
-  Elternrolle und Client-Freigabe werden erneut geprüft.
-- Refresh-Rotation sperrt den gemeinsamen Grant; Wiederverwendung widerruft
-  auch Nachfolger-Tokens. Der Widerruf wird trotz Fehlerrückgabe gespeichert.
-- Auth-Migrations-, Token-Lifecycle- und PostgreSQL-Parallelitätstests ergänzt.
-  Die Token-Funktionen sind noch nicht als öffentliche Endpunkte eingebunden.
-
-## Verbleibende Release-Blocker
+## Verbleibende Release-Arbeit
 
 | Bereich | Noch erforderlich |
 | --- | --- |
-| Zentrale Anmeldung | Browser-Sessions, Login/Logout, Passwortwechsel, Kontoverwaltung und Einladungen vollständig auf `famquest_auth` umstellen; lokale User-Referenzen ohne lokale Login-Geheimnisse erhalten. |
-| API-Isolation | Authentifizierten Tenant vor jeder Family-Session bestimmen; sämtliche API-Pfade, Hintergrundjobs, Uploads und Exporte auf getrennte Datenbanken/Verzeichnisse umstellen. Legacy-Zugriff darf keine zweite Familie erreichen. |
-| MCP | HTTP-Authorization/Consent/Token/Revocation-Endpunkte und Metadaten integrieren; Token an serverseitigen Tenant-Kontext binden; globalen Service-Token und Parent-ID-Header vor Mehrfamilienbetrieb ablösen; Elternbestätigungen erhalten. |
-| Provisionierung | Auth-DB und Family-DBs mit getrennten minimalen Rollen migrieren; Sertl/Henning erst danach aktivieren und Elternkonten sicher einladen. |
-| Bestandsmigration | Wiederherstellbare Testkopie erstellen; IDs, Zuordnungen, XP, Bonus, Belohnungen und Uploads vorher/nachher vergleichen; Wiederherstellungsprobe durchführen. |
-| Bonusregeln | Aktuelle API erlaubt frei wählbare Cent-/XP-Abzüge und Datumswerte. Issue #25 fordert feste Kritikstufen, geschützten Restbonus und unveränderliche abgeschlossene Wochen. Vor einer Freigabe dieses Geldbereichs abgleichen und mit Tests absichern. |
-| Abzeichen/Drache | Offene Issues #29/#30 gegen bereits vorhandenen Level-/Drachencode abnehmen; vorhandener Code allein ist kein Abschlussnachweis. |
-| QNAP | Tatsächliches Image/Digest, DB-Migrationsstand und Compose-Konfiguration ermitteln; Backup und Restore prüfen; anschließend konkreten Cutover zur Freigabe vorlegen. |
+| MCP | Eigenständigen MCP-Dienst an die individuelle zentrale Tokenprüfung anbinden; Service-Token und globale Elternzuordnung ablösen; doppelte Schreibaktionen verhindern und explizite Elternbestätigungen durchgängig prüfen. MCP-Schreibzugriffe bleiben bis dahin gesperrt. |
+| Hintergrundjobs | Automatische Wochenabrechnung und gegebenenfalls Kalenderaktualisierung mit expliziten Familienverbindungen ausführen. Im integrierten Testserver starten noch keine Scheduler. |
+| Kalender | Google-Neuanbindung bleibt im Testserver gesperrt. Die produktive Einstellung ist unbekannt; bewusst ausgeschaltete Kalenderfunktionen dürfen nicht ungeprüft aktiviert werden. |
+| Bonusregeln | Feste Kritikstufen, geschütztes Grundtaschengeld und Restbonus sowie unveränderliche abgeschlossene Wochen gemäß Issue #25 gegen API und Oberfläche abgleichen und absichern. Bankanbindung bleibt ein gesonderter Machbarkeitstest. |
+| Abnahme | Abzeichen/Drache aus Issues #29/#30 gegen die vereinbarten Kriterien abnehmen. |
+| Migration/Deployment | Wiederherstellbare Testkopie, vollständige Restore-Probe und Vorher-/Nachher-Abgleich von IDs, Konten, XP, Boni und Uploads; Produktionskonfiguration und Image prüfen; konkrete Umstellung vorlegen und freigeben lassen. |
 
-Es gibt keinen Nachweis, dass die bisherigen Einfamilien-Endpunkte bereits
-zwischen zwei gleichzeitig angemeldeten Familien isolieren. Die vorhandenen
-Router-/Registry-Unit-Tests ersetzen diesen End-to-End-Nachweis nicht.
+Der produktive Einstieg app.main:app ist noch unverändert. Der neue Server liegt
+separat in app.multitenant_app.create_app. Details stehen in
+integrated-family-staging.md, mcp-authorization-staging.md,
+legacy-settings-audit.md und household-statistics.md.
 
-## Prüfungen dieser Änderung
-
-- 53 isolierte Backendtests bestanden, inklusive Auth-Migration auf SQLite.
-- Ruff-Lint und Formatprüfung bestanden.
-- Lokale Typprüfung und Produktionsbuild bestanden.
-- 46 Tests der betroffenen Familien-/Haushaltsansichten bestanden.
-- PostgreSQL-Parallelität und vollständiger Backendlauf benötigen den CI-Lauf;
-  lokal steht kein PostgreSQL-/Docker-Testdienst zur Verfügung.
-- Lokale Frontend-Pakete wurden mit pnpm installiert; dabei wurden innerhalb der
-  Versionsbereiche neuere Pakete gewählt. Verbindlicher Reproduktionsnachweis
-  bleibt CI mit `npm ci` und dem unveränderten `package-lock.json`.
-
-## Fortsetzung
-
-Der Nutzer hat den Upload dieser Änderungen auf den bestehenden GitHub-Draft
-und den Start der vollständigen CI-Prüfungen ausdrücklich freigegeben.
-Die CI-Ergebnisse dieses Updates stehen noch aus. Kein Merge nach main,
-keine Image-Veröffentlichung und kein produktiver Cutover als Teil dieses Uploads.
+Die Freigabe des Nutzers deckt notwendige getestete Änderungen im bestehenden
+GitHub-Entwurf und deren Prüfungen ab. Risikoreiche Migrationen und produktive
+Änderungen sind separat freizugeben.
