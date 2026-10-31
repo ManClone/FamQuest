@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth_registry import Membership, OAuthAuthorizationCode, OAuthClient, Tenant
+from app.auth_registry import Identity, Membership, OAuthAuthorizationCode, OAuthClient, Tenant
 from app.oauth_pkce import verify_s256
 
 
@@ -40,6 +40,7 @@ def issue_code(
             Membership.tenant_id == tenant_id,
         )
     )
+    identity = db.get(Identity, identity_id)
     if (
         client is None
         or not client.enabled
@@ -47,6 +48,9 @@ def issue_code(
         or tenant is None
         or tenant.status != "active"
         or membership is None
+        or membership.role not in {"admin", "parent"}
+        or identity is None
+        or identity.is_superadmin
     ):
         raise PermissionError("Authorization denied")
     code = secrets.token_urlsafe(32)
@@ -76,6 +80,7 @@ def consume_code(
         select(OAuthAuthorizationCode)
         .where(OAuthAuthorizationCode.code_hash == digest)
         .with_for_update()
+        .execution_options(populate_existing=True)
     )
     now = datetime.now(UTC)
     expires_at = record.expires_at if record is not None else None
@@ -98,12 +103,16 @@ def consume_code(
             Membership.tenant_id == record.tenant_id,
         )
     )
+    identity = db.get(Identity, record.identity_id)
     if (
         client is None
         or not client.enabled
         or tenant is None
         or tenant.status != "active"
         or membership is None
+        or membership.role not in {"admin", "parent"}
+        or identity is None
+        or identity.is_superadmin
     ):
         raise PermissionError("Authorization revoked")
     record.consumed_at = now

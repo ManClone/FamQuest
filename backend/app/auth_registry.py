@@ -76,3 +76,28 @@ class OAuthAuthorizationCode(AuthBase):
     code_challenge: Mapped[str] = mapped_column(String(43))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OAuthGrant(AuthBase):
+    """Revocable MCP authorization shared by rotated tokens."""
+
+    __tablename__ = "oauth_grants"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("oauth_clients.id"))
+    identity_id: Mapped[int] = mapped_column(ForeignKey("identities.id"))
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"))
+    audience: Mapped[str] = mapped_column(String(2048))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OAuthToken(AuthBase):
+    """Opaque token digest; raw access and refresh secrets never persist."""
+
+    __tablename__ = "oauth_tokens"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    grant_id: Mapped[str] = mapped_column(ForeignKey("oauth_grants.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
