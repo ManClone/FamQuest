@@ -97,10 +97,16 @@ def create_app(
             and request.headers.get("authorization", "").startswith("Bearer ")
             and allowed(request.method, request.url.path)
         )
+        machine_oauth = request.url.path in {
+            "/token",
+            "/revoke",
+            "/register",
+        } and not request.headers.get("origin")
         if (
             request.method not in {"GET", "HEAD", "OPTIONS"}
             and request.headers.get("origin") != origin
             and not mcp_request
+            and not machine_oauth
         ):
             return JSONResponse({"code": "auth.csrf_failed"}, status_code=403)
         response = await call_next(request)

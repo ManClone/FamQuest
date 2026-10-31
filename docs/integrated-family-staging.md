@@ -41,7 +41,17 @@ Bilddateinamen, Sperrung, fehlende Zuordnung, PIN-Reste, zentrale Passwortänder
 und gebundene MCP-Lesezugriffe. Ein separater PostgreSQL-Test provisioniert drei
 temporäre Datenbanken mit eigenen Rollen, migriert vollständige Schemas und prüft
 Fachdatenzugriffe sowie die verweigerte Verbindung von Family-A-Rollen auf Family B.
-Dieser PostgreSQL-Test benötigt noch den CI-Lauf des neuen Commits.
+Dieser PostgreSQL-Test und beide vollständigen Prüfläufe sind für den Kontenstand
+`49df099a27c8f5224f4dcfe5dc5176301c0e9c0a` bestanden.
+
+Der integrierte Server bietet inzwischen eigene OAuth-Metadaten, einen
+Eltern-Zustimmungsdialog und Code-/Refresh-/Widerrufs-Endpunkte. Die Oberfläche
+kehrt nach der Anmeldung ausschließlich zum lokalen Zustimmungsdialog zurück.
+Öffentliche Clients benötigen eine exakt hinterlegte HTTPS-Weiterleitungsadresse,
+S256 und die Ressourcenadresse dieser Installation. Dynamische Registrierung ist
+standardmäßig aus; `OAUTH_DYNAMIC_REGISTRATION=true` schaltet sie gezielt ein.
+Es werden keine fremden Client-Metadatenadressen abgerufen. Siehe
+`mcp-authorization-staging.md` für Grenzen und Prüfungen dieses zusätzlichen Standes.
 
 Der aktuelle Stand ist ein überprüfbarer Integrationszwischenstand, **kein
 Mehrfamilien-Produktivrelease**. Google-Neuanbindung und MCP-Schreibzugriffe

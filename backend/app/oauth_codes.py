@@ -1,7 +1,7 @@
 """Database-backed OAuth authorization code exchange primitives.
 
-Not exposed as HTTP endpoints until authentication, migrations and access-token
-issuance are implemented and tested.
+The integrated staging server exposes these through explicit browser consent;
+the legacy application's authorization flow remains separate.
 """
 
 import hashlib
