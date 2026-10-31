@@ -32,6 +32,7 @@ import { TaskIcon } from '../../components/TaskIcon'
 import { TIME_OF_DAY_ICONS } from '../../components/TimeOfDayIcon'
 import { Alert, Button, Switch, TextAreaField, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
+import { euroCents, euroInput } from '../../euro-input'
 import { DEFAULT_TASK_ICON, iconLabel, iconName, suggestIcon } from '../../icons/catalog'
 import { COLOR_TOKENS, MEMBER_COLORS, type MemberColor } from '../../memberColors'
 import { WEEKEND, WORKDAYS, sameDays, todayIn, weekdayName, weekdayOrder } from '../../weekdays'
@@ -91,6 +92,8 @@ export function TaskEditor({
   // Bis Eltern selbst ein Symbol wählen, wird es aus dem Titel vorgeschlagen.
   const [chosenIcon, setChosenIcon] = useState<string | null>(task?.icon ?? null)
   const [points, setPoints] = useState(task?.points ?? 1)
+  const [bonus, setBonus] = useState(euroInput(task?.money_cents ?? 0))
+  const moneyCents = euroCents(bonus)
   const [memberIds, setMemberIds] = useState<number[]>(task?.member_ids ?? initialMemberIds)
   const [kind, setKind] = useState<RecurrenceKind>(recurrence?.kind ?? 'daily')
   const [weekdays, setWeekdays] = useState<number[]>(
@@ -169,7 +172,7 @@ export function TaskEditor({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
-    if (!title.trim()) return
+    if (!title.trim() || moneyCents === null) return
     if (routineStep) {
       addStep.mutate(
         {
@@ -180,6 +183,7 @@ export function TaskEditor({
               icon,
               description: description.trim(),
               points,
+              ...(moneyCents || task?.money_cents ? { money_cents: moneyCents } : {}),
               time_of_day: routineStep.time,
               extra: false,
               color,
@@ -206,6 +210,7 @@ export function TaskEditor({
         icon,
         description: description.trim(),
         points,
+        ...(moneyCents || task?.money_cents ? { money_cents: moneyCents } : {}),
         time_of_day: block === 'extra' ? null : block,
         extra: block === 'extra',
         color,
@@ -237,6 +242,7 @@ export function TaskEditor({
     setTitle(templateTitle)
     setChosenIcon(taskTemplateIcon(template))
     setPoints(template.points)
+    setBonus(euroInput(0))
     setBlock(template.extra ? 'extra' : template.time_of_day)
     setSelectedTimes(template.time_of_day && !template.extra ? [template.time_of_day] : [])
     setNeedsApproval(template.needs_approval ?? false)
@@ -323,6 +329,19 @@ export function TaskEditor({
           />
         </Field>
 
+        <TextField
+          label={t('tasks.euro_bonus')}
+          value={bonus}
+          inputMode="decimal"
+          maxLength={8}
+          onChange={(event) => setBonus(event.target.value)}
+          hint={t('tasks.euro_bonus_hint')}
+          error={
+            submitted && moneyCents === null
+              ? t('errors.validation.invalid')
+              : fieldError('money_cents')
+          }
+        />
         <div className="flex flex-col gap-1">
           <Switch
             checked={needsApproval || repeatable}

@@ -268,7 +268,9 @@
     "kids_only_link": "go to “Household”",
     "repeatable": "Repeat during the day",
     "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately.",
-    "multiple_times": "Choose multiple times. Each selected period gets its own execution."
+    "multiple_times": "Choose multiple times. Each selected period gets its own execution.",
+    "euro_bonus": "Optional euro bonus per completion",
+    "euro_bonus_hint": "0.00 means no euro bonus. Separate from stars and unconditional base allowance."
   },
   "routines": {
     "section": "Routines",
@@ -533,7 +535,8 @@
     "money": {
       "child_required": "This feature is only available for children",
       "invalid_allowance": "Invalid pocket money amount",
-      "invalid_pagination": "Invalid pagination parameters"
+      "invalid_pagination": "Invalid pagination parameters",
+      "task_history_protected": "This task has bonus records. Deactivate the task instead of deleting those records."
     },
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
@@ -1240,6 +1243,11 @@
     "reverse": "Prepare correction",
     "correction_reason": "Reason for correction",
     "reverse_confirm": "I confirm reversing this decision.",
-    "reverse_save": "Save reversal"
+    "reverse_save": "Save reversal",
+    "allowance_settings": "Configure base allowance",
+    "allowance_hint": "A fixed weekly amount, independent of tasks and criticism. Existing weekly credits stay unchanged. 0.00 disables future automatic credits only. No transfer is initiated.",
+    "allowance_amount": "Weekly base allowance in euros",
+    "allowance_save": "Save base allowance",
+    "allowance_saved": "Setting saved."
   }
 }

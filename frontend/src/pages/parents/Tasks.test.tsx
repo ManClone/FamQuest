@@ -50,6 +50,24 @@ afterEach(() => {
 })
 
 describe('Aufgaben im Elternbereich', () => {
+  it('erhält einen bestehenden Euro-Bonus bei Aufgabenänderungen', async () => {
+    const user = userEvent.setup()
+    const paid = makeTask({ money_cents: 350 })
+    const calls = api([paid], {
+      'PUT /api/tasks/1': (body) => Response.json({ ...paid, ...(body as object) }),
+    })
+    renderApp('/parents/tasks')
+    await user.click(await screen.findByRole('button', { name: 'Zähne putzen bearbeiten' }))
+    expect(screen.getByLabelText('Optionaler Euro-Bonus pro Erledigung')).toHaveValue('3,50')
+    await user.clear(screen.getByLabelText('Titel'))
+    await user.type(screen.getByLabelText('Titel'), 'Andere Bezeichnung')
+    await user.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('ist gespeichert')
+    expect(calls.find((call) => call.key === 'PUT /api/tasks/1')?.body).toMatchObject({
+      money_cents: 350,
+    })
+  })
+
   it('bittet zuerst um Kinder; Erwachsene bekommen keine Aufgaben', async () => {
     api([], { 'GET /api/members': Response.json([mama]) })
     renderApp('/parents/tasks')

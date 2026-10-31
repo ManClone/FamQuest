@@ -10,6 +10,7 @@ import { TODAY_KEY } from '../../api/today'
 import { Avatar } from '../../components/Avatar'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
+import { newRequestKey } from '../../request-key'
 
 export function EncouragementPanel({ members }: { members: Member[] }) {
   const { t } = useTranslation()
@@ -43,7 +44,7 @@ function EncouragementForm({ member }: { member: Member }) {
   const [mode, setMode] = useState<'praise' | 'deduct' | null>(null)
   const [reason, setReason] = useState('')
   const [amount, setAmount] = useState(1)
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID().replaceAll('-', ''))
+  const [requestKey, setRequestKey] = useState(newRequestKey)
   const [saved, setSaved] = useState(false)
   const save = useParentMutation(async () => {
     if (mode === 'praise')
@@ -62,7 +63,7 @@ function EncouragementForm({ member }: { member: Member }) {
         setSaved(true)
         setMode(null)
         setReason('')
-        setRequestKey(crypto.randomUUID().replaceAll('-', ''))
+        setRequestKey(newRequestKey())
       },
     })
   }

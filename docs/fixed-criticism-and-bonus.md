@@ -50,6 +50,26 @@ Dieser Bereich ist eine Abrechnungshilfe, keine Bankanbindung. Er löst keine
 keinen frei wählbaren Wochen-Sonderbonus. Bankabruf, Auszahlungstag-/Erinnerungs-
 Automatik und nachträglicher Bankabgleich bleiben gesonderte Ausbauschritte.
 
+Aufgabenboni sind jetzt im Aufgaben-/Routineneditor als optionale Euro-Eingabe
+bedienbar. Bestehende Werte werden beim Ändern einer Aufgabe erhalten. Die Eingabe
+rechnet Dezimalwerte ohne Gleitkomma-Rundung in ganze Cent um. Grundtaschengeld hat
+eine getrennte Elterneinstellung; deren Änderung verändert keine bereits gebuchte
+Woche. Aufgaben mit Bonus-Nachweisen werden deaktiviert statt durch Löschen der
+Definition ihrer Verdienstnachweise beraubt.
+
+MCP darf weder neue Euro-Boni festlegen noch bereits vergütete Aufgabendefinitionen
+ändern oder löschen. Das schließt indirekte Änderungen über Wiederholbarkeit,
+Freigabepflicht und Zeitpläne ein. Die gemeinsamen Speicherroutinen sichern auch
+verschachtelte Routinenschritte ab; im MCP-Eingabeschema ist das Geldfeld entfernt.
+Normale Aufgaben ohne Euro-Bonus bleiben über MCP bearbeitbar. Bereits konfigurierte
+Boni können Teil gelesener Aufgabendaten und ausdrücklich bestätigter gültiger
+Erledigungen sein; das ist keine Freigabe zur Geld- oder Bankverwaltung.
+
+Lob und Kritik verwenden wie die übrigen Erledigungsaktionen kryptografische
+128-Bit-Auftragsschlüssel über `getRandomValues`. Dadurch benötigen diese beiden
+Formulare nicht die nur im sicheren Kontext verfügbare `randomUUID`-Methode;
+siehe [W3C Web Cryptography API](https://w3c.github.io/webcrypto/).
+
 ## Docker-Testimage
 
 Der Predeployment-Workflow prüft jetzt genau den Head des eigenen Entwurfs und

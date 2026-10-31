@@ -49,6 +49,7 @@ def test_service_parent_uses_real_task_parameters_but_cannot_manage_accounts(
     response = client.get("/api/internal/mcp/schema", headers=headers)
     assert response.status_code == 200, response.text
     spec = response.json()
+    assert "money_cents" not in spec["components"]["schemas"]["TaskIn"]["properties"]
     assert "/api/tasks/schedule" in spec["paths"]
     assert "/api/chores/weekly-confirmed" in spec["paths"]
     assert "/api/maintenance/consistency" in spec["paths"]
@@ -117,6 +118,34 @@ def test_schema_and_runtime_allowlist_agree_on_sensitive_operations():
     ):
         assert not allowed("POST", path)
     assert allowed("POST", "/api/tasks/schedule")
+
+
+def test_task_bonus_cannot_be_changed_or_deleted_via_mcp(client, parent, lena, monkeypatch):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import User
+    from tests.test_tasks import task_data
+
+    monkeypatch.setattr(get_settings(), "mcp_service_token", "s" * 40)
+    with SessionLocal() as db:
+        owner = db.scalar(select(User.id).where(User.role == "admin"))
+    headers = service_headers(owner)
+    body = task_data([lena], money_cents=350)
+    assert client.post("/api/tasks", json=body, headers=headers).status_code == 403
+    created = client.post("/api/tasks", json=body, headers=csrf(parent))
+    assert created.status_code == 201
+    url = f"/api/tasks/{created.json()['id']}"
+    assert client.put(url, json={**body, "money_cents": 0}, headers=headers).status_code == 403
+    assert client.delete(url, headers=headers).status_code == 403
+    without_money = {key: value for key, value in body.items() if key != "money_cents"}
+    edited = client.put(url, json={**without_money, "title": "Changed title"}, headers=headers)
+    assert edited.status_code == 403, edited.text
+    original = next(
+        item for item in client.get("/api/tasks").json() if item["id"] == created.json()["id"]
+    )
+    assert original["money_cents"] == 350
+    assert original["title"] != "Changed title"
     assert allowed("POST", "/api/chores/weekly-confirmed")
     assert not allowed("POST", "/api/chores/1/credit")
 
