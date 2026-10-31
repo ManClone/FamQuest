@@ -19,6 +19,11 @@ def save_member_login(
     auth: AuthSession,
     request: Request,
 ) -> None:
+    if getattr(request.app.state, "multitenant", False):
+        from app.central_accounts import editor_for
+
+        editor_for(db).save_member(member, login, auth)
+        return
     # Do not flush a changed profile until all account validation has passed.
     with db.no_autoflush:
         family_id = auth.user.family_id

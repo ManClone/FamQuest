@@ -1,7 +1,7 @@
 """Integrated staging app: central authentication selects every business DB.
 
-Not selected by the production entrypoint yet. Account editing, OAuth HTTP and
-per-family schedulers remain explicit release gates.
+Not selected by the production entrypoint yet. OAuth HTTP, write deduplication
+and per-family schedulers remain explicit release gates.
 """
 
 from collections.abc import Iterator
@@ -40,8 +40,11 @@ from app.api import (
     weather,
     weekly_consequences,
 )
+from app.api.auth import AccountCreateRequest, AccountOut
 from app.auth_db import AuthDatabase
+from app.auth_registry import Identity, Membership
 from app.browser_sessions import COOKIE_NAME, BrowserCsrfError, authenticate_browser
+from app.central_accounts import editor_for
 from app.central_auth import create_app as create_login_app
 from app.config import Settings, get_settings
 from app.db import get_db
@@ -49,7 +52,7 @@ from app.errors import ApiError
 from app.family_db import FamilyDatabase, FamilyDatabaseRouter
 from app.family_principal import FamilyPrincipal
 from app.mcp_access import allowed, tool_schema
-from app.models import AuthSession, Family, User
+from app.models import AuthSession, Family, FamilyMember, User
 from app.oauth_tokens import authenticate_access
 from app.tenant_storage import tenant_upload_root
 
@@ -174,15 +177,6 @@ def create_app(
         request.state.central_csrf = csrf
         if path.startswith("/api/calendar/google/"):
             return JSONResponse({"code": "calendar.central_oauth_required"}, status_code=503)
-        # Family-local account edits are not safe until their control-plane
-        # commit/recovery path is implemented; deny rather than store passwords locally.
-        if (
-            request.method in {"POST", "PUT"}
-            and (path == "/api/members" or path.startswith("/api/members/"))
-            and "avatar" not in path
-            and path != "/api/members/order"
-        ):
-            return JSONResponse({"code": "auth.central_account_setup_required"}, status_code=503)
         storage = settings.upload_dir / "families" / str(principal.tenant_id)
         token = tenant_upload_root.set(storage)
         try:
@@ -196,7 +190,10 @@ def create_app(
             raise ApiError(401, "auth.not_authenticated")
         with family_session(principal) as db:
             local_actor(db, principal)
-            yield db
+            with registry.session() as control:
+                db.info["central_control"] = control
+                db.info["family_principal"] = principal
+                yield db
 
     def current_family_session(request: Request, db: auth.DbSession):
         user = local_actor(db, request.state.family_principal)
@@ -204,6 +201,52 @@ def create_app(
 
     app.dependency_overrides[get_db] = get_family_db
     app.dependency_overrides[auth.current_session] = current_family_session
+
+    @app.get("/api/auth/accounts")
+    def accounts(actor: auth.ParentSession, db: auth.DbSession) -> list[AccountOut]:
+        control = db.info["central_control"]
+        principal = db.info["family_principal"]
+        links = dict(
+            db.execute(
+                select(FamilyMember.user_id, FamilyMember.id).where(
+                    FamilyMember.user_id.is_not(None)
+                )
+            ).all()
+        )
+        result = []
+        for mapping, identity in control.execute(
+            select(Membership, Identity)
+            .join(Identity, Identity.id == Membership.identity_id)
+            .where(Membership.tenant_id == principal.tenant_id)
+            .order_by(Membership.family_user_id)
+        ):
+            user = (
+                db.get(User, mapping.family_user_id) if mapping.family_user_id is not None else None
+            )
+            if (
+                user is not None
+                and user.family_id == actor.user.family_id
+                and not identity.is_superadmin
+            ):
+                result.append(
+                    AccountOut(
+                        id=user.id,
+                        email=identity.email,
+                        role=mapping.role,
+                        member_id=links.get(user.id),
+                    )
+                )
+        return result
+
+    @app.post("/api/auth/accounts", status_code=201)
+    def create_account(
+        body: AccountCreateRequest, actor: auth.ParentSession, db: auth.DbSession
+    ) -> AccountOut:
+        editor = editor_for(db)
+        user = editor.create_unlinked(body.email, body.password, body.role, actor.user.family_id)
+        account_id = user.id
+        members.commit_member(db)
+        return AccountOut(id=account_id, email=body.email, role=body.role)
 
     @app.get("/api/setup/status")
     def setup_status():

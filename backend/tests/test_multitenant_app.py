@@ -322,3 +322,166 @@ def test_profile_password_route_updates_only_central_credentials(environment):
         assert client.get("/api/auth/me").status_code == 401
     with router.session(FamilyDatabase(1, "famquest_sertl")) as db:
         assert db.get(User, 1).password_hash == "!"
+
+
+def child_payload():
+    return {
+        "name": "Tim",
+        "role": "child",
+        "color": "purple",
+        "login": {"email": "tim@example.invalid", "password": "child-password-123"},
+    }
+
+
+def test_central_member_login_keeps_secrets_out_of_family_db_and_limits_child_access(environment):
+    from sqlalchemy import select
+
+    from app.family_db import FamilyDatabase
+    from app.security import verify_secret
+
+    app, registry, router, _ = environment
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as parent:
+        me = login(parent, "Sertl")
+        created = parent.post(
+            "/api/members", json=child_payload(), headers={"x-csrf-token": me["csrf_token"]}
+        )
+        assert created.status_code == 201, created.text
+        child_id = created.json()["id"]
+        accounts = parent.get("/api/auth/accounts").json()
+        assert {account["email"] for account in accounts} == {
+            "sertl@example.invalid",
+            "tim@example.invalid",
+        }
+        assert all(account["email"] != "henning@example.invalid" for account in accounts)
+        with registry.session() as db:
+            identity = db.scalar(select(Identity).where(Identity.email == "tim@example.invalid"))
+            assert verify_secret(identity.password_hash, "child-password-123")
+            assert identity.id != child_id  # Central and local IDs are deliberately different.
+        with router.session(FamilyDatabase(1, "famquest_sertl")) as db:
+            assert db.get(FamilyMember, child_id).user_id == 2
+            assert db.get(User, 2).password_hash == "!"
+        with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as child:
+            result = child.post("/api/auth/login", json=child_payload()["login"])
+            assert result.status_code == 200, result.text
+            assert result.json()["member_id"] == child_id
+            assert [member["id"] for member in child.get("/api/members").json()] == [child_id]
+            assert child.get("/api/auth/accounts").status_code == 403
+            assert (
+                child.post(
+                    "/api/members",
+                    json=child_payload(),
+                    headers={"x-csrf-token": result.json()["csrf_token"]},
+                ).status_code
+                == 403
+            )
+
+
+def test_create_unlinked_central_account_and_link_it_by_family_local_id(environment):
+    app, _, _, _ = environment
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as client:
+        me = login(client, "Sertl")
+        headers = {"x-csrf-token": me["csrf_token"]}
+        account = client.post(
+            "/api/auth/accounts",
+            headers=headers,
+            json={
+                "email": "tim@example.invalid",
+                "password": "child-password-123",
+                "role": "child",
+            },
+        )
+        assert account.status_code == 201, account.text
+        assert account.json()["member_id"] is None
+        created = client.post(
+            "/api/members",
+            headers=headers,
+            json=child_payload() | {"login": {"account_id": account.json()["id"]}},
+        )
+        assert created.status_code == 201, created.text
+        assert client.get("/api/auth/accounts").json()[1]["member_id"] == created.json()["id"]
+
+
+def test_account_from_another_family_cannot_be_taken_over_and_parent_role_is_protected(environment):
+    app, registry, _, _ = environment
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as client:
+        me = login(client, "Sertl")
+        headers = {"x-csrf-token": me["csrf_token"]}
+        payload = child_payload() | {
+            "login": {"email": "henning@example.invalid", "password": "new-password-123"}
+        }
+        assert client.post("/api/members", headers=headers, json=payload).status_code == 409
+        assert len(client.get("/api/members").json()) == 1
+        assert (
+            client.put(
+                "/api/members/1",
+                headers=headers,
+                json={"name": "Parent", "role": "child", "color": "blue"},
+            ).status_code
+            == 409
+        )
+        assert client.get("/api/auth/me").json()["user"]["role"] == "parent"
+
+
+def test_parent_reset_revokes_child_sessions_without_changing_parent_session(environment):
+    app, _, _, _ = environment
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as parent:
+        me = login(parent, "Sertl")
+        headers = {"x-csrf-token": me["csrf_token"]}
+        created = parent.post("/api/members", headers=headers, json=child_payload()).json()
+        with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as child:
+            assert child.post("/api/auth/login", json=child_payload()["login"]).status_code == 200
+            payload = child_payload() | {
+                "login": {"email": "tim@example.invalid", "password": "reset-password-123"}
+            }
+            response = parent.put(f"/api/members/{created['id']}", headers=headers, json=payload)
+            assert response.status_code == 200, response.text
+            assert child.get("/api/auth/me").status_code == 401
+            assert parent.get("/api/auth/me").status_code == 200
+            assert child.post("/api/auth/login", json=payload["login"]).status_code == 200
+
+
+def test_failed_central_commit_never_activates_credentials_and_existing_profile_is_repairable(
+    environment, monkeypatch
+):
+    from sqlalchemy import select
+
+    from app.central_accounts import CentralAccountEditor
+
+    app, registry, _, _ = environment
+    original = CentralAccountEditor.commit_after_family
+    failed = []
+
+    def finalize(editor):
+        if failed:
+            return original(editor)
+        failed.append(True)
+        commit = editor.control.commit
+
+        def reject():
+            raise RuntimeError("Simulated auth DB commit failure")
+
+        monkeypatch.setattr(editor.control, "commit", reject)
+        try:
+            return original(editor)
+        finally:
+            monkeypatch.setattr(editor.control, "commit", commit)
+
+    monkeypatch.setattr(CentralAccountEditor, "commit_after_family", finalize)
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as parent:
+        me = login(parent, "Sertl")
+        headers = {"x-csrf-token": me["csrf_token"]}
+        result = parent.post("/api/members", headers=headers, json=child_payload())
+        assert result.status_code == 503
+        assert result.json()["code"] == "auth.account_save_incomplete"
+        with registry.session() as db:
+            assert (
+                db.scalar(select(Identity).where(Identity.email == "tim@example.invalid")) is None
+            )
+        profiles = parent.get("/api/members").json()
+        child_id = next(member["id"] for member in profiles if member["name"] == "Tim")
+        assert len(profiles) == 2
+        result = parent.put(f"/api/members/{child_id}", headers=headers, json=child_payload())
+        assert result.status_code == 200, result.text
+        assert len(parent.get("/api/members").json()) == 2
+    with TestClient(app, base_url=ORIGIN, headers={"origin": ORIGIN}) as child:
+        assert child.post("/api/auth/login", json=child_payload()["login"]).status_code == 200

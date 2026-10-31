@@ -59,9 +59,9 @@ Code-Defaults lässt sich die tatsächliche NAS-Einstellung nicht ableiten.
 
 ## Noch offene Integrationsgrenzen
 
-Konten-/Mitgliedsbearbeitung mit zentralem Login, Google-Neuanbindung und MCP-
-Schreibtransport sind im neuen Testserver ausdrücklich gesperrt, solange ihre
-zentralen Transaktions-/OAuth-/Wiederholungswege fehlen. Das sind bekannte
+Konten-/Mitgliedsbearbeitung verwendet inzwischen zentrale Konten und einen
+geprüften Commit-/Reparaturpfad. Google-Neuanbindung und MCP-Schreibtransport
+sind noch ausdrücklich gesperrt, solange ihre zentralen OAuth-/Wiederholungswege fehlen. Das sind bekannte
 Release-Blocker und keine versteckten alten Einstellungen. Vor Produktivbetrieb
 folgen außerdem per-family Hintergrundjobs, Provisionierungs-/Restore-Probelauf
 und Freigabe der konkreten QNAP-Umstellung.
