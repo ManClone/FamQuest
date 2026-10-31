@@ -64,6 +64,12 @@ def approve(
     praise: bool = Query(default=False),
 ) -> None:
     """Bestätigt die Erledigung und bucht ihre Punkte, genau einmal (auch bei Doppel-Tipp)."""
+    # Keep the same task -> completion -> member lock order as completion and undo.
+    # Otherwise an approval holding the completion can wait for the task FK while
+    # a correction holding the task waits for that completion.
+    task_id = db.scalar(select(TaskCompletion.task_id).where(TaskCompletion.id == completion_id))
+    if task_id is not None:
+        db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
     approved = db.execute(
         update(TaskCompletion)
         .where(TaskCompletion.id == completion_id, TaskCompletion.approved_at.is_(None))
@@ -306,12 +312,12 @@ def undo_confirmed_task(completion_id: int, auth: ParentSession, db: DbSession) 
         return
     # Same task lock as completion creation; refresh after waiting for concurrent actions.
     task_id = old.task_id
-    task = db.scalar(select(Task).where(Task.id == task_id).with_for_update())
+    task = db.scalar(select(Task).where(Task.id == task_id).with_for_update(of=Task))
     completion = db.scalar(
         select(TaskCompletion)
         .where(TaskCompletion.id == completion_id)
         .execution_options(populate_existing=True)
-        .with_for_update()
+        .with_for_update(of=TaskCompletion)
     )
     if completion is None:
         return

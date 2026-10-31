@@ -185,3 +185,24 @@ def test_pending_completion_is_not_in_confirmed_history(client, parent, lena, no
         == 409
     )
     assert len(approvals(client)) == 1
+
+
+def test_parallel_parent_corrections_reverse_one_completion_once(client, parent, lena, now):
+    from concurrent.futures import ThreadPoolExecutor
+
+    task = add_task(client, parent, [lena], points=5, money_cents=50)
+    assert complete(client, parent, task, lena).status_code == 204
+    [item] = client.get(f"/api/approvals/confirmed?member_id={lena}").json()["items"]
+    url = f"/api/approvals/{item['id']}/confirmed"
+    headers = csrf(parent)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(
+            pool.map(lambda _: client.delete(url, headers=headers).status_code, range(4))
+        )
+    assert results == [204] * 4
+    assert points_of(client, lena)["total"] == 0
+    assert client.get(f"/api/members/{lena}/money").json()["bonus_cents"] == 0
+    reversals = [
+        entry for entry in history(client, lena)["transactions"] if entry["kind"] == "task_undone"
+    ]
+    assert len(reversals) == 1
