@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 
-import { useLogout, useMe } from '../api/auth'
+import { ME_KEY, useLogout, useMe } from '../api/auth'
 import { api, apiGet } from '../api/client'
 import type { Member } from '../api/members'
 import { Avatar } from '../components/Avatar'
@@ -56,6 +56,7 @@ export function ProfileSection() {
       setNewPassword('')
       setRepeatPassword('')
       setNotice(t('personal.password_saved'))
+      void queryClient.invalidateQueries({ queryKey: ME_KEY })
     },
   })
   const member = profile.data?.member

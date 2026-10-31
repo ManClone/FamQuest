@@ -39,7 +39,16 @@ def test_router_rejects_changed_mapping_until_evicted():
 
 @pytest.mark.parametrize(
     "name",
-    ["postgres", "famquest_;drop", "famquest_../x", "famquest_UPPER", "famquest_ä"],
+    [
+        "postgres",
+        "famquest_;drop",
+        "famquest_../x",
+        "famquest_UPPER",
+        "famquest_ä",
+        "famquest_auth",
+        "famquest_",
+        "famquest_" + "a" * 51,
+    ],
 )
 def test_router_rejects_invalid_database_names(name):
     router = FamilyDatabaseRouter(family_settings())

@@ -39,7 +39,10 @@ class Identity(AuthBase):
 
 class Membership(AuthBase):
     __tablename__ = "memberships"
-    __table_args__ = (UniqueConstraint("identity_id", "tenant_id"),)
+    __table_args__ = (
+        UniqueConstraint("identity_id", "tenant_id"),
+        UniqueConstraint("tenant_id", "family_user_id", name="uq_membership_family_actor"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     identity_id: Mapped[int] = mapped_column(
@@ -49,6 +52,8 @@ class Membership(AuthBase):
         ForeignKey("tenants.id", ondelete="RESTRICT"), index=True
     )
     role: Mapped[str] = mapped_column(String(20))
+    # Non-secret local actor reference; never a cross-database foreign key.
+    family_user_id: Mapped[int | None] = mapped_column()
     identity: Mapped[Identity] = relationship()
     tenant: Mapped[Tenant] = relationship()
 
