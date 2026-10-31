@@ -69,9 +69,7 @@ Router-/Registry-Unit-Tests ersetzen diesen End-to-End-Nachweis nicht.
 
 ## Fortsetzung
 
-Die automatische Freigabeprüfung hat das Hochladen der geänderten Quelldateien
-nach GitHub abgelehnt, weil die ausdrückliche Freigabe für diesen Export fehlt.
-Deshalb wurden keine Remote-Git-Objekte angelegt, kein Branch aktualisiert und
-kein neuer CI-Lauf ausgelöst. Nach ausdrücklicher Freigabe Änderungen auf dem
-bestehenden Draft-Zweig prüfen, hochladen und CI abwarten. Kein Merge nach main,
+Der Nutzer hat den Upload dieser Änderungen auf den bestehenden GitHub-Draft
+und den Start der vollständigen CI-Prüfungen ausdrücklich freigegeben.
+Die CI-Ergebnisse dieses Updates stehen noch aus. Kein Merge nach main,
 keine Image-Veröffentlichung und kein produktiver Cutover als Teil dieses Uploads.
