@@ -9,10 +9,13 @@ import PlusCircleIcon from '~icons/fluent-emoji-flat/plus'
 import TrophyIcon from '~icons/fluent-emoji-flat/trophy'
 import ManualIcon from '~icons/fluent-emoji-flat/writing-hand'
 
-import { ApiError } from '../../api/client'
+import { ApiError, api } from '../../api/client'
+import { useParentMutation } from '../../api/mutations'
 import type { Member } from '../../api/members'
 import {
   MANUAL_MAX_POINTS,
+  POINTS_KEY,
+  PROGRESS_KEY,
   type PointKind,
   type PointTransaction,
   useBookPoints,
@@ -23,7 +26,6 @@ import { TaskIcon } from '../../components/TaskIcon'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
 import { ChoiceTile, Field, NumberStepper } from './formParts'
-import { CriticismPanel } from './CriticismPanel'
 
 const KIND_ICONS: Record<PointKind, typeof ManualIcon> = {
   task_completed: CheckIcon,
@@ -45,11 +47,12 @@ interface PointsEditorProps {
   member: Member
   /** Zeitzone der Familie für Datum und Uhrzeit der Buchungen. */
   timeZone: string
-  onBack: () => void
+  onBack?: () => void
+  embedded?: boolean
 }
 
 /** Punktestand, Buchungshistorie und manuelle Buchung für eine Person. */
-export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
+export function PointsEditor({ member, timeZone, onBack, embedded = false }: PointsEditorProps) {
   const { t } = useTranslation()
   const history = usePointHistory(member.id)
   const book = useBookPoints(member.id)
@@ -59,6 +62,7 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
   const [submitted, setSubmitted] = useState(false)
   const [notice, setNotice] = useState<string>()
   const credit = member.role === 'child' || direction === 'credit'
+  const Heading = embedded ? 'h2' : 'h1'
 
   const total = history.data?.pages[0]?.total
   const transactions = history.data?.pages.flatMap((page) => page.transactions) ?? []
@@ -93,16 +97,24 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 p-4 sm:p-6">
-      <Button variant="secondary" onClick={onBack} className="self-start">
-        <BackIcon className="size-8" aria-hidden="true" />
-        {t('actions.back')}
-      </Button>
+    <section
+      className={
+        embedded
+          ? 'flex min-w-0 flex-col gap-6'
+          : 'mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 p-4 sm:p-6'
+      }
+    >
+      {!embedded && (
+        <Button variant="secondary" onClick={onBack} className="self-start">
+          <BackIcon className="size-8" aria-hidden="true" />
+          {t('actions.back')}
+        </Button>
+      )}
       <header className="flex flex-wrap items-center gap-4">
         <Avatar name={member.name} color={member.color} src={member.avatar_url} size="lg" />
-        <h1 className="min-w-0 flex-1 text-3xl font-extrabold break-words text-orange-600">
+        <Heading className="min-w-0 flex-1 text-3xl font-extrabold break-words text-orange-600">
           {t('points.open', { name: member.name })}
-        </h1>
+        </Heading>
         <p className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm">
           <TrophyIcon className="size-10" aria-hidden="true" />
           <span className="sr-only">{t('points.balance')}: </span>
@@ -121,13 +133,14 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
         </p>
       )}
 
-      {member.role === 'child' && <CriticismPanel memberId={member.id} />}
       <form
         className="flex flex-col gap-6 rounded-3xl bg-white p-6 shadow-sm"
         onSubmit={submit}
         noValidate
       >
-        <h2 className="text-2xl font-extrabold text-slate-800">{t('points.book_title')}</h2>
+        <h2 className="text-2xl font-extrabold text-slate-800">
+          {t(member.role === 'child' ? 'family_account.credit_title' : 'points.book_title')}
+        </h2>
         {book.isError && !(book.error instanceof ApiError && book.error.fields.reason) && (
           <Alert>{errorMessage(t, book.error)}</Alert>
         )}
@@ -191,9 +204,14 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
           <p className="text-lg text-slate-600">{t('points.history_empty')}</p>
         )}
         {transactions.length > 0 && (
-          <ul className="flex flex-col divide-y divide-slate-100">
+          <ul className="flex max-h-96 flex-col divide-y divide-slate-100 overflow-y-auto">
             {transactions.map((transaction) => (
-              <TransactionRow key={transaction.id} transaction={transaction} timeZone={timeZone} />
+              <TransactionRow
+                key={transaction.id}
+                transaction={transaction}
+                timeZone={timeZone}
+                memberId={member.id}
+              />
             ))}
           </ul>
         )}
@@ -208,18 +226,29 @@ export function PointsEditor({ member, timeZone, onBack }: PointsEditorProps) {
           </Button>
         )}
       </Section>
-    </main>
+    </section>
   )
 }
 
 function TransactionRow({
   transaction,
   timeZone,
+  memberId,
 }: {
   transaction: PointTransaction
   timeZone: string
+  memberId: number
 }) {
   const { t, i18n } = useTranslation()
+  const [correcting, setCorrecting] = useState(false)
+  const [correction, setCorrection] = useState('')
+  const reverse = useParentMutation(
+    () =>
+      api('POST', `/members/${memberId}/points/${transaction.id}/reverse`, {
+        reason: correction.trim(),
+      }),
+    [POINTS_KEY, PROGRESS_KEY, ['today']],
+  )
   const language = i18n.resolvedLanguage ?? i18n.language
   const KindIcon = KIND_ICONS[transaction.kind] ?? ManualIcon
   const when = new Intl.DateTimeFormat(language, {
@@ -230,7 +259,7 @@ function TransactionRow({
   const positive = transaction.amount > 0
 
   return (
-    <li className="flex items-center gap-3 py-3">
+    <li className="flex flex-wrap items-center gap-3 py-3">
       <span className="shrink-0">
         {transaction.icon ? (
           <TaskIcon icon={transaction.icon} className="size-12" />
@@ -261,6 +290,39 @@ function TransactionRow({
       >
         {positive ? `+${transaction.amount}` : `−${Math.abs(transaction.amount)}`}
       </span>
+      {transaction.kind === 'manual' && transaction.amount > 0 && !transaction.reversed_at && (
+        <div className="w-full">
+          {!correcting ? (
+            <Button variant="secondary" size="compact" onClick={() => setCorrecting(true)}>
+              {t('family_account.correct_credit')}
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-xl bg-orange-50 p-3">
+              <p>{t('family_account.credit_hint', { count: transaction.amount })}</p>
+              <TextField
+                label={t('criticism.correction_reason')}
+                value={correction}
+                maxLength={200}
+                onChange={(event) => setCorrection(event.target.value)}
+              />
+              {reverse.isError && <Alert>{errorMessage(t, reverse.error)}</Alert>}
+              <Button
+                disabled={!correction.trim() || reverse.isPending}
+                onClick={() => reverse.mutate(undefined, { onSuccess: () => setCorrecting(false) })}
+              >
+                {t('family_account.confirm_credit')}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={reverse.isPending}
+                onClick={() => setCorrecting(false)}
+              >
+                {t('actions.cancel')}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </li>
   )
 }

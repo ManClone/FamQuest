@@ -36,7 +36,15 @@ it('gives a separate heart and restores reasoned star deductions on the dashboar
       hearts++
       return Response.json({ id: 1 })
     },
-    'POST /api/members/1/points': Response.json({ total: 8, transactions: [], has_more: false }),
+    'GET /api/members/1/criticism': Response.json({
+      date: '2026-10-31',
+      spendable_stars: 8,
+      payable_bonus_cents: 50,
+      total_cents: 50,
+      levels: { light: { stars: 1, bonus_cents: 0 }, conversation: { stars: 0, bonus_cents: 0 } },
+    }),
+    'GET /api/members/1/consequences': Response.json([]),
+    'POST /api/consequences': Response.json({ id: 1 }, { status: 201 }),
   })
   renderApp('/')
   const panel = await screen.findByRole('region', { name: 'Praise & discipline' })
@@ -49,11 +57,15 @@ it('gives a separate heart and restores reasoned star deductions on the dashboar
     reason: 'Great help',
   })
   await user.click(within(panel).getByRole('button', { name: 'Deduct stars' }))
-  await user.type(within(panel).getByLabelText('Reason'), 'Correction')
-  await user.click(within(panel).getAllByRole('button', { name: 'Deduct stars' }).at(-1)!)
-  expect(await within(panel).findByRole('status')).toHaveTextContent('Saved.')
-  expect(calls.find((call) => call.key === 'POST /api/members/1/points')?.body).toMatchObject({
-    amount: -1,
-    reason: 'Correction',
+  await user.selectOptions(await within(panel).findByRole('combobox'), 'light')
+  await user.type(within(panel).getByLabelText('Brief reason'), 'Correction')
+  await user.click(within(panel).getByRole('checkbox', { name: /confirm this specific/ }))
+  await user.click(within(panel).getByRole('button', { name: 'Save decision' }))
+  expect(await within(panel).findByText('Decision saved.')).toBeVisible()
+  expect(calls.find((call) => call.key === 'POST /api/consequences')?.body).toMatchObject({
+    severity: 'light',
+    apply_money: false,
+    confirmed: true,
   })
+  expect(calls.some((call) => call.key === 'POST /api/members/1/points')).toBe(false)
 })

@@ -62,7 +62,7 @@ describe('Management replaces everyday navigation', () => {
     const headings = screen
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent)
-    expect(headings).toEqual(['Familie', 'Familienmitglieder', 'Wetter', 'Taschengeld'])
+    expect(headings).toEqual(['Familie', 'Familienmitglieder', 'Wetter'])
     expect(screen.queryByRole('heading', { name: 'Dieses Gerät' })).toBeNull()
   })
 

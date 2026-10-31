@@ -1249,5 +1249,21 @@
     "allowance_amount": "Weekly base allowance in euros",
     "allowance_save": "Save base allowance",
     "allowance_saved": "Setting saved."
+  },
+  "family_account": {
+    "week": "Weekly bonus and settlement",
+    "completed_tasks": "Completed child tasks",
+    "undo_confirm": "Undo this completion? Its original points and euro bonus will be reversed. The task will be open again for that day.",
+    "correct_credit": "Correct credit",
+    "credit_hint": "Reverse this credit of {{count}} points? An auditable compensating entry will be created.",
+    "confirm_credit": "Reverse credit with reason",
+    "credit_title": "Credit and correct points",
+    "criticism": "Record criticism",
+    "levels": {
+      "conversation": "Conversation / making amends",
+      "light": "Light",
+      "heavy": "Serious",
+      "severe": "Very serious"
+    }
   }
 }

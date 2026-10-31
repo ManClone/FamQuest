@@ -1249,5 +1249,21 @@
     "allowance_amount": "Wöchentliches Grundtaschengeld in Euro",
     "allowance_save": "Grundtaschengeld speichern",
     "allowance_saved": "Einstellung gespeichert."
+  },
+  "family_account": {
+    "week": "Wochenbonus und Abrechnung",
+    "completed_tasks": "Erledigte Kinderaufgaben",
+    "undo_confirm": "Diese Erledigung zurücknehmen? Die damaligen Punkte und der Euro-Bonus werden zurückgebucht. Die Aufgabe ist für diesen Tag wieder offen.",
+    "correct_credit": "Gutschrift korrigieren",
+    "credit_hint": "Diese Gutschrift von {{count}} Punkten zurücknehmen? Es wird eine nachvollziehbare Gegenbuchung erstellt.",
+    "confirm_credit": "Gutschrift mit Begründung zurücknehmen",
+    "credit_title": "Punkte gutschreiben und korrigieren",
+    "criticism": "Kritik festlegen",
+    "levels": {
+      "conversation": "Gespräch / Wiedergutmachung",
+      "light": "Leicht",
+      "heavy": "Schwer",
+      "severe": "Sehr schwer"
+    }
   }
 }
