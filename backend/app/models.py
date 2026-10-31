@@ -72,6 +72,9 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    family_id: Mapped[int | None] = mapped_column(
+        ForeignKey("families.id", ondelete="RESTRICT"), index=True
+    )
     role: Mapped[str] = mapped_column(String(20))
     language: Mapped[str | None] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -741,6 +744,8 @@ class ChoreCompletion(Base):
 
     approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     points: Mapped[int] = mapped_column(default=0, server_default="0")
+    # Snapshot; NULL for historical executions whose old time estimate is unknown.
+    estimated_minutes: Mapped[int | None] = mapped_column(SmallInteger)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))

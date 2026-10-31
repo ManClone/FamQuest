@@ -6,8 +6,8 @@ from pathlib import Path
 from fastapi import Request, status
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from app.config import get_settings
 from app.errors import ApiError
+from app.tenant_storage import upload_root
 
 AVATAR_SIZE = 512
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -70,7 +70,7 @@ def process_avatar(data: bytes) -> bytes:
 
 
 def image_dir(folder: str) -> Path:
-    return get_settings().upload_dir / folder
+    return upload_root() / folder
 
 
 def store_image(folder: str, data: bytes) -> str:

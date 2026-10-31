@@ -397,6 +397,9 @@
       "password_mismatch": "The passwords don't match"
     },
     "auth": {
+      "central_account_setup_required": "Account management is not available here yet.",
+      "account_save_incomplete": "The profile was saved, but account setup is incomplete. Please reload the page and finish account setup on the existing profile.",
+      "family_mapping_required": "Your account is not fully linked to this family yet. Please contact your family administrator.",
       "not_authenticated": "Please sign in",
       "invalid_credentials": "Email or password is incorrect",
       "email_taken": "This email address is already in use.",
@@ -465,6 +468,7 @@
       "not_found": "This has already been checked or undone."
     },
     "calendar": {
+      "central_oauth_required": "New calendar connections are not available in this version yet.",
       "not_configured": "Google Calendar is not set up yet",
       "state_invalid": "The Google sign-in expired or is invalid. Please try again.",
       "access_denied": "The Google sign-in was cancelled",
@@ -538,6 +542,7 @@
       "request_conflict": "This praise was already saved differently. Please reload."
     },
     "mcp": {
+      "central_gateway_required": "Changes through the assistant are not available here yet.",
       "operation_forbidden": "This operation is not available through MCP.",
       "parent_confirmation_required": "This decision requires explicit parent confirmation.",
       "parent_required": "MCP must be linked to an existing parent account."
@@ -604,7 +609,15 @@
     "choose_member": "Choose a family member"
   },
   "care": {
-    "title": "Who did it?",
+    "time_legend": "{{name}}: {{minutes}} estimated min ({{percent}}%)",
+    "minutes": "{{minutes}} min",
+    "time_basis": "Estimated time from household task durations. Older executions use today's task estimate. One-off to-dos without a duration are not included.",
+    "title": "Household overview",
+    "parent_time": "Parents: estimated time",
+    "child_legend_one": "{{name}}: {{count}} task completed",
+    "child_legend_other": "{{name}}: {{count}} tasks completed",
+    "child_count_one": "{{count}} task",
+    "child_count_other": "{{count}} tasks",
     "period": "last {{days}} days",
     "legend_one": "{{name}}: {{percent}}% ({{count}} time)",
     "legend_other": "{{name}}: {{percent}}% ({{count}} times)",

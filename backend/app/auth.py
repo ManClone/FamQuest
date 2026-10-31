@@ -34,8 +34,12 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def get_family(db: Session) -> Family:
-    family = db.scalars(select(Family)).one_or_none()
+def get_family(db: Session, user: User | None = None) -> Family:
+    if user is not None and user.family_id is not None:
+        family = db.get(Family, user.family_id)
+    else:
+        # Legacy single-family callers until every route is tenant-aware.
+        family = db.scalars(select(Family)).one_or_none()
     if family is None:
         raise ApiError(status.HTTP_409_CONFLICT, "setup.required")
     return family
@@ -111,6 +115,10 @@ def current_session(request: Request, db: DbSession) -> AuthSession:
         user = db.get(User, int(raw_id)) if raw_id.isdecimal() else None
         if user is None or user.role not in ("admin", "parent"):
             raise ApiError(403, "mcp.parent_required")
+        # MCP identities must belong to a persisted family. Never infer a
+        # tenant from request headers or silently fall back to another family.
+        if user.family_id is None or db.get(Family, user.family_id) is None:
+            raise ApiError(403, "mcp.parent_required")
         logger.info("MCP parent=%s method=%s path=%s", user.id, request.method, request.url.path)
         # Transient principal: no reusable browser session, cookie or CSRF exemption for cookies.
         return AuthSession(user_id=user.id, user=user)
@@ -165,8 +173,8 @@ ParentSession = Annotated[AuthSession, Depends(parent_session)]
 
 
 def me_response(db: Session, auth_session: AuthSession) -> MeResponse:
-    family = get_family(db)
     user = auth_session.user
+    family = get_family(db, user)
     return MeResponse(
         user=UserOut(email=user.email, role=user.role, language=user.language),
         family=FamilyOut(

@@ -72,7 +72,7 @@ export interface ChorePlan {
   /** So viele Tage zählt die faire Verteilung zurück (heute eingeschlossen). */
   share_days: number
   /** Wer in dieser Zeit wie oft etwas erledigt hat (Putzplan und Liste); nur mit „Wer war's?“. */
-  shares: { member_id: number; count: number }[]
+  shares: { member_id: number; count: number; estimated_minutes?: number }[]
 }
 
 export interface RoomData {

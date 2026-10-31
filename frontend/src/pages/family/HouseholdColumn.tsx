@@ -57,6 +57,8 @@ export function HouseholdColumn({
       room={plan.rooms.find((room) => room.id === chore.room_id)}
       doneBy={members.find((member) => member.id === chore.done_by)}
       onToggle={() => done.toggle(chore)}
+      onRepeat={() => done.repeat(chore)}
+      busy={done.busy}
     />
   )
 

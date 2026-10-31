@@ -71,6 +71,9 @@ def commit_member(db: DbSession) -> None:
         if "family_members_user_id" in constraint:
             code = "auth.login_already_linked"
         raise ApiError(status.HTTP_409_CONFLICT, code) from error
+    editor = db.info.get("central_account_editor")
+    if editor is not None:
+        editor.commit_after_family()
 
 
 @router.get("/members")

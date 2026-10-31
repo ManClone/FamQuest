@@ -397,6 +397,9 @@
       "password_mismatch": "Die Passwörter stimmen nicht überein"
     },
     "auth": {
+      "central_account_setup_required": "Die Kontoverwaltung ist hier noch nicht freigeschaltet.",
+      "account_save_incomplete": "Das Profil wurde gespeichert, der Zugang aber noch nicht vollständig eingerichtet. Bitte lade die Seite neu und ergänze den Zugang beim vorhandenen Profil.",
+      "family_mapping_required": "Dein Konto ist dieser Familie noch nicht vollständig zugeordnet. Bitte wende dich an die Familienverwaltung.",
       "not_authenticated": "Bitte melde dich an",
       "invalid_credentials": "E-Mail oder Passwort ist falsch",
       "email_taken": "Diese E-Mail-Adresse wird bereits verwendet.",
@@ -465,6 +468,7 @@
       "not_found": "Diese Erledigung wurde schon geprüft oder zurückgenommen."
     },
     "calendar": {
+      "central_oauth_required": "Neue Kalenderverbindungen sind in dieser Version noch nicht verfügbar.",
       "not_configured": "Der Google Kalender ist noch nicht eingerichtet",
       "state_invalid": "Die Anmeldung bei Google ist abgelaufen oder ungültig. Bitte nochmal versuchen.",
       "access_denied": "Die Anmeldung bei Google wurde abgebrochen",
@@ -538,6 +542,7 @@
       "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
     },
     "mcp": {
+      "central_gateway_required": "Schreibaktionen über den Assistenten sind hier noch nicht freigeschaltet.",
       "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
       "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
       "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
@@ -604,7 +609,15 @@
     "choose_member": "Familienmitglied wählen"
   },
   "care": {
-    "title": "Wer hat’s gemacht?",
+    "title": "Haushalt im Überblick",
+    "parent_time": "Eltern: geschätzter Zeitaufwand",
+    "child_legend_one": "{{name}}: {{count}} Aufgabe erledigt",
+    "child_legend_other": "{{name}}: {{count}} Aufgaben erledigt",
+    "child_count_one": "{{count}} Aufgabe",
+    "child_count_other": "{{count}} Aufgaben",
+    "time_legend": "{{name}}: {{minutes}} Min. geschätzt ({{percent}} %)",
+    "minutes": "{{minutes}} Min.",
+    "time_basis": "Geschätzter Zeitaufwand aus den Zeitvorgaben der Hausarbeiten. Ältere Erledigungen nutzen die heutige Zeitvorgabe. Einmalige To-dos ohne Zeitangabe sind nicht enthalten.",
     "period": "letzte {{days}} Tage",
     "legend_one": "{{name}}: {{percent}} % ({{count}}-mal)",
     "legend_other": "{{name}}: {{percent}} % ({{count}}-mal)",
