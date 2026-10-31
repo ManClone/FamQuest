@@ -6,3 +6,7 @@ export function oauthReturnPath(search: string): string | null {
   const parsed = new URL(next, base)
   return parsed.origin === base && parsed.pathname === '/authorize' ? next : null
 }
+
+export function resumeOAuth(target: string): void {
+  window.location.replace(target)
+}

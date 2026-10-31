@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import i18n from '../i18n'
+import * as oauthReturn from '../oauth-return'
 import { makeMe, mockApi, notAuthenticated, renderApp, setupDone } from '../test/utils'
 
 beforeEach(async () => {
@@ -11,9 +12,39 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe('Login', () => {
+  it.each([
+    ['/authorize?client_id=registered&state=original', true],
+    ['https://attacker.invalid/authorize?state=original', false],
+  ])('setzt nach Login nur einen lokalen Zustimmungsdialog fort (%s)', async (target, valid) => {
+    const resume = vi.spyOn(oauthReturn, 'resumeOAuth').mockImplementation(() => undefined)
+    const user = userEvent.setup()
+    const me = makeMe()
+    let loggedIn = false
+    mockApi({
+      'GET /api/setup/status': setupDone,
+      'GET /api/auth/me': () => (loggedIn ? Response.json(me) : notAuthenticated.clone()),
+      'POST /api/auth/login': () => {
+        loggedIn = true
+        return Response.json(me)
+      },
+    })
+    renderApp(`/login?next=${encodeURIComponent(target)}`)
+    await user.type(await screen.findByLabelText('E-Mail'), 'mama@example.org')
+    await user.type(screen.getByLabelText('Passwort'), 'sehr-geheim-123')
+    await user.click(screen.getByRole('button', { name: 'Anmelden' }))
+    if (valid) {
+      await waitFor(() => expect(resume).toHaveBeenCalledWith(target))
+      expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull()
+    } else {
+      expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeVisible()
+      expect(resume).not.toHaveBeenCalled()
+    }
+  })
+
   it('leitet ohne Anmeldung zum Login', async () => {
     mockApi({ 'GET /api/setup/status': setupDone, 'GET /api/auth/me': notAuthenticated })
 
