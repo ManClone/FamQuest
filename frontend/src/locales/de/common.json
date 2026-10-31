@@ -397,6 +397,8 @@
       "password_mismatch": "Die Passwörter stimmen nicht überein"
     },
     "auth": {
+      "central_account_setup_required": "Die Kontoverwaltung ist hier noch nicht freigeschaltet.",
+      "family_mapping_required": "Dein Konto ist dieser Familie noch nicht vollständig zugeordnet. Bitte wende dich an die Familienverwaltung.",
       "not_authenticated": "Bitte melde dich an",
       "invalid_credentials": "E-Mail oder Passwort ist falsch",
       "email_taken": "Diese E-Mail-Adresse wird bereits verwendet.",
@@ -465,6 +467,7 @@
       "not_found": "Diese Erledigung wurde schon geprüft oder zurückgenommen."
     },
     "calendar": {
+      "central_oauth_required": "Neue Kalenderverbindungen sind in dieser Version noch nicht verfügbar.",
       "not_configured": "Der Google Kalender ist noch nicht eingerichtet",
       "state_invalid": "Die Anmeldung bei Google ist abgelaufen oder ungültig. Bitte nochmal versuchen.",
       "access_denied": "Die Anmeldung bei Google wurde abgebrochen",
@@ -538,6 +541,7 @@
       "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
     },
     "mcp": {
+      "central_gateway_required": "Schreibaktionen über den Assistenten sind hier noch nicht freigeschaltet.",
       "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
       "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
       "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
