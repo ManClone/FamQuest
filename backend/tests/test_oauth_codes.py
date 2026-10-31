@@ -74,3 +74,21 @@ def test_code_denied_after_family_deactivation(registry):
             registry, code=code, client_id="chatgpt-test",
             redirect_uri="https://example.invalid/callback", verifier=verifier,
         )
+
+
+def test_code_denied_after_client_revocation(registry):
+    verifier = "v" * 43
+    code = issue_code(
+        registry, client_id="chatgpt-test",
+        redirect_uri="https://example.invalid/callback",
+        identity_id=1, tenant_id=1,
+        code_challenge=s256_challenge(verifier),
+    )
+    registry.commit()
+    registry.get(OAuthClient, "chatgpt-test").enabled = False
+    registry.commit()
+    with pytest.raises(PermissionError):
+        consume_code(
+            registry, code=code, client_id="chatgpt-test",
+            redirect_uri="https://example.invalid/callback", verifier=verifier,
+        )
