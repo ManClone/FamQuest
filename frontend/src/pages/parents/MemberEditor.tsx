@@ -1,7 +1,6 @@
 import { PocketMoneySection } from './PocketMoneySection'
 import { CriticismPanel } from './CriticismPanel'
 import { PointsEditor } from './PointsEditor'
-import { ConfirmedChores } from './ConfirmedChores'
 import { type FormEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CameraIcon from '~icons/fluent-emoji-flat/camera'
@@ -343,8 +342,6 @@ export function MemberEditor({
             </>
           )}
           <PointsEditor member={member} timeZone={timeZone} embedded />
-          <ConfirmedChores members={members} memberId={member.id} source="task" />
-          <ConfirmedChores members={members} memberId={member.id} />
         </>
       )}
 

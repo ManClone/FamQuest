@@ -21,6 +21,8 @@ def book(
     task_date: dt.date | None = None,
     user_id: int | None = None,
     redemption: RewardRedemption | None = None,
+    completion_source: str | None = None,
+    completion_id: int | None = None,
 ) -> PointTransaction | None:
     """Legt eine Buchung an; Aufgaben mit 0 Punkten erzeugen keine."""
     if amount == 0:
@@ -39,6 +41,8 @@ def book(
         task_date=task_date,
         created_by_user_id=user_id,
         redemption=redemption,
+        completion_source=completion_source,
+        completion_id=completion_id,
     )
     db.add(entry)
     if kind in LEVEL_EARNING_KINDS:

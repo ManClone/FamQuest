@@ -330,3 +330,17 @@ def reverse_points(
     Existing compensation must be explicitly linked, or reviewed as unrelated.
     """
     return reverse_points_entry(member_id, transaction_id, body, auth, db)
+
+
+@router.get("/members/{member_id}/activity")
+def get_activity(
+    member_id: int,
+    _: ParentSession,
+    db: DbSession,
+    cursor: str | None = Query(default=None, max_length=512),
+    limit: int = Query(default=50, ge=1, le=50),
+) -> dict:
+    from app.activity import activity_history
+
+    get_member(db, member_id)
+    return activity_history(db, member_id, cursor, limit)

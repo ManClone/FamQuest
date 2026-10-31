@@ -53,7 +53,7 @@ function api(extra: Record<string, Response | ((body: unknown) => Response)> = {
         ],
       }),
     ),
-    'GET /api/members/1/points': Response.json(history),
+    'GET /api/members/1/activity': Response.json(history),
     'GET /api/members/1/criticism': Response.json({
       date: '2026-10-31',
       week_start: '2026-10-26',
@@ -148,7 +148,7 @@ describe('Punkte im Elternbereich', () => {
   it('nimmt eine einzelne manuelle Gutschrift mit Begründung zurück', async () => {
     let reversed = false
     const calls = api({
-      'GET /api/members/1/points': () =>
+      'GET /api/members/1/activity': () =>
         Response.json({
           ...history,
           transactions: [
@@ -161,7 +161,7 @@ describe('Punkte im Elternbereich', () => {
       },
     })
     const user = await openLena()
-    await user.click(await screen.findByRole('button', { name: 'Gutschrift korrigieren' }))
+    await user.click(await screen.findByRole('button', { name: /Beim Aufräumen geholfen/ }))
     const confirm = screen.getByRole('button', { name: 'Gutschrift mit Begründung zurücknehmen' })
     expect(confirm).toBeDisabled()
     await user.type(screen.getByLabelText('Grund der Korrektur'), 'Versehentlich gebucht')
@@ -172,6 +172,44 @@ describe('Punkte im Elternbereich', () => {
     })
     expect(screen.queryByRole('button', { name: 'Gutschrift korrigieren' })).toBeNull()
   })
+
+  it.each(['task', 'chore'] as const)(
+    'korrigiert %s direkt in der einzigen Buchungsliste',
+    async (source) => {
+      let undone = false
+      const route = source === 'task' ? 'approvals' : 'chore-approvals'
+      const calls = api({
+        'GET /api/members/1/activity': () =>
+          Response.json({
+            total: undone ? 0 : 2,
+            has_more: false,
+            transactions: [
+              {
+                ...makeTransaction(),
+                undo_source: undone ? null : source,
+                undo_id: undone ? null : 41,
+              },
+            ],
+          }),
+        [`DELETE /api/${route}/41/confirmed`]: () => {
+          undone = true
+          return new Response(null, { status: 204 })
+        },
+      })
+      const user = await openLena()
+      expect(screen.queryByText('Erledigte Kinderaufgaben')).toBeNull()
+      expect(screen.queryByText('Bestätigte Erledigungen')).toBeNull()
+      await user.click(await screen.findByRole('button', { name: /Zähne putzen/ }))
+      expect(calls.some((call) => call.key.startsWith('DELETE'))).toBe(false)
+      await user.click(screen.getByRole('button', { name: 'Ja, rückgängig machen' }))
+      await vi.waitFor(() =>
+        expect(screen.queryByRole('button', { name: /Zähne putzen/ })).toBeNull(),
+      )
+      expect(calls.filter((call) => call.key.startsWith('DELETE')).map((call) => call.key)).toEqual(
+        [`DELETE /api/${route}/41/confirmed`],
+      )
+    },
+  )
 
   it('verlangt eine Begründung', async () => {
     const calls = api()
@@ -184,11 +222,16 @@ describe('Punkte im Elternbereich', () => {
   })
 
   it('lädt ältere Buchungen nach', async () => {
-    const firstPage = { ...history, transactions: history.transactions.slice(0, 1), has_more: true }
+    const firstPage = {
+      ...history,
+      transactions: history.transactions.slice(0, 1),
+      has_more: true,
+      next_cursor: 'older',
+    }
     const secondPage = { ...history, transactions: history.transactions.slice(1) }
     let page = 0
     api({
-      'GET /api/members/1/points': () => Response.json(++page === 1 ? firstPage : secondPage),
+      'GET /api/members/1/activity': () => Response.json(++page === 1 ? firstPage : secondPage),
     })
     const requested: string[] = []
     const mockedFetch = globalThis.fetch
@@ -203,7 +246,7 @@ describe('Punkte im Elternbereich', () => {
     await user.click(screen.getByRole('button', { name: 'Ältere Buchungen laden' }))
 
     await vi.waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(3))
-    expect(requested).toContain('/api/members/1/points?before=3')
+    expect(requested).toContain('/api/members/1/activity?cursor=older')
     expect(screen.queryByRole('button', { name: 'Ältere Buchungen laden' })).toBeNull()
   })
 })

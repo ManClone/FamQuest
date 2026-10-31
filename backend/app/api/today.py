@@ -246,6 +246,8 @@ def complete_task(
             reason=task.title,
             task_id=task_id,
             task_date=today,
+            completion_source="task",
+            completion_id=created,
         )
     if created is not None and not task.needs_approval:
         book_money(db, member_id, task.money_cents, "task_completed", task.title, created)

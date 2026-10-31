@@ -78,3 +78,30 @@ separate Testimages mit vollständiger Commit-Kennung. Es gibt keine Veröffentl
 unter `latest` aus diesem Testweg. Pull Requests fremder Repositories können diesen
 Veröffentlichungsschritt nicht ausführen. Eine fertige Testimage-Veröffentlichung
 ersetzt nicht die separate Migrations-/Restore-Probe vor produktivem Update.
+
+
+## Eine gemeinsame Liste beim Kind
+
+Unter Familie → Kind bearbeiten zeigt die Buchungsliste Erledigungen und
+Gegenbuchungen. Eine korrigierbare Erledigung wird direkt angetippt; erst die
+nachfolgende Bestätigung nimmt genau diese Erledigung zurück. Die zusätzlichen
+Listen für Kinderaufgaben und Haushaltsaufgaben entfallen in diesem Profil.
+Manuelle Gutschriften werden ebenfalls über ihren Eintrag mit Begründung korrigiert.
+
+Der gemeinsame, cursorbasierte Verlauf berücksichtigt auch Erledigungen ohne
+Punkte sowie reine Euro-Boni. Positive Aufgaben-Geldbuchungen und zugehörige
+Punkte erscheinen zusammen; reine Euro-Gegenbuchungen bleiben nachvollziehbar.
+Die Buchungsnachweise selbst werden durch eine Rücknahme nicht gelöscht.
+
+Die additive Migration `o20261101links` ergänzt ausschließlich zwei optionale
+Herkunftsspalten im Punktejournal. Neue Gutschriften verweisen damit direkt auf
+die konkrete Kinder- oder Haushaltserledigung. Die Referenz bleibt als Nachweis
+erhalten, wenn eine Erledigung zurückgenommen wurde. Bestehende Beträge und
+Buchungen werden nicht umgeschrieben.
+
+Alte Einträge ohne Herkunftsreferenz erhalten nur dann eine Rücknahmeaktion,
+wenn genau eine Buchung und eine passende Erledigung innerhalb desselben
+Datenbank-Transaktionszeitpunkts eindeutig zusammengehören. Es wird niemals
+allein anhand gleicher Titel, Tage oder Punkte auf eine Erledigung geschlossen.
+Nicht eindeutig zuordenbare alte Nachweise bleiben lesbar; die vorhandenen
+fachlichen Korrekturansichten können sie weiterhin bearbeiten.
