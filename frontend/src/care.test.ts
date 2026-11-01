@@ -36,9 +36,11 @@ describe('Faire Verteilung', () => {
     ])
   })
 
-  it('zeigt nichts, solange niemand angetippt wurde oder nur eine Person dabei ist', () => {
+  it('zeigt nichts ohne Daten, aber die Werte auch für ein einzelnes Elternteil', () => {
     expect(careShares([mama, papa], shares({}))).toBeNull()
-    expect(careShares([mama, lena], shares({ 1: 5 }))).toBeNull()
+    expect(
+      careShares([mama, lena], shares({ 1: 5 }))?.map((s) => [s.count, s.minutes, s.percent]),
+    ).toEqual([[5, 5, 100]])
   })
 
   it('weights time instead of execution counts and invents no time for untimed to-dos', () => {
@@ -55,7 +57,7 @@ describe('Faire Verteilung', () => {
       ['Papa', 20, 25],
       ['Lena', 0, 0],
     ])
-    expect(careShares([mama, papa], [{ member_id: 1, count: 20 }])).toBeNull()
+    expect(careShares([mama, papa], [{ member_id: 1, count: 20 }])?.[0].minutes).toBe(0)
   })
 
   it('allocates all rounding remainders and keeps child counts separate', () => {
@@ -67,4 +69,20 @@ describe('Faire Verteilung', () => {
     expect(result?.map((share) => share.percent)).toEqual([17, 17, 16, 50, 0])
     expect(result?.find((share) => share.member.id === 4)?.count).toBe(20)
   })
+})
+
+it('bezieht Kinder-Prozente auf alle Aufgaben, Eltern-Prozente weiterhin auf die Elternzeit', () => {
+  const result = careShares(
+    [mama, papa, lena],
+    [
+      { member_id: 1, count: 2, estimated_minutes: 30 },
+      { member_id: 2, count: 5, estimated_minutes: 75 },
+      { member_id: 4, count: 2, estimated_minutes: 100 },
+    ],
+  )!
+  expect(result.map((s) => [s.count, s.minutes, s.percent, s.taskPercent])).toEqual([
+    [2, 30, 29, 22],
+    [5, 75, 71, 56],
+    [2, 100, 0, 22],
+  ])
 })

@@ -117,10 +117,11 @@ export const CHORES_KEY = ['chores'] as const
 /** Erledigt jemand etwas am Handy, zieht das Display nach; die Ampel rückt ohnehin täglich vor. */
 export const CHORES_REFETCH_MS = 60 * 1000
 
-export function useChores() {
+export function useChores(shareDays = 30) {
   return useQuery({
-    queryKey: CHORES_KEY,
-    queryFn: () => apiGet<ChorePlan>('/chores'),
+    queryKey: shareDays === 30 ? CHORES_KEY : [...CHORES_KEY, 'statistics', shareDays],
+    queryFn: () =>
+      apiGet<ChorePlan>(shareDays === 30 ? '/chores' : `/chores?share_days=${shareDays}`),
     refetchInterval: CHORES_REFETCH_MS,
   })
 }

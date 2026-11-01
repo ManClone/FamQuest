@@ -636,13 +636,12 @@
     "choose_member": "Choose a family member"
   },
   "care": {
-    "time_legend": "{{name}}: {{minutes}} estimated min ({{percent}}%)",
     "minutes": "{{minutes}} min",
     "time_basis": "Estimated time from household task durations. Older executions use today's task estimate. One-off to-dos without a duration are not included.",
     "title": "Household overview",
     "parent_time": "Parents: estimated time",
-    "child_legend_one": "{{name}}: {{count}} task completed",
-    "child_legend_other": "{{name}}: {{count}} tasks completed",
+    "child_legend_one": "{{name}}: {{count}} task · {{percent}}%",
+    "child_legend_other": "{{name}}: {{count}} tasks · {{percent}}%",
     "child_count_one": "{{count}} task",
     "child_count_other": "{{count}} tasks",
     "period": "last {{days}} days",
@@ -650,7 +649,15 @@
     "legend_other": "{{name}}: {{percent}}% ({{count}} times)",
     "count_one": "{{count}} time",
     "count_other": "{{count}} times",
-    "percent": "{{percent}}%"
+    "percent": "{{percent}}%",
+    "time_legend_one": "{{name}}: {{count}} task · {{minutes}} estimated min · {{percent}}%",
+    "time_legend_other": "{{name}}: {{count}} tasks · {{minutes}} estimated min · {{percent}}%",
+    "percent_basis": "Percentages: parents by their share of the parents’ time; children by their share of all family completions.",
+    "range": "Time range",
+    "days_7": "7 days",
+    "days_30": "30 days",
+    "year": "1 year",
+    "empty": "No attributed completions in this time range yet."
   },
   "approvals": {
     "section": "To check",
