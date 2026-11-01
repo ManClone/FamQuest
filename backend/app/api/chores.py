@@ -276,8 +276,8 @@ def _last_completions(db: DbSession, chore_ids: list[int]) -> dict[int, ChoreCom
     return {completion.chore_id: completion for completion in completions}
 
 
-def _shares(db: DbSession, today: dt.date) -> list[ShareOut]:
-    since = today - dt.timedelta(days=SHARE_DAYS - 1)
+def _shares(db: DbSession, today: dt.date, days: int = SHARE_DAYS) -> list[ShareOut]:
+    since = today - dt.timedelta(days=days - 1)
     counts = db.execute(
         select(
             ChoreCompletion.member_id,
@@ -366,7 +366,11 @@ def _commit_room(db: DbSession) -> None:
 
 
 @router.get("")
-def list_chores(_: ParentSession, db: DbSession) -> ChoresOut:
+def list_chores(
+    _: ParentSession, db: DbSession, share_days: int = Query(default=SHARE_DAYS, ge=1, le=365)
+) -> ChoresOut:
+    if share_days not in (7, 30, 365):
+        raise ApiError(422, "validation.invalid")
     """Alle Räume und Aufgaben mit ihrem Stand; das Display zeigt davon nur die aktiven."""
     today = _today(db)
     rooms = db.scalars(select(ChoreRoom).order_by(ChoreRoom.position, ChoreRoom.id))
@@ -397,8 +401,8 @@ def list_chores(_: ParentSession, db: DbSession) -> ChoresOut:
             for chore in chores
         ],
         todos=[todo_out(todo) for todo in visible_todos(db, today)],
-        share_days=SHARE_DAYS,
-        shares=_shares(db, today),
+        share_days=share_days,
+        shares=_shares(db, today, share_days),
     )
 
 

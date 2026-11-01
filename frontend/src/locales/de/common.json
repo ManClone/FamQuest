@@ -638,11 +638,10 @@
   "care": {
     "title": "Haushalt im Überblick",
     "parent_time": "Eltern: geschätzter Zeitaufwand",
-    "child_legend_one": "{{name}}: {{count}} Aufgabe erledigt",
-    "child_legend_other": "{{name}}: {{count}} Aufgaben erledigt",
+    "child_legend_one": "{{name}}: {{count}} Aufgabe · {{percent}} %",
+    "child_legend_other": "{{name}}: {{count}} Aufgaben · {{percent}} %",
     "child_count_one": "{{count}} Aufgabe",
     "child_count_other": "{{count}} Aufgaben",
-    "time_legend": "{{name}}: {{minutes}} Min. geschätzt ({{percent}} %)",
     "minutes": "{{minutes}} Min.",
     "time_basis": "Geschätzter Zeitaufwand aus den Zeitvorgaben der Hausarbeiten. Ältere Erledigungen nutzen die heutige Zeitvorgabe. Einmalige To-dos ohne Zeitangabe sind nicht enthalten.",
     "period": "letzte {{days}} Tage",
@@ -650,7 +649,15 @@
     "legend_other": "{{name}}: {{percent}} % ({{count}}-mal)",
     "count_one": "{{count}}-mal",
     "count_other": "{{count}}-mal",
-    "percent": "{{percent}} %"
+    "percent": "{{percent}} %",
+    "time_legend_one": "{{name}}: {{count}} Aufgabe · {{minutes}} Min. geschätzt · {{percent}} %",
+    "time_legend_other": "{{name}}: {{count}} Aufgaben · {{minutes}} Min. geschätzt · {{percent}} %",
+    "percent_basis": "Prozente: Eltern nach ihrem Zeitanteil unter den Eltern; Kinder nach ihrem Aufgabenanteil an allen Erledigungen der Familie.",
+    "range": "Zeitraum",
+    "days_7": "7 Tage",
+    "days_30": "30 Tage",
+    "year": "1 Jahr",
+    "empty": "Noch keine zugeordneten Erledigungen in diesem Zeitraum."
   },
   "approvals": {
     "section": "Zu prüfen",

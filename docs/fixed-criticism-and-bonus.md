@@ -154,3 +154,18 @@ wieder angezeigt. Vorhandene Drachen-Namen und Level bleiben erhalten. Ein noch
 unbenannter Drache kann einmalig benannt werden; Kinder dürfen nur ihren eigenen
 Drachen benennen. Es handelt sich um die Anzeige mit vorhandenem Drachen-Icon und
 bestehendem Levelstand, nicht um eine neue animierte Entwicklungssimulation.
+
+
+### Haushaltsstatistik mit Zeitraum und getrennten Prozentbezügen
+
+Die Übersicht zeigt Eltern mit Aufgabenanzahl, geschätzten Minuten und Anteil an
+der Elternzeit. Kinder zeigen Aufgabenanzahl und Anteil an allen zugeordneten
+Erledigungen der Familie, einschließlich der Eltern-Erledigungen. Kinder-Minuten
+werden nicht in die Elternzeit eingerechnet. Ein Hinweis erklärt die verschiedenen
+Bezugsgrößen. Auch ein einzelnes Elternteil wird mit seinen Werten angezeigt.
+
+Im Kopf stehen 7 Tage, 30 Tage oder 1 Jahr zur Wahl (rollierend 365 Tage, jeweils
+heute eingeschlossen). Anzahl und Zeit werden für denselben Zeitraum neu geladen;
+nur bestätigte, zugeordnete Erledigungen bis einschließlich heute zählen. Die
+Auswahl bleibt auch in einem leeren Zeitraum sichtbar. Die kompakte Familienansicht
+behält den Standardzeitraum von 30 Tagen.

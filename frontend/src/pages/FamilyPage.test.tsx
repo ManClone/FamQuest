@@ -362,7 +362,7 @@ describe('Familienansicht', () => {
     // Faire Verteilung aus „Wer war's?“ im Putzplan.
     expect(
       household.getByRole('img', {
-        name: 'Eltern: geschätzter Zeitaufwand (letzte 30 Tage): Mama: 90 Min. geschätzt (40 %); Papa: 135 Min. geschätzt (60 %)',
+        name: 'Eltern: geschätzter Zeitaufwand (letzte 30 Tage): Mama: 6 Aufgaben · 90 Min. geschätzt · 40 %; Papa: 9 Aufgaben · 135 Min. geschätzt · 60 %',
       }),
     ).toBeVisible()
     expect(household.getByRole('link', { name: 'Haushalt öffnen' })).toHaveAttribute(

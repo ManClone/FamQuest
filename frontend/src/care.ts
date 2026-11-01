@@ -7,14 +7,16 @@ export interface CareSegment {
   minutes: number
   /** Kinder werden nach Erledigungen gezeigt, nicht mit Eltern-Minuten verrechnet. */
   count: number
-  /** Anteil an der zugeordneten Zeit; zusammen genau 100. */
+  /** Anteil an allen zugeordneten Erledigungen der Familie. */
+  taskPercent: number
+  /** Anteil an der Elternzeit; bei vorhandener Zeit zusammen genau 100. */
   percent: number
 }
 
 /**
  * Faire Verteilung im Haushalt: wer in den letzten Tagen wie viel vom Putzplan erledigt hat.
  * Erwachsene stehen immer dabei, Kinder nur, wenn sie mitgeholfen haben. Solange niemand etwas
- * angetippt hat oder nur eine Person dabei wäre, gibt es nichts zu verteilen (null).
+ * angetippt hat, gibt es noch keine Daten (null). Auch eine einzelne Person wird angezeigt.
  */
 export function careShares(members: Member[], shares: ChorePlan['shares']): CareSegment[] | null {
   const minutes = (member: Member) =>
@@ -23,10 +25,10 @@ export function careShares(members: Member[], shares: ChorePlan['shares']): Care
     shares.find((share) => share.member_id === member.id)?.count ?? 0
   const people = members.filter((member) => member.role === 'parent' || count(member) > 0)
   const parents = people.filter((member) => member.role === 'parent')
-  const children = people.filter((member) => member.role !== 'parent')
   const counts = parents.map(minutes)
   const total = counts.reduce((sum, value) => sum + value, 0)
-  if ((parents.length < 2 || total === 0) && children.length === 0) return null
+  const totalCount = people.reduce((sum, member) => sum + count(member), 0)
+  if (total === 0 && totalCount === 0) return null
 
   // Größte Reste zuerst aufrunden, damit die Prozente zusammen 100 ergeben.
   const exact = counts.map((value) => (total > 0 ? (value / total) * 100 : 0))
@@ -42,6 +44,7 @@ export function careShares(members: Member[], shares: ChorePlan['shares']): Care
     member,
     minutes: minutes(member),
     count: count(member),
+    taskPercent: totalCount > 0 ? Math.round((count(member) / totalCount) * 100) : 0,
     percent:
       member.role === 'parent'
         ? percents[parents.findIndex((parent) => parent.id === member.id)]
