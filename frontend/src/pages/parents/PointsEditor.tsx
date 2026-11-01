@@ -269,7 +269,7 @@ function TransactionRow({
     timeStyle: 'short',
     timeZone,
   }).format(new Date(transaction.created_at))
-  const positive = transaction.amount > 0
+  const positive = (transaction.amount || transaction.money_cents || 0) > 0
 
   const manualCredit =
     transaction.kind === 'manual' && transaction.amount > 0 && !transaction.reversed_at
