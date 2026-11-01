@@ -6,7 +6,7 @@ services:
     entrypoint: ["/bin/sh", "/app/docker-entrypoint.central.sh"]
     env_file: .env.central
     ports:
-      - "127.0.0.1:11901:8080"
+      - "127.0.0.1:11902:8080"
     volumes:
       - ${FAMQUEST_CENTRAL_UPLOADS:?Set an isolated restored upload directory}:/data/uploads
     read_only: true

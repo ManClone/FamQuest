@@ -1,5 +1,12 @@
 # Zentralen Testbetrieb vorbereiten
 
+Für einen neuen isolierten Zwei-Familien-Test ohne Bestandsdaten gibt es jetzt
+`scripts/prepare-central-stage.py` und die Anleitung `central-stage-quickstart.md`.
+Dieses Paket verwendet eigene Volumes und Port 11902; die bestehende Testanwendung
+auf 11901 bleibt erhalten. Es enthält noch keine globale Superadmin-Weboberfläche.
+Die folgenden manuellen Vorlagen gelten weiterhin für ausdrücklich vorbereitete
+Bestands-/Restore-Kopien und sind nicht der neue automatische Erststart-Test.
+
 Die alternative Compose-Datei `docker-compose.central.yml` startet ausschließlich
 die integrierte Anwendung an einem getrennten lokalen Port. Sie erstellt keine
 Datenbanken und führt keine Migrationen aus. Nicht mit produktiven Verbindungen

@@ -1,0 +1,59 @@
+name: famquest-central-stage
+services:
+  central-stage-db:
+    image: postgres:16-alpine
+    restart: "no"
+    env_file: "@@DIR@@/postgres.env"
+    volumes:
+      - central-stage-db:/var/lib/postgresql/data
+    networks: [stage-data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  central-stage-init:
+    image: "@@IMAGE@@"
+    restart: "no"
+    entrypoint: [python, -m, app.staging_bootstrap]
+    env_file: "@@DIR@@/bootstrap.env"
+    depends_on:
+      central-stage-db:
+        condition: service_healthy
+    networks: [stage-data]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+  central-stage-gateway:
+    image: nginx:stable-alpine
+    restart: "no"
+    ports: ["127.0.0.1:11902:8080"]
+    volumes:
+      - "@@DIR@@/gateway.conf:/etc/nginx/conf.d/default.conf:ro"
+    networks: [stage-front]
+    security_opt: ["no-new-privileges:true"]
+  central-stage-app:
+    image: "@@IMAGE@@"
+    restart: "no"
+    entrypoint: [/bin/sh, /app/docker-entrypoint.stage.sh]
+    env_file: "@@DIR@@/runtime.env"
+    depends_on:
+      central-stage-init:
+        condition: service_completed_successfully
+      central-stage-gateway:
+        condition: service_started
+    volumes:
+      - central-stage-uploads:/data/uploads
+    networks: [stage-front, stage-data]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+networks:
+  stage-data:
+    internal: true
+  stage-front: {}
+volumes:
+  central-stage-db:
+    name: famquest-central-stage-db-v1
+  central-stage-uploads:
+    name: famquest-central-stage-uploads-v1
