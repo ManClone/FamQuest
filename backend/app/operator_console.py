@@ -38,7 +38,7 @@ def authenticate(db, raw, csrf=None, *, writing=False):
         raise ApiError(401, "auth.not_authenticated")
     # Operator identities must remain independent of family accounts.
     if db.scalar(select(Membership.id).where(Membership.identity_id == identity.id).limit(1)):
-        raise ApiError(403, "auth.forbidden")
+        raise ApiError(403, "auth.operator_required")
     if writing and (
         not csrf or not secrets.compare_digest(csrf.encode(), session.csrf_token.encode())
     ):
