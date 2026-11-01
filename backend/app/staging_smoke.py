@@ -247,6 +247,34 @@ def run(settings=None, environ=None):
                 clients[("B", "PARENT")].get("/api/today").status_code == 200,
                 "other family remains accessible",
             )
+            other = next(row for row in listing.json() if row["name"] == "Testfamilie B")
+            other_path = f"/operator/api/families/{other['id']}/status"
+            other_action = {**action, "family_name": other["name"], "request_key": str(uuid4())}
+            require(
+                operator_client.post(
+                    other_path, json=other_action, headers=operator_headers
+                ).status_code
+                == 200,
+                "suspend second disposable family for recovery check",
+            )
+            require(
+                check_ready(settings) == [],
+                "operator recovery preflight with all families disabled",
+            )
+            require(
+                operator_client.post(
+                    other_path,
+                    json={
+                        **other_action,
+                        "expected_status": "disabled",
+                        "status": "active",
+                        "request_key": str(uuid4()),
+                    },
+                    headers=operator_headers,
+                ).status_code
+                == 200,
+                "restore second disposable family",
+            )
             require(
                 operator_client.post(
                     path,
@@ -264,6 +292,16 @@ def run(settings=None, environ=None):
             require(
                 clients[("A", "PARENT")].get("/api/today").status_code == 401,
                 "reactivation does not resurrect a session",
+            )
+            require(
+                clients[("A", "PARENT")]
+                .post(
+                    "/api/auth/login",
+                    json={"email": "eltern.a@famquest.test", "password": accounts[("A", "PARENT")]},
+                )
+                .status_code
+                == 200,
+                "reactivated family permits a fresh login",
             )
             history = operator_client.get(f"/operator/api/families/{target['id']}/history").json()
             require(len(history["items"]) == 2, "one audit entry per real change")
