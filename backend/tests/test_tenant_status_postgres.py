@@ -89,9 +89,11 @@ def test_suspension_wins_against_waiting_credential_issuance(auth_engine, mode):
     pids = Queue()
 
     def worker():
-        with Session(auth_engine) as db:
-            pids.put(db.scalar(text("SELECT pg_backend_pid()")))
-            db.commit()
+        # Pin the connection: a commit must not swap the observed backend PID.
+        with auth_engine.connect() as connection, Session(bind=connection) as db:
+            pid = connection.scalar(text("SELECT pg_backend_pid()"))
+            connection.commit()
+            pids.put(pid)
             try:
                 if mode == "browser":
                     login_browser(db, "parent@example.invalid", PASSWORD)
