@@ -341,7 +341,7 @@ def test_reactivated_manual_credit_keeps_insufficient_balance_guard(client, pare
     [inactive] = activity(client, lena)["transactions"]
     assert restore_row(client, parent, inactive).status_code == 204
     with SessionLocal() as db:
-        db.add(PointTransaction(member_id=lena, amount=-4, kind="reward_redeemed", reason="Reward"))
+        db.add(PointTransaction(member_id=lena, amount=-4, kind="manual", reason="Already used"))
         db.commit()
     response = client.post(
         f"/api/activity-corrections/{inactive['correction_id']}/deactivate",

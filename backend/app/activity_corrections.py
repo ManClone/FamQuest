@@ -161,6 +161,7 @@ def reverse_completion(db, source, completion, definition, actor_id):
         credit = db.get(ChoreCredit, completion.id)
         if credit is not None:
             db.delete(credit)
+            db.flush()
     state.inactive = True
     state.changed_by_user_id = actor_id
     db.delete(completion)
