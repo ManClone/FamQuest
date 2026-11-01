@@ -352,3 +352,20 @@ def test_reactivated_manual_credit_keeps_insufficient_balance_guard(client, pare
     result = activity(client, lena)
     assert result["total"] == 0
     assert not next(r for r in result["transactions"] if r.get("correction_id"))["inactive"]
+
+
+def test_deleting_definition_does_not_falsely_mark_earned_points_reversed(
+    client, parent, lena, now
+):
+    task = add_task(client, parent, [lena], points=2)
+    complete(client, parent, task, lena)
+    [row] = activity(client, lena)["transactions"]
+    client.delete(f"/api/approvals/{row['undo_id']}/confirmed", headers=csrf(parent))
+    [inactive] = activity(client, lena)["transactions"]
+    assert restore_row(client, parent, inactive).status_code == 204
+    assert client.delete(f"/api/tasks/{task}", headers=csrf(parent)).status_code == 204
+    result = activity(client, lena)
+    [receipt] = result["transactions"]
+    assert result["total"] == 2
+    assert receipt["inactive"] is False
+    assert receipt["undo_id"] is None and receipt["restore_id"] is None
