@@ -1,3 +1,4 @@
+import { DragonCompanion } from '../components/DragonCompanion'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -172,6 +173,7 @@ function MemberColumn({
           {member.name}
         </span>
       </Link>
+      <DragonCompanion member={member} compact />
       <DayProgress
         member={member}
         tasks={currentTasks(tasks, member.id, today.date)}

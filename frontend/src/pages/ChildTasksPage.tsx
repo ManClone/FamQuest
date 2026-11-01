@@ -1,3 +1,4 @@
+import { DragonCompanion } from '../components/DragonCompanion'
 import { PraiseCelebration } from '../components/PraiseCelebration'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
@@ -51,6 +52,7 @@ export function ChildTasksPage({ currentOnly = false }: { currentOnly?: boolean 
     <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       {currentOnly && <h1 className="text-3xl font-extrabold text-orange-600">{t('nav.today')}</h1>}
       <ChildProgressHeader member={member} total={points.total} currentOnly={currentOnly} />
+      <DragonCompanion member={member} showLevel={false} />
       <div className="rounded-3xl bg-white/80 p-4 shadow-sm">
         <p className="mb-3 text-center text-lg font-bold text-slate-700">
           {t('child_progress.today_progress')} · {t('points.today_label', { count: points.today })}

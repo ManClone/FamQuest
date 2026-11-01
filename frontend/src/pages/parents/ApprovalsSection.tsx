@@ -117,6 +117,14 @@ function ApprovalRow({
             <span aria-hidden="true">{approval.points}</span>
             <span className="sr-only">{t('tasks.points_count', { count: approval.points })}</span>
           </span>
+          {!!approval.money_cents && (
+            <span className="font-bold text-emerald-700">
+              {new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' }).format(
+                approval.money_cents / 100,
+              )}{' '}
+              Bonus
+            </span>
+          )}
         </span>
       </span>
       <span className="flex flex-wrap gap-2">

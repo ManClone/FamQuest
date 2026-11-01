@@ -12,6 +12,7 @@ export interface Approval {
   task_id: number
   title: string
   icon: string
+  money_cents?: number
   points: number
   member_id: number
   /** Tag der Erledigung (`YYYY-MM-DD`). */

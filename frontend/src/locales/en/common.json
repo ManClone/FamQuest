@@ -536,7 +536,9 @@
       "child_required": "This feature is only available for children",
       "invalid_allowance": "Invalid pocket money amount",
       "invalid_pagination": "Invalid pagination parameters",
-      "task_history_protected": "This task has bonus records. Deactivate the task instead of deleting those records."
+      "task_history_protected": "This task has bonus records. Deactivate the task instead of deleting those records.",
+      "chore_history_protected": "This chore has approved money bonuses. Reverse the relevant completions first, or deactivate the chore.",
+      "chore_recipient_protected": "This completion has a money bonus. Reverse it and complete it again to change the recipient."
     },
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
@@ -568,6 +570,9 @@
       "restore_conflict": "This task has since been completed again. Duplicate credit is not allowed.",
       "restore_unavailable": "This entry cannot be reactivated.",
       "already_grouped": "This entry has already been linked."
+    },
+    "dragon": {
+      "already_named": "Your dragon already has a permanent name."
     }
   },
   "rewards": {
@@ -1083,7 +1088,9 @@
     "awaiting": "{{count}} completions awaiting approval",
     "child_complete": "Done!",
     "who_before_completion": "Who completed {{title}}?",
-    "confirm_undo": "Really undo “{{title}}”?"
+    "confirm_undo": "Really undo “{{title}}”?",
+    "money_bonus": "Child bonus per completion in euros",
+    "money_bonus_hint": "Added to the weekly bonus after parent approval. Leave empty for no money bonus. Adults do not receive a money bonus."
   },
   "todos": {
     "title": "To do",
@@ -1274,5 +1281,15 @@
     "reactivated": "Reactivated",
     "restore_confirm": "Reactivate this entry with its original points and bonus?",
     "restore": "Reactivate"
+  },
+  "dragon": {
+    "title": "Your dragon companion",
+    "unnamed": "Your dragon",
+    "of": "{{name}}’s dragon companion",
+    "hint": "On an adventure together!",
+    "name_action": "Name your dragon",
+    "name": "Dragon name",
+    "name_hint": "Choose the name together. It is set once and will be kept.",
+    "save": "Set name"
   }
 }

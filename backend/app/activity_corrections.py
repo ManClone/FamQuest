@@ -80,18 +80,14 @@ def capture_completion(db, source, completion, definition, actor_id):
     original = next(
         (p for p in candidates if _active_completion(db, p) == (source, completion.id)), None
     )
-    money = (
-        db.scalar(
-            select(MoneyTransaction)
-            .where(
-                MoneyTransaction.member_id == member,
-                MoneyTransaction.completion_id == completion.id,
-                MoneyTransaction.kind == "task_completed",
-            )
-            .order_by(MoneyTransaction.id.desc())
+    money = db.scalar(
+        select(MoneyTransaction)
+        .where(
+            MoneyTransaction.member_id == member,
+            MoneyTransaction.completion_id == completion.id,
+            MoneyTransaction.kind == f"{source}_completed",
         )
-        if source == "task"
-        else None
+        .order_by(MoneyTransaction.id.desc())
     )
     state = ActivityCorrection(
         source=source,
@@ -109,7 +105,7 @@ def capture_completion(db, source, completion, definition, actor_id):
         snapshot=dict(
             completion=values,
             point_amount=amount,
-            money_cents=completion.money_cents if source == "task" else 0,
+            money_cents=completion.money_cents,
             shared=bool(definition.shared) if source == "task" else False,
         ),
         inactive=False,
@@ -155,9 +151,10 @@ def reverse_completion(db, source, completion, definition, actor_id):
         user_id=actor_id,
     )
     link_journal(db, state, "point", entry.id if entry else None)
-    if source == "task":
-        _book_money(db, state, -state.snapshot["money_cents"], "task_undone")
-    else:
+    if db.info.get("mcp_request") and state.snapshot["money_cents"]:
+        raise ApiError(403, "mcp.operation_forbidden")
+    _book_money(db, state, -state.snapshot["money_cents"], f"{source}_undone")
+    if source == "chore":
         credit = db.get(ChoreCredit, completion.id)
         if credit is not None:
             db.delete(credit)
@@ -283,9 +280,8 @@ def restore(db, correction_id, actor_id):
             completion_id=state.origin_id,
         )
         link_journal(db, state, "point", entry.id if entry else None)
-        if source == "task":
-            _book_money(db, state, state.snapshot["money_cents"], "task_completed")
-        elif state.snapshot["point_amount"]:
+        _book_money(db, state, state.snapshot["money_cents"], f"{source}_completed")
+        if source == "chore" and state.snapshot["point_amount"]:
             db.add(
                 ChoreCredit(
                     completion_id=state.origin_id,

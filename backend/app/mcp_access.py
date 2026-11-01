@@ -40,10 +40,11 @@ def allowed(method: str, path: str) -> bool:
 
 def tool_schema(spec: dict) -> dict:
     result = deepcopy(spec)
-    task_input = result.get("components", {}).get("schemas", {}).get("TaskIn", {})
-    task_input.get("properties", {}).pop("money_cents", None)
-    if "required" in task_input:
-        task_input["required"] = [name for name in task_input["required"] if name != "money_cents"]
+    for schema_name in ("TaskIn", "ChoreIn", "ChoreCreateIn"):
+        schema = result.get("components", {}).get("schemas", {}).get(schema_name, {})
+        schema.get("properties", {}).pop("money_cents", None)
+        if "required" in schema:
+            schema["required"] = [name for name in schema["required"] if name != "money_cents"]
     result["paths"] = {}
     for path, operations in spec["paths"].items():
         # Validate path templates against the same boundary as real requests.

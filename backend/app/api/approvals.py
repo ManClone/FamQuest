@@ -29,6 +29,7 @@ def list_approvals(_: ParentSession, db: DbSession) -> list[ApprovalOut]:
             title=completion.task.title,
             icon=completion.task.icon,
             points=completion.points,
+            money_cents=completion.money_cents,
             member_id=completion.member_id,
             date=completion.date,
             completed_at=completion.completed_at,
@@ -48,6 +49,7 @@ def list_approvals(_: ParentSession, db: DbSession) -> list[ApprovalOut]:
                 title=chore.title,
                 icon=chore.icon,
                 points=completion.points,
+                money_cents=completion.money_cents,
                 member_id=completion.member_id,
                 date=completion.date,
                 completed_at=completion.completed_at,
@@ -154,6 +156,8 @@ def approve_chore(
     )
     if completion is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "approval.not_found")
+    if db.info.get("mcp_request") and completion.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
     if completion.approved:
         return
     completion.approved = True
@@ -177,6 +181,9 @@ def approve_chore(
                 amount=completion.points,
             )
         )
+    from app.chore_money import credit_chore_money
+
+    credit_chore_money(db, completion, chore.title)
     if praise and completion.member_id is not None:
         from app.praise import grant_praise
 

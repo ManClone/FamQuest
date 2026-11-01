@@ -144,6 +144,7 @@ def activity_history(db, member_id, cursor=None, limit=50):
         .where(
             ChoreCompletion.member_id == member_id,
             ChoreCompletion.approved.is_(True),
+            ChoreCompletion.money_cents == 0,
             ChoreCredit.completion_id.is_(None),
             ~select(ActivityCorrection.id)
             .where(
@@ -160,7 +161,9 @@ def activity_history(db, member_id, cursor=None, limit=50):
         MoneyTransaction.created_at.label("occurred_at"),
     ).where(
         MoneyTransaction.member_id == member_id,
-        MoneyTransaction.kind.in_(("task_completed", "task_undone")),
+        MoneyTransaction.kind.in_(
+            ("task_completed", "task_undone", "chore_completed", "chore_undone")
+        ),
         ~select(ActivityJournalLink.journal_id)
         .where(
             ActivityJournalLink.journal_source == "money",
@@ -269,15 +272,20 @@ def activity_history(db, member_id, cursor=None, limit=50):
             item.update(
                 undo_source=target[0] if target else None, undo_id=target[1] if target else None
             )
+            if target:
+                completion_model = TaskCompletion if target[0] == "task" else ChoreCompletion
+                item["money_cents"] = db.get(completion_model, target[1]).money_cents
         elif source == "money":
             entry = db.get(MoneyTransaction, origin)
             if entry is None:
                 continue
-            c = db.get(TaskCompletion, entry.completion_id) if entry.completion_id else None
+            completion_source = "chore" if entry.kind.startswith("chore_") else "task"
+            model = ChoreCompletion if completion_source == "chore" else TaskCompletion
+            c = db.get(model, entry.completion_id) if entry.completion_id else None
             available = (
-                entry.kind == "task_completed"
+                entry.kind == f"{completion_source}_completed"
                 and c is not None
-                and c.approved_at is not None
+                and (c.approved if completion_source == "chore" else c.approved_at is not None)
                 and c.member_id == member_id
             )
             item = dict(
@@ -286,10 +294,14 @@ def activity_history(db, member_id, cursor=None, limit=50):
                 money_cents=entry.amount_cents,
                 kind=entry.kind,
                 reason=entry.reason,
-                icon=c.task.icon if c else None,
+                icon=(
+                    c.task.icon if completion_source == "task" else db.get(Chore, c.chore_id).icon
+                )
+                if c
+                else None,
                 task_date=c.date if c else None,
                 created_at=entry.created_at,
-                undo_source="task" if available else None,
+                undo_source=completion_source if available else None,
                 undo_id=c.id if available else None,
             )
         else:

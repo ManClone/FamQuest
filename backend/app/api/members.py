@@ -2,10 +2,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
+from app.auth import (
+    CurrentSession,
+    DbSession,
+    ParentSession,
+    child_member_id,
+    ensure_member_access,
+    utcnow,
+)
 from app.avatars import (
     avatar_path,
     delete_avatar,
@@ -195,3 +203,26 @@ def get_avatar(filename: str, _: CurrentSession, db: DbSession) -> FileResponse:
         media_type="image/webp",
         headers={"Cache-Control": "private, max-age=31536000, immutable"},
     )
+
+
+class DragonNameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=24, pattern=r"\S")
+
+
+@router.put("/members/{member_id}/dragon")
+def name_dragon(member_id: int, body: DragonNameIn, auth: CurrentSession, db: DbSession) -> dict:
+    """Keep the existing one-time name, scoped to the child's own family/profile."""
+    ensure_member_access(db, auth, member_id)
+    member = get_member(db, member_id)
+    db.refresh(member, with_for_update=True)
+    if member.role != "child":
+        raise ApiError(422, "money.child_required")
+    name = body.name.strip()
+    if member.dragon_name is not None and member.dragon_name != name:
+        raise ApiError(409, "dragon.already_named")
+    if member.dragon_name is None:
+        member.dragon_name = name
+        member.dragon_named_at = utcnow()
+        member.dragon_named_by_user_id = auth.user_id
+    db.commit()
+    return {"dragon_name": member.dragon_name}
