@@ -131,6 +131,7 @@ def test_create_room_and_chore(client, parent, now):
         "repeatable": False,
         "child_enabled": False,
         "child_xp": 0,
+        "money_cents": 0,
         "child_member_ids": [],
         "assignment_mode": "flexible",
         "fixed_member_id": None,
