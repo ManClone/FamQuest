@@ -359,6 +359,10 @@ def create_app(
                 "scopes": ["famquest:parent"],
             }
 
+    from app.operator_console import install as install_operator_console
+
+    install_operator_console(app, registry)
+
     # Register before the SPA fallback, so unknown API requests never return HTML.
     @app.api_route(
         "/api/{path:path}",

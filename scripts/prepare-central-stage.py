@@ -137,7 +137,7 @@ server {{
             {
                 "app": image,
                 "origin": origin,
-                "scope": "isolated two-family staging; no global superadmin console",
+                "scope": "isolated two-family staging; read-only operator console requires separate setup",
                 "databases": ["famquest_auth", "famquest_stage_a", "famquest_stage_b"],
             },
             indent=2,
@@ -150,6 +150,10 @@ server {{
         guide.replace("@@ORIGIN@@", origin)
         .replace("@@DIR@@", directory)
         .replace("@@IMAGE@@", image),
+        encoding="utf-8",
+    )
+    (output / "BETREIBERVERWALTUNG.md").write_text(
+        (root / "docs/operator-console.md").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     for private_file in (

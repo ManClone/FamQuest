@@ -10,9 +10,11 @@ Zentrale Anmeldung mit separater Benutzer-Datenbank, zwei getrennte Familien-Dat
 Eltern-/Kinderrechte, Kontenverwaltung innerhalb der eigenen Familie, getrennte Fach- und
 Bildzugriffe sowie Sperrung einer Familie auch bei bereits bestehender Anmeldung.
 
-**Eine globale Superadmin-Weboberfläche ist noch nicht implementiert.** Die vier Zugänge
-sind Eltern- und Kinderzugänge zweier Testfamilien, keine Betreiber-Administratoren.
-Familien anlegen, sperren oder löschen ist daher noch kein fertiger Web-Verwaltungsablauf.
+Unter `/operator` ist eine **separate lesende Betreiberübersicht** vorbereitet. Sie benötigt
+einen ausdrücklich separat eingerichteten Betreiberzugang (siehe `BETREIBERVERWALTUNG.md`
+im erzeugten Paket). Die vier Zugänge dieses Pakets sind Eltern- und Kinderzugänge zweier
+Testfamilien, keine Betreiber-Administratoren. Familien anlegen, sperren oder löschen ist
+weiterhin kein fertiger Web-Verwaltungsablauf.
 Die automatisierte Sperrprüfung erfolgt ausschließlich im neu angelegten isolierten Testcluster.
 
 ## Vorbereitung auf QNAP
@@ -69,5 +71,5 @@ Das App-Image ist festgelegt auf:
 `@@IMAGE@@`
 
 Die echte Wiederherstellungsprobe mit Bildern, Bestandsmigration, Provisionierung realer
-Familien und globale Superadmin-Oberfläche bleiben weitere Arbeitsschritte. Dieses Paket
+Familien und schreibende Betreiberaktionen bleiben weitere Arbeitsschritte. Dieses Paket
 erteilt keine produktive Mehrfamilien-Freigabe.
