@@ -9,9 +9,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select, text, update
 from sqlalchemy.exc import OperationalError
 
-from app.auth_registry import Tenant
+from app.auth_registry import Identity, Tenant
 from app.config import Settings
 from app.multitenant_app import create_app
+from app.operator_setup import create_operator
+from app.security import new_token
 from app.staging_bootstrap import DATABASES, check_ready, inspect_cluster, validated_inputs
 
 
@@ -56,6 +58,10 @@ def run(settings=None, environ=None):
                 headers[key] = {"x-csrf-token": response.json()["csrf_token"]}
                 cookies = response.headers.get("set-cookie", "").lower()
                 require("secure" in cookies and "httponly" in cookies, "secure session cookies")
+                require(
+                    client.get("/operator/api/families").status_code == 401,
+                    "family session cannot access operator overview",
+                )
         results.append("four_logins_and_secure_cookies")
         registry = app.state.auth_registry
         try:
@@ -171,6 +177,49 @@ def run(settings=None, environ=None):
                 "child logout",
             )
         results.append("csrf_logout_and_test_cleanup")
+        operator_email = f"operator-{uuid4().hex}@famquest.test"
+        operator_password = new_token()
+        with registry.session() as control:
+            operator = create_operator(control, operator_email, operator_password)
+            operator_id = operator.id
+            control.commit()
+        try:
+            operator_client = stack.enter_context(
+                TestClient(
+                    app, base_url=settings.public_url, headers={"origin": settings.public_url}
+                )
+            )
+            response = operator_client.post(
+                "/operator/api/login", json={"email": operator_email, "password": operator_password}
+            )
+            require(response.status_code == 200, "operator login")
+            operator_csrf = response.json()["csrf_token"]
+            listing = operator_client.get("/operator/api/families")
+            require(
+                listing.status_code == 200 and len(listing.json()) == 2,
+                "operator two-family registry overview",
+            )
+            require(all(row["accounts"] == 2 for row in listing.json()), "operator account counts")
+            require(
+                operator_client.get("/api/members").status_code == 401,
+                "operator cookie cannot access family data",
+            )
+            require(
+                operator_client.post(
+                    "/operator/api/logout", headers={"x-csrf-token": operator_csrf}
+                ).status_code
+                == 204,
+                "operator logout",
+            )
+            require(
+                operator_client.get("/operator/api/families").status_code == 401,
+                "operator session revoked",
+            )
+        finally:
+            with registry.session() as control:
+                control.delete(control.get(Identity, operator_id))
+                control.commit()
+        results.append("separate_operator_overview_and_session_boundary")
     return results
 
 

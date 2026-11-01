@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FamQuest · Betreiberverwaltung</title>
+  <link rel="stylesheet" href="/operator/assets/console.css">
+  <script src="/operator/assets/console.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><a href="/">Zur Familienanmeldung</a><h1>FamQuest Betreiberverwaltung</h1>
+      <p>Übersicht der registrierten Familien. Änderungen an Familien sind hier noch nicht möglich.</p>
+    </header>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="login-panel" aria-labelledby="login-title">
+      <h2 id="login-title">Als Betreiber anmelden</h2>
+      <p>Nur für einen separat eingerichteten Betreiberzugang. Eltern- und Kinderkonten gelten hier nicht.</p>
+      <form id="login-form">
+        <label for="email">E-Mail</label><input id="email" type="email" autocomplete="username" required maxlength="254">
+        <label for="password">Passwort</label><input id="password" type="password" autocomplete="current-password" required maxlength="256">
+        <button id="login-button" type="submit">Anmelden</button>
+      </form>
+    </section>
+    <section id="overview" hidden aria-labelledby="overview-title">
+      <div class="toolbar"><div><h2 id="overview-title">Familienübersicht</h2><p id="signed-in"></p></div>
+        <div><button id="refresh" type="button">Aktualisieren</button> <button id="logout" type="button">Abmelden</button></div>
+      </div>
+      <p>Die Anmeldung endet nach einer Stunde. Diese Ansicht öffnet keine Familien-Datenbank und zeigt keine Aufgaben, Bilder oder Kennwörter.</p>
+      <p id="count"></p><ul id="families" aria-label="Registrierte Familien"></ul>
+    </section>
+  </main>
+</body>
+</html>

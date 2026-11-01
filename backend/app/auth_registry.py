@@ -121,3 +121,17 @@ class BrowserSession(AuthBase):
     csrf_token: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class OperatorSession(AuthBase):
+    """Separate, short-lived operator session, never a family principal."""
+
+    __tablename__ = "operator_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    identity_id: Mapped[int] = mapped_column(
+        ForeignKey("identities.id", ondelete="CASCADE"), index=True
+    )
+    csrf_token: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
