@@ -326,3 +326,29 @@ def test_restore_requires_parent_account(client, parent, lena, now):
     )
     assert login.status_code == 200
     assert restore_row(client, login.json(), inactive).status_code == 403
+
+
+def test_reactivated_manual_credit_keeps_insufficient_balance_guard(client, parent, lena):
+    client.post(
+        f"/api/members/{lena}/points", json={"amount": 4, "reason": "Extra"}, headers=csrf(parent)
+    )
+    [row] = activity(client, lena)["transactions"]
+    client.post(
+        f"/api/members/{lena}/points/{row['id']}/reverse",
+        json={"reason": "Mistake"},
+        headers=csrf(parent),
+    )
+    [inactive] = activity(client, lena)["transactions"]
+    assert restore_row(client, parent, inactive).status_code == 204
+    with SessionLocal() as db:
+        db.add(PointTransaction(member_id=lena, amount=-4, kind="reward_redeemed", reason="Reward"))
+        db.commit()
+    response = client.post(
+        f"/api/activity-corrections/{inactive['correction_id']}/deactivate",
+        json={"confirmed": True, "reason": "Again"},
+        headers=csrf(parent),
+    )
+    assert response.status_code == 409
+    result = activity(client, lena)
+    assert result["total"] == 0
+    assert not next(r for r in result["transactions"] if r.get("correction_id"))["inactive"]

@@ -346,7 +346,7 @@ function TransactionRow({
       {canRestore || canUndo || manualCredit ? (
         <button
           type="button"
-          className="flex w-full min-w-0 items-center gap-3 rounded-xl p-2 text-left hover:bg-orange-50 focus-visible:outline-2 focus-visible:outline-orange-400"
+          className={`flex w-full min-w-0 items-center gap-3 rounded-xl p-2 text-left focus-visible:outline-2 focus-visible:outline-orange-400 ${transaction.inactive ? 'hover:bg-red-100' : 'hover:bg-orange-50'}`}
           disabled={undo.isPending || reverse.isPending || restore.isPending}
           aria-expanded={canRestore ? restoring : canUndo ? undoing : correcting}
           onClick={() =>
