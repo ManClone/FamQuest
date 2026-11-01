@@ -7,7 +7,7 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import select, text
 
 from app.auth_db import AuthDatabase
-from app.auth_registry import Membership, Tenant
+from app.auth_registry import Identity, Membership, Tenant
 from app.config import get_settings
 from app.family_db import FamilyDatabase, FamilyDatabaseRouter
 from app.family_principal import resolve_family_principal
@@ -30,7 +30,19 @@ def verify(registry, router, *, auth_head, family_head):
             control.scalars(select(Tenant).where(Tenant.status == "active").order_by(Tenant.id))
         )
         if not families:
-            raise RuntimeError("No active family has been explicitly provisioned")
+            disabled = control.scalar(select(Tenant.id).where(Tenant.status == "disabled").limit(1))
+            operator = control.scalar(
+                select(Identity.id)
+                .where(
+                    Identity.is_superadmin.is_(True),
+                    ~select(Membership.id).where(Membership.identity_id == Identity.id).exists(),
+                )
+                .limit(1)
+            )
+            if disabled is None or operator is None:
+                raise RuntimeError("No active family has been explicitly provisioned")
+            # Keep recovery through the separate operator console available.
+            # No disabled family connection is opened or automatically migrated.
         for tenant in families:
             family = FamilyDatabase(tenant.id, tenant.database_name)
             with router.session(family) as db:

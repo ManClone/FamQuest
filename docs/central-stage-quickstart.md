@@ -10,11 +10,11 @@ Zentrale Anmeldung mit separater Benutzer-Datenbank, zwei getrennte Familien-Dat
 Eltern-/Kinderrechte, Kontenverwaltung innerhalb der eigenen Familie, getrennte Fach- und
 Bildzugriffe sowie Sperrung einer Familie auch bei bereits bestehender Anmeldung.
 
-Unter `/operator` ist eine **separate lesende Betreiberübersicht** vorbereitet. Sie benötigt
+Unter `/operator` ist eine **separate Betreiberverwaltung** vorbereitet. Sie benötigt
 einen ausdrücklich separat eingerichteten Betreiberzugang (siehe `BETREIBERVERWALTUNG.md`
 im erzeugten Paket). Die vier Zugänge dieses Pakets sind Eltern- und Kinderzugänge zweier
-Testfamilien, keine Betreiber-Administratoren. Familien anlegen, sperren oder löschen ist
-weiterhin kein fertiger Web-Verwaltungsablauf.
+Testfamilien, keine Betreiber-Administratoren. Sperren und Wiederfreigeben erfordern eine
+Begründung und Bestätigung. Familien anlegen oder löschen ist weiterhin nicht möglich.
 Die automatisierte Sperrprüfung erfolgt ausschließlich im neu angelegten isolierten Testcluster.
 
 ## Vorbereitung auf QNAP

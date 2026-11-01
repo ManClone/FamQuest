@@ -42,14 +42,30 @@ def migrate_registry(registry):
     command.upgrade(config, "f20261101_operator")
 
 
+def migrate_status_registry(registry):
+    with registry.engine.connect() as connection:
+        current = connection.scalars(text("SELECT version_num FROM alembic_version")).all()
+    if current not in (["f20261101_operator"], ["g20261101_status"]):
+        raise ValueError("Unexpected registry revision; manual review required")
+    root = Path(__file__).resolve().parents[1]
+    config = Config(root / "auth_alembic.ini")
+    config.attributes.update(database_url=registry.engine.url, configure_logger=False)
+    command.upgrade(config, "g20261101_status")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--apply-reviewed-auth-migration", action="store_true")
+    mode.add_argument("--apply-reviewed-status-migration", action="store_true")
     mode.add_argument("--email")
     args = parser.parse_args()
     registry = AuthDatabase(Settings())
     try:
+        if args.apply_reviewed_status_migration:
+            migrate_status_registry(registry)
+            print("Reviewed additive status-audit migration applied; no family database changed.")
+            return
         if args.apply_reviewed_auth_migration:
             migrate_registry(registry)
             print(

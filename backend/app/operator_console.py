@@ -4,11 +4,12 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from fastapi import Request, Response
+from fastapi import Query, Request, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
-from app.auth_registry import Identity, Membership, OperatorSession, Tenant
+from app.auth_registry import Identity, Membership, OperatorSession, Tenant, TenantStatusEvent
 from app.central_auth import LoginIn
 from app.errors import ApiError
 from app.security import (
@@ -19,6 +20,7 @@ from app.security import (
     token_hash,
     verify_secret,
 )
+from app.tenant_status import StatusChange, change_status
 
 COOKIE = "__Host-famquest_operator"
 LIFETIME = timedelta(hours=1)
@@ -145,6 +147,48 @@ def install(app, registry):
                 }
                 for tenant, count in rows
             ]
+
+    @app.post("/operator/api/families/{tenant_id}/status", include_in_schema=False)
+    def status(tenant_id: int, body: StatusChange, request: Request):
+        with registry.session() as db:
+            _, actor = authenticate(
+                db, request.cookies.get(COOKIE), request.headers.get("x-csrf-token"), writing=True
+            )
+            try:
+                event = change_status(db, actor.id, tenant_id, body)
+                db.commit()
+                return {"event_id": event.id, "status": event.to_status}
+            except IntegrityError as exc:
+                db.rollback()
+                raise ApiError(409, "auth.operator_conflict") from exc
+
+    @app.get("/operator/api/families/{tenant_id}/history", include_in_schema=False)
+    def history(tenant_id: int, request: Request, before: int | None = Query(default=None, ge=1)):
+        with registry.session() as db:
+            authenticate(db, request.cookies.get(COOKIE))
+            if db.get(Tenant, tenant_id) is None:
+                raise ApiError(404, "common.not_found")
+            query = (
+                select(TenantStatusEvent, Identity.email)
+                .join(Identity, Identity.id == TenantStatusEvent.actor_identity_id)
+                .where(TenantStatusEvent.tenant_id == tenant_id)
+            )
+            if before is not None:
+                query = query.where(TenantStatusEvent.id < before)
+            rows = db.execute(query.order_by(TenantStatusEvent.id.desc()).limit(51)).all()
+            items = [
+                {
+                    "id": event.id,
+                    "family_name": event.family_name,
+                    "from_status": event.from_status,
+                    "to_status": event.to_status,
+                    "reason": event.reason,
+                    "actor_email": email,
+                    "created_at": event.created_at,
+                }
+                for event, email in rows[:50]
+            ]
+            return {"items": items, "next_before": items[-1]["id"] if len(rows) > 50 else None}
 
     @app.post("/operator/api/logout", status_code=204, include_in_schema=False)
     def logout(request: Request, response: Response):

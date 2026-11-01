@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth_registry import Identity, Membership, OAuthAuthorizationCode, OAuthClient, Tenant
+from app.family_principal import lock_active_tenant
 from app.oauth_pkce import verify_s256
 
 
@@ -33,7 +34,8 @@ def issue_code(
     if re.fullmatch(r"[A-Za-z0-9_-]{43}", code_challenge) is None:
         raise ValueError("Invalid challenge")
     client = db.get(OAuthClient, client_id)
-    tenant = db.get(Tenant, tenant_id)
+    db.scalar(select(Identity).where(Identity.id == identity_id).with_for_update())
+    tenant = lock_active_tenant(db, tenant_id)
     membership = db.scalar(
         select(Membership).where(
             Membership.identity_id == identity_id,

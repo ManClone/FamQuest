@@ -1,8 +1,10 @@
-# Betreiberverwaltung: erster lesender Stand
+# Betreiberverwaltung: Familien sperren und wieder freigeben
 
 Die zentrale Testanwendung besitzt unter `/operator` eine getrennte Betreiberanmeldung.
-Sie zeigt Familiennamen, Status und Anzahl verknüpfter Konten. Sie öffnet keine Familien-DB,
-zeigt keine Aufgaben oder Bilder und kann noch keine Familien anlegen, sperren oder löschen.
+Sie zeigt Familiennamen, Status und Anzahl verknüpfter Konten. Sie öffnet keine Familien-DB
+und zeigt keine Aufgaben oder Bilder. Aktive Familien können mit Begründung, exakt eingegebenem
+Familiennamen und ausdrücklicher Bestätigung gesperrt bzw. wieder freigegeben werden.
+Familien anlegen oder löschen ist weiterhin nicht möglich.
 Der bisherige Elternbereich innerhalb einer Familie bleibt getrennt bestehen.
 
 ## Rechte und Anmeldung
@@ -16,6 +18,24 @@ Der bisherige Elternbereich innerhalb einer Familie bleibt getrennt bestehen.
 - Die Oberfläche setzt Familiennamen als Text ein und verwendet eine Content Security Policy ohne Inline-Skripte.
 
 ## Bestehende zentrale Testinstanz aktualisieren
+
+### Bereits vorhandene Betreiberübersicht (Auth-Stand `f20261101_operator`)
+
+Für die Statusaktionen ist die neue additive Auth-Migration `g20261101_status` nötig.
+Sie legt nur `tenant_status_events` samt Index an. Vor Ausführung frische Benutzer-DB-Sicherung
+und Compose-Kopie erstellen, Sicherung prüfen und Freigabe einholen; keine Familie migrieren.
+Mit dem neuen geprüften Image, bestehender `runtime.env` und internem Staging-Datennetz einmalig:
+
+```text
+python -m app.operator_setup --apply-reviewed-status-migration
+```
+
+Der Helfer akzeptiert nur `f20261101_operator` oder den bereits angewendeten Zielstand.
+Danach die beiden App-Image-Verweise im bestehenden Staging-Compose aktualisieren,
+Netzwerke und Volumes behalten, Gateway und App gemeinsam neu starten. Der vorhandene
+Betreiberzugang bleibt erhalten; keinen neuen Betreiber und keine neuen Passwortdateien anlegen.
+
+### Älterer Stand ohne Betreiberübersicht
 
 **Kein bloßes Image-Update:** Die zentrale Benutzer-DB benötigt die additive Migration
 `f20261101_operator` nach `e20261031_actors`. Sie legt ausschließlich `operator_sessions`
@@ -36,7 +56,8 @@ erstellen und prüfen. Erst nach Freigabe ausführen. Daten-Volumes beibehalten.
 
    Die Hilfe akzeptiert nur den bekannten alten bzw. bereits migrierten Stand. Bei fremdem
    Stand bricht sie ab. Sie migriert weder Familien noch zukünftige unbekannte Versionen.
-2. Danach im Staging-Compose beide App-Image-Verweise auf den geprüften neuen Digest ändern,
+2. Zusätzlich die oben beschriebene Status-Migration auf `g20261101_status` anwenden.
+   Danach im Staging-Compose beide App-Image-Verweise auf den geprüften neuen Digest ändern,
    bestehende Netzwerke, Host-Header und Volumes behalten; Gateway und App zusammen neu starten.
    Die Initialisierung prüft den existierenden Stand und überschreibt keine Testkonten.
 3. Im laufenden neuen Test-App-Container mit interaktivem Terminal einen **neuen, unabhängigen**
@@ -64,6 +85,25 @@ Auch dort wird kein Betreiber automatisch eingerichtet.
 - Nach Abmeldung oder Ablauf ist erneute Anmeldung nötig.
 - Mobile Ansicht ohne horizontalen Überlauf; lange Namen dürfen umbrechen.
 
-Noch offen bleiben schreibende Betreiberaktionen mit Audit/Bestätigung, Provisionierung echter
+## Verhalten der Statusaktionen
+
+- Sperre, Widerruf der Browser-Sitzungen und MCP-Freigaben sowie Protokolleintrag werden
+  in einer zentralen Transaktion gespeichert. Ausstehende OAuth-Codes werden ebenfalls entwertet.
+- Neue Anmeldungen und neue OAuth-Codes/Grants nehmen dieselbe Familien-Zeilensperre.
+  Gleichzeitige Anmeldeversuche können deshalb nicht nachträglich eine gültige Sitzung
+  hinter einer abgeschlossenen Sperre anlegen. Bereits laufende Fachvorgänge werden nicht abgebrochen.
+- Wiederfreigabe erfordert erneut Begründung und Bestätigung. Sie stellt keine alten
+  Sitzungen oder MCP-Freigaben wieder her: neu anmelden bzw. MCP erneut autorisieren.
+- Ein Request-Schlüssel macht identische Wiederholungen idempotent. Widersprüchliche
+  Wiederholungen oder veraltete Ausgangsstände werden abgewiesen. Ein alter Auftrag kann eine
+  inzwischen wieder freigegebene Familie nicht erneut sperren.
+- Der Statusverlauf ist nur lesbar, nachladbar und enthält Betreiber, Zeitpunkt, Begründung,
+  Familiennamen zur Zeit der Änderung und alten/neuen Status. Kein Lösch-/Änderungsendpunkt.
+- Familien in Einrichtung oder mit unbekanntem Status können hier nicht aktiviert werden.
+- Sind alle Familien gesperrt, darf die App mit einem unabhängigen Betreiberzugang neu starten,
+  ohne gesperrte Familien-DBs zu öffnen. So bleibt Wiederfreigabe möglich. Eine leere bzw.
+  unvollständige Registrierung ohne solchen Betreiber wird weiterhin abgewiesen.
+
+Noch offen bleiben weitere Betreiberaktionen wie Familienanlage/-löschung, Provisionierung echter
 Familien und die produktive Wiederherstellungs-/Migrationsabnahme. Dieser Stand erteilt keine
 Freigabe zur Produktionsumstellung.

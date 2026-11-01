@@ -135,3 +135,22 @@ class OperatorSession(AuthBase):
     csrf_token: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class TenantStatusEvent(AuthBase):
+    """Append-only through the operator API; no family content or credentials."""
+
+    __tablename__ = "tenant_status_events"
+    __table_args__ = (UniqueConstraint("actor_identity_id", "request_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(
+        ForeignKey("tenants.id", ondelete="RESTRICT"), index=True
+    )
+    actor_identity_id: Mapped[int] = mapped_column(ForeignKey("identities.id", ondelete="RESTRICT"))
+    request_key: Mapped[str] = mapped_column(String(36))
+    family_name: Mapped[str] = mapped_column(String(100))
+    from_status: Mapped[str] = mapped_column(String(20))
+    to_status: Mapped[str] = mapped_column(String(20))
+    reason: Mapped[str] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
