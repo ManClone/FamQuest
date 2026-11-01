@@ -17,7 +17,7 @@ from app.models import (
     TaskCompletion,
 )
 from app.money import book_money
-from app.points import book, lock_member
+from app.points import balance, book, lock_member
 
 
 def link_journal(db, state, source, entry_id):
@@ -304,6 +304,8 @@ def deactivate_manual(db, correction_id, actor_id, reason):
         raise ApiError(422, "validation.invalid")
     if state.inactive:
         return
+    if balance(db, state.member_id) < state.snapshot["point_amount"]:
+        raise ApiError(409, "points.insufficient")
     entry = book(
         db,
         state.member_id,
