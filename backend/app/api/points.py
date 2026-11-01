@@ -110,7 +110,7 @@ def member_progress(
 ) -> dict[str, int | str | None]:
     """Levels use earned task XP, never the balance spent on rewards."""
     ensure_member_access(db, auth, member_id)
-    get_member(db, member_id)
+    member = get_member(db, member_id)
     latest = db.scalar(
         select(Praise)
         .where(Praise.member_id == member_id, Praise.revoked_at.is_(None))
@@ -145,6 +145,7 @@ def member_progress(
         .limit(1)
     )
     return {
+        "dragon_name": member.dragon_name,
         "latest_deduction_id": deduction.id if deduction else 0,
         "latest_deduction_reason": deduction.reason if deduction else None,
         "latest_deduction_amount": -deduction.amount if deduction else 0,

@@ -1,3 +1,4 @@
+import { DragonCompanion } from '../components/DragonCompanion'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router'
 import BackIcon from '~icons/fluent-emoji-flat/left-arrow'
@@ -67,6 +68,7 @@ export function PersonPage() {
           {member.name}
         </h1>
       </header>
+      <DragonCompanion member={member} />
       <DayProgress
         member={member}
         tasks={currentTasks(tasks, member.id, today.date)}

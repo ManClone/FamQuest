@@ -536,7 +536,9 @@
       "child_required": "Diese Funktion ist nur für Kinder verfügbar",
       "invalid_allowance": "Ungültiger Taschengeldbetrag",
       "invalid_pagination": "Ungültige Seitennummerierung",
-      "task_history_protected": "Für diese Aufgabe gibt es Bonus-Nachweise. Bitte die Aufgabe deaktivieren, statt diese Nachweise zu löschen."
+      "task_history_protected": "Für diese Aufgabe gibt es Bonus-Nachweise. Bitte die Aufgabe deaktivieren, statt diese Nachweise zu löschen.",
+      "chore_history_protected": "Diese Hausarbeit hat bestätigte Geldboni. Bitte zuerst die betreffenden Erledigungen zurücknehmen; alternativ die Hausarbeit deaktivieren.",
+      "chore_recipient_protected": "Diese Erledigung hat einen Geldbonus. Zum Personenwechsel zuerst zurücknehmen und neu erledigen."
     },
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
@@ -568,6 +570,9 @@
       "restore_conflict": "Diese Aufgabe wurde inzwischen erneut erledigt. Keine doppelte Gutschrift möglich.",
       "restore_unavailable": "Dieser Eintrag kann nicht wieder aktiviert werden.",
       "already_grouped": "Dieser Eintrag wurde bereits zugeordnet."
+    },
+    "dragon": {
+      "already_named": "Dein Drache hat bereits einen festen Namen."
     }
   },
   "rewards": {
@@ -1083,7 +1088,9 @@
     "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
     "child_complete": "Erledigt!",
     "who_before_completion": "Wer hat {{title}} erledigt?",
-    "confirm_undo": "„{{title}}“ wirklich zurücknehmen?"
+    "confirm_undo": "„{{title}}“ wirklich zurücknehmen?",
+    "money_bonus": "Kinderbonus pro Erledigung in Euro",
+    "money_bonus_hint": "Wird nach Elternfreigabe beim Wochenbonus gutgeschrieben. Leer lassen für keinen Geldbonus. Erwachsene erhalten keinen Geldbonus."
   },
   "todos": {
     "title": "Zu erledigen",
@@ -1274,5 +1281,15 @@
     "reactivated": "Wieder aktiviert",
     "restore_confirm": "Diesen Eintrag mit den ursprünglichen Punkten und dem ursprünglichen Bonus wieder aktivieren?",
     "restore": "Wieder aktivieren"
+  },
+  "dragon": {
+    "title": "Dein Drachenbegleiter",
+    "unnamed": "Dein Drache",
+    "of": "Drachenbegleiter von {{name}}",
+    "hint": "Gemeinsam auf Abenteuerreise!",
+    "name_action": "Drachen benennen",
+    "name": "Drachenname",
+    "name_hint": "Wähle den Namen gemeinsam mit deinem Kind. Er wird einmalig festgelegt und bleibt erhalten.",
+    "save": "Namen festlegen"
   }
 }

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import MoneyTransaction
 
-BONUS_KINDS = frozenset({"task_completed", "task_undone"})
+BONUS_KINDS = frozenset({"task_completed", "task_undone", "chore_completed", "chore_undone"})
 ALLOWANCE_KINDS = frozenset({"allowance"})
 PAYMENT_KINDS = frozenset({"payout"})
 

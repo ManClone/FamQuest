@@ -302,6 +302,16 @@ function TransactionRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-lg font-bold break-words text-slate-800">{transaction.reason}</span>
+        {!!transaction.money_cents && transaction.amount !== 0 && (
+          <span
+            className={`text-sm font-bold ${transaction.inactive ? 'text-red-800 line-through' : 'text-emerald-700'}`}
+          >
+            {new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' }).format(
+              transaction.money_cents / 100,
+            )}{' '}
+            Bonus
+          </span>
+        )}
         {transaction.inactive && (
           <span className="text-sm font-bold text-red-800">{t('family_account.inactive')}</span>
         )}

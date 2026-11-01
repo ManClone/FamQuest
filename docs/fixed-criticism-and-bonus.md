@@ -123,3 +123,34 @@ Familienverlauf fasst sie zu einem Eintrag zusammen. Die additive Migration legt
 nur zwei neue Tabellen an und schreibt keine alten Beträge um. Vor diesem Stand
 bereits gelöschte Erledigungen besitzen keine vollständige Momentaufnahme und
 werden deshalb nicht nachträglich als wiederherstellbar ausgegeben.
+
+
+### Geldbonus bei Haushaltsaufgaben und Drachenanzeige
+
+Ab `q20261101chorebonus` kann pro Haushaltsaufgabe ein optionaler Kinderbonus in
+Euro eingestellt werden. Er gilt zusätzlich zu Sternen, getrennt vom
+Grundtaschengeld. Kinder-Erledigungen warten auf Elternfreigabe; eine direkt von
+Eltern für ein berechtigtes Kind bestätigte Erledigung wird sofort gebucht.
+Erwachsene erhalten keinen Geldbonus. Ohne Personen-Zuordnung wird nichts bezahlt.
+Der Betrag bleibt pro Erledigung gespeichert. Änderungen der Aufgabe ändern
+frühere oder bereits zur Freigabe eingereichte Beträge nicht.
+
+Rücknahme und Wiederaktivierung wirken auf denselben ursprünglichen Bonus und
+erscheinen in der gemeinsamen Buchungsliste. Wiederholte Aufrufe zahlen nicht
+doppelt. Haushalts- und Kinderaufgaben besitzen getrennte Journalarten, damit
+identische Datenbank-IDs ihre Wochenbeträge nicht vermischen. Abgeschlossene
+Wochen bleiben eingefroren und zeigen nachträgliche Korrekturen zur Prüfung an.
+Bestätigte bezahlte Erledigungen müssen vor dem Löschen einer Hausarbeit oder
+ihres Raums zurückgenommen werden; Deaktivieren bleibt möglich. Der Empfänger
+einer bezahlten Erledigung kann nicht stillschweigend geändert werden.
+
+Die additive Migration ergänzt je ein Null-vorbelegtes Cent-Feld in Aufgaben und
+Erledigungen. Bestehende Ausführungen bekommen keinen nachträglichen Bonus. MCP
+kann diese Geldwerte weder konfigurieren noch Geldfreigaben oder Rücknahmen
+ausführen.
+
+Der Drachenbegleiter wird in Kinderansicht, Personenansicht und Familienübersicht
+wieder angezeigt. Vorhandene Drachen-Namen und Level bleiben erhalten. Ein noch
+unbenannter Drache kann einmalig benannt werden; Kinder dürfen nur ihren eigenen
+Drachen benennen. Es handelt sich um die Anzeige mit vorhandenem Drachen-Icon und
+bestehendem Levelstand, nicht um eine neue animierte Entwicklungssimulation.

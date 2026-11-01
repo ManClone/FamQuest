@@ -19,6 +19,7 @@ export interface ChoreRoom {
 export interface Chore {
   repeatable?: boolean
   child_enabled?: boolean
+  money_cents?: number
   child_xp?: number
   child_member_ids?: number[]
   id: number
@@ -83,6 +84,7 @@ export interface RoomData {
 export interface ChoreData {
   repeatable?: boolean
   child_enabled?: boolean
+  money_cents?: number
   child_xp?: number
   child_member_ids?: number[]
   room_id: number
@@ -146,9 +148,16 @@ function useDoneMutation<TVariables, TItem extends { id: number }>(
     },
     onSettled: () =>
       Promise.all(
-        [CHORES_KEY, TODAY_KEY, POINTS_KEY, PROGRESS_KEY].map((queryKey) =>
-          queryClient.invalidateQueries({ queryKey }),
-        ),
+        [
+          CHORES_KEY,
+          TODAY_KEY,
+          POINTS_KEY,
+          PROGRESS_KEY,
+          ['money'],
+          ['criticism'],
+          ['approvals'],
+          ['my-chores'],
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       ),
   })
 }
@@ -220,6 +229,7 @@ export const choreData = (chore: Chore): ChoreData => ({
   repeatable: chore.repeatable ?? false,
   child_enabled: chore.child_enabled ?? false,
   child_xp: chore.child_xp ?? 0,
+  money_cents: chore.money_cents ?? 0,
   child_member_ids: chore.child_member_ids ?? [],
   room_id: chore.room_id,
   title: chore.title,
@@ -240,7 +250,14 @@ export const setupChores = (rooms: SetupRoom[]) =>
 export function useChoresMutation<TVariables, TResult>(
   request: (variables: TVariables) => Promise<TResult>,
 ) {
-  return useParentMutation(request, [CHORES_KEY])
+  return useParentMutation(request, [
+    CHORES_KEY,
+    ['my-chores'],
+    ['money'],
+    ['criticism'],
+    POINTS_KEY,
+    TODAY_KEY,
+  ])
 }
 
 /** Read-only weekly household assignment suggestions; never persists assignments. */

@@ -59,6 +59,7 @@ class RoomOut(BaseModel):
 class ChoreOut(BaseModel):
     repeatable: bool = False
     child_enabled: bool = False
+    money_cents: int = 0
     child_xp: int = 0
     child_member_ids: list[int] = []
     id: int
@@ -118,6 +119,7 @@ class RoomIn(BaseModel):
 class ChoreIn(BaseModel):
     repeatable: bool = False
     child_enabled: bool = False
+    money_cents: int = Field(default=0, ge=0, le=100000)
     child_xp: int = Field(default=0, ge=0, le=1000)
     child_member_ids: list[int] = Field(default_factory=list, max_length=100)
     room_id: int
@@ -225,6 +227,7 @@ def _chore_out(
         repeatable=chore.repeatable,
         child_enabled=chore.child_enabled,
         child_xp=chore.child_xp,
+        money_cents=chore.money_cents,
         child_member_ids=chore.child_member_ids,
         id=chore.id,
         room_id=chore.room_id,
@@ -307,6 +310,8 @@ def _shares(db: DbSession, today: dt.date) -> list[ShareOut]:
 
 def _reverse_chore_credits(db: DbSession, completions: list[ChoreCompletion], title: str) -> None:
     """Reverse booked XP before completions are removed by edits or deletion."""
+    if any(c.approved and c.money_cents for c in completions):
+        raise ApiError(409, "money.chore_history_protected")
     credits = [(completion, db.get(ChoreCredit, completion.id)) for completion in completions]
     for member_id in sorted({credit.member_id for _, credit in credits if credit is not None}):
         lock_member(db, member_id)
@@ -574,6 +579,8 @@ def publish_weekly(body: WeeklyPublishIn, _: ParentSession, db: DbSession) -> We
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_chore(body: ChoreCreateIn, _: ParentSession, db: DbSession) -> ChoreOut:
     _get_room(db, body.room_id)
+    if db.info.get("mcp_request") and body.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
     _validate_assignment(db, body)
     today = _today(db)
     _check_counted_from(body.counted_from, today)
@@ -581,6 +588,7 @@ def create_chore(body: ChoreCreateIn, _: ParentSession, db: DbSession) -> ChoreO
         repeatable=body.repeatable,
         child_enabled=body.child_enabled,
         child_xp=body.child_xp,
+        money_cents=body.money_cents,
         child_member_ids=body.child_member_ids,
         room_id=body.room_id,
         title=body.title,
@@ -629,7 +637,13 @@ def update_room(room_id: int, body: RoomIn, _: ParentSession, db: DbSession) -> 
 def delete_room(room_id: int, _: ParentSession, db: DbSession) -> None:
     """Löscht einen Raum mitsamt seinen Aufgaben."""
     room = _get_room(db, room_id)
-    chores = list(db.scalars(select(Chore).where(Chore.room_id == room.id)))
+    chores = list(
+        db.scalars(
+            select(Chore).where(Chore.room_id == room.id).order_by(Chore.id).with_for_update()
+        )
+    )
+    if db.info.get("mcp_request") and any(c.money_cents for c in chores):
+        raise ApiError(403, "mcp.operation_forbidden")
     for chore in chores:
         completions = list(
             db.scalars(
@@ -697,6 +711,8 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
     schon abgehakten Erledigungen, werden diese gelöscht: Sonst zählte weiter die jüngste davon.
     """
     chore = _get_chore(db, chore_id)
+    if db.info.get("mcp_request") and (body.money_cents or chore.money_cents):
+        raise ApiError(403, "mcp.operation_forbidden")
     _get_room(db, body.room_id)
     # Validate the effective values, including metadata omitted by legacy clients.
     fields = body.model_fields_set
@@ -746,7 +762,7 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
         chore.estimated_minutes = body.estimated_minutes
     if "adult_xp" in fields:
         chore.adult_xp = body.adult_xp
-    for key in ("repeatable", "child_enabled", "child_xp", "child_member_ids"):
+    for key in ("repeatable", "child_enabled", "child_xp", "child_member_ids", "money_cents"):
         if key in fields:
             setattr(chore, key, getattr(body, key))
     chore.assignment_mode = effective_mode
@@ -758,6 +774,8 @@ def update_chore(chore_id: int, body: ChoreIn, _: ParentSession, db: DbSession) 
 @router.delete("/{chore_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chore(chore_id: int, _: ParentSession, db: DbSession) -> None:
     chore = _get_chore(db, chore_id)
+    if db.info.get("mcp_request") and chore.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
     completions = list(
         db.scalars(
             select(ChoreCompletion)
@@ -778,6 +796,9 @@ def delete_chore(chore_id: int, _: ParentSession, db: DbSession) -> None:
 def _credit_completion(
     db: DbSession, chore: Chore, completion: ChoreCompletion, member: FamilyMember | None
 ) -> None:
+    from app.chore_money import credit_chore_money
+
+    credit_chore_money(db, completion, chore.title)
     old = db.get(ChoreCredit, completion.id)
     amount = (
         (
@@ -835,6 +856,16 @@ def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> C
         raise ApiError(409, "chore.fixed_assignee_only")
     member = get_member(db, body.member_id) if body.member_id is not None else None
     today = _today(db)
+    bonus = (
+        chore.money_cents
+        if member is not None
+        and member.role == "child"
+        and chore.child_enabled
+        and member.id in chore.child_member_ids
+        else 0
+    )
+    if db.info.get("mcp_request") and bonus:
+        raise ApiError(403, "mcp.operation_forbidden")
     completion = db.scalar(
         select(ChoreCompletion).where(
             ChoreCompletion.chore_id == chore.id,
@@ -854,6 +885,7 @@ def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> C
             date=today,
             member_id=body.member_id,
             request_key=body.request_key,
+            money_cents=bonus,
             estimated_minutes=chore.estimated_minutes,
         )
         db.add(completion)
@@ -862,6 +894,12 @@ def mark_done(chore_id: int, body: DoneIn, _: ParentSession, db: DbSession) -> C
         except IntegrityError as error:
             db.rollback()
             raise ApiError(status.HTTP_409_CONFLICT, "chore.request_conflict") from error
+    if completion.money_cents and body.member_id not in (None, completion.member_id):
+        raise ApiError(409, "money.chore_recipient_protected")
+    if db.info.get("mcp_request") and completion.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
+    if body.member_id is not None and completion.member_id != body.member_id:
+        completion.money_cents = bonus
     # A retry of the initial unassigned request must not erase the later attribution.
     if body.member_id is not None or completion.member_id is None:
         completion.member_id = body.member_id
@@ -896,6 +934,8 @@ def approve_chore_credit(chore_id: int, body: DoneIn, _: ParentSession, db: DbSe
     )
     if completion is None:
         raise ApiError(status.HTTP_409_CONFLICT, "chore.not_completed")
+    if completion.money_cents:
+        raise ApiError(409, "money.chore_recipient_protected")
     old = db.get(ChoreCredit, completion.id)
     amount = chore.adult_xp
     if old is not None and old.member_id == member.id:
@@ -997,6 +1037,7 @@ def my_chores(auth: CurrentSession, db: DbSession) -> list[dict]:
                 title=chore.title,
                 icon=chore.icon,
                 points=chore.child_xp,
+                money_cents=chore.money_cents,
                 repeatable=chore.repeatable,
                 days_left=state.days_left,
                 done_today=state.done_today,
@@ -1037,6 +1078,7 @@ def child_chore_done(
             request_key=body.request_key,
             approved=False,
             points=chore.child_xp,
+            money_cents=chore.money_cents,
             estimated_minutes=chore.estimated_minutes,
         )
     )

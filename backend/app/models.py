@@ -716,6 +716,7 @@ class Chore(Base):
 
     repeatable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     child_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     child_xp: Mapped[int] = mapped_column(default=0, server_default="0")
     child_member_ids: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
 
@@ -762,6 +763,7 @@ class ChoreCompletion(Base):
         ),
     )
 
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     points: Mapped[int] = mapped_column(default=0, server_default="0")
     # Snapshot; NULL for historical executions whose old time estimate is unknown.

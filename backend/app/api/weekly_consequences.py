@@ -14,6 +14,7 @@ from app.demo_mode import NotInDemo
 from app.errors import ApiError
 from app.models import (
     BonusWeekClose,
+    ChoreCompletion,
     ConsequenceEntry,
     MoneyPaymentMatch,
     MoneyTransaction,
@@ -245,6 +246,19 @@ def raw_week(db, member_id, date):
                 MoneyTransaction.kind.in_(("task_completed", "task_undone")),
                 TaskCompletion.date >= start,
                 TaskCompletion.date <= end,
+            )
+        )
+        or 0
+    )
+    earned += (
+        db.scalar(
+            select(func.coalesce(func.sum(MoneyTransaction.amount_cents), 0))
+            .join(ChoreCompletion, MoneyTransaction.completion_id == ChoreCompletion.id)
+            .where(
+                MoneyTransaction.member_id == member_id,
+                MoneyTransaction.kind.in_(("chore_completed", "chore_undone")),
+                ChoreCompletion.date >= start,
+                ChoreCompletion.date <= end,
             )
         )
         or 0
