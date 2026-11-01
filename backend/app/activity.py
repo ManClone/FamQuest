@@ -251,10 +251,10 @@ def activity_history(db, member_id, cursor=None, limit=50):
                 icon=state.icon,
                 task_date=state.snapshot.get("completion", {}).get("date"),
                 created_at=state.occurred_at,
-                inactive=not available,
+                inactive=state.inactive,
                 correction_id=state.id,
                 restore_id=state.id if state.inactive else None,
-                reactivated=available and state.restored_at is not None,
+                reactivated=not state.inactive and state.restored_at is not None,
                 undo_source=state.source if available and state.source != "manual" else None,
                 undo_id=state.origin_id if available and state.source != "manual" else None,
             )
