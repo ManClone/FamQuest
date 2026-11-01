@@ -105,3 +105,21 @@ Datenbank-Transaktionszeitpunkts eindeutig zusammengehören. Es wird niemals
 allein anhand gleicher Titel, Tage oder Punkte auf eine Erledigung geschlossen.
 Nicht eindeutig zuordenbare alte Nachweise bleiben lesbar; die vorhandenen
 fachlichen Korrekturansichten können sie weiterhin bearbeiten.
+
+
+### Sichtbare Rücknahmen und Wiederaktivierung
+
+Ab `p20261101reactivate` bleiben neu zurückgenommene Erledigungen als ein roter,
+inaktiver Eintrag in der gemeinsamen Buchungsliste erhalten. Sie zählen nicht zum
+Punktestand. Antippen und Bestätigen aktiviert die ursprünglichen Punkte und den
+ursprünglichen Aufgabenbonus wieder; geänderte Aufgabendefinitionen ändern diese
+Momentaufnahme nicht. Eine inzwischen erneut erledigte normale Aufgabe blockiert
+die Wiederaktivierung, damit keine doppelte Gutschrift entsteht. Einzelne echte
+Wiederholungs-Erledigungen bleiben unabhängig.
+
+Das gilt auch für manuelle positive Gutschriften. Alle ursprünglichen und
+kompensierenden Buchungen bleiben im unveränderten Journal erhalten; der
+Familienverlauf fasst sie zu einem Eintrag zusammen. Die additive Migration legt
+nur zwei neue Tabellen an und schreibt keine alten Beträge um. Vor diesem Stand
+bereits gelöschte Erledigungen besitzen keine vollständige Momentaufnahme und
+werden deshalb nicht nachträglich als wiederherstellbar ausgegeben.

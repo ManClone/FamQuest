@@ -247,7 +247,8 @@ def confirmed_chores(
 @router.delete("/chore-approvals/{completion_id}/confirmed", status_code=204)
 def undo_confirmed_chore(completion_id: int, auth: ParentSession, db: DbSession) -> None:
     """Remove exactly one execution and reverse its original credit once."""
-    from app.api.chores import _get_chore, _reverse_chore_credits
+    from app.activity_corrections import reverse_completion
+    from app.api.chores import _get_chore
 
     old = db.get(ChoreCompletion, completion_id)
     if old is None:
@@ -263,8 +264,7 @@ def undo_confirmed_chore(completion_id: int, auth: ParentSession, db: DbSession)
         return
     if not completion.approved:
         raise ApiError(status.HTTP_409_CONFLICT, "approval.not_found")
-    _reverse_chore_credits(db, [completion], chore.title)
-    db.delete(completion)
+    reverse_completion(db, "chore", completion, chore, auth.user_id)
     db.commit()
 
 
@@ -309,8 +309,6 @@ def confirmed_tasks(
 @router.delete("/approvals/{completion_id}/confirmed", status_code=204)
 def undo_confirmed_task(completion_id: int, auth: ParentSession, db: DbSession) -> None:
     """Reverse exactly one execution using its original point and bonus snapshots."""
-    from app.points import lock_member
-
     old = db.get(TaskCompletion, completion_id)
     if old is None:
         return
@@ -329,25 +327,9 @@ def undo_confirmed_task(completion_id: int, auth: ParentSession, db: DbSession) 
         raise ApiError(409, "approval.not_found")
     if db.info.get("mcp_request") and completion.money_cents:
         raise ApiError(403, "mcp.operation_forbidden")
-    lock_member(db, completion.member_id)
-    title = task.title if task else "Aufgabe"
-    book(
-        db,
-        completion.member_id,
-        -completion.points,
-        "task_undone",
-        reason=title,
-        task_id=task_id,
-        task_date=completion.date,
-        user_id=auth.user_id,
-    )
-    book_money(
-        db,
-        completion.member_id,
-        -completion.money_cents,
-        "task_undone",
-        title,
-        completion.id,
-    )
-    db.delete(completion)
+    from app.activity_corrections import reverse_completion
+
+    if task is None:
+        raise ApiError(409, "activity.restore_unavailable")
+    reverse_completion(db, "task", completion, task, auth.user_id)
     db.commit()

@@ -211,6 +211,64 @@ describe('Punkte im Elternbereich', () => {
     },
   )
 
+  it('markiert Rücknahmen rot und aktiviert erst nach Bestätigung wieder', async () => {
+    let inactive = true
+    const calls = api({
+      'GET /api/members/1/activity': () =>
+        Response.json({
+          total: inactive ? 0 : 2,
+          has_more: false,
+          transactions: [
+            makeTransaction({
+              id: -4,
+              inactive,
+              correction_id: 1,
+              restore_id: inactive ? 1 : null,
+              reactivated: !inactive,
+              undo_source: inactive ? null : 'task',
+              undo_id: inactive ? null : 41,
+            }),
+          ],
+        }),
+      'POST /api/activity-corrections/1/restore': () => {
+        inactive = false
+        return new Response(null, { status: 204 })
+      },
+    })
+    const user = await openLena()
+    const label = await screen.findByText('Zurückgenommen – zählt nicht zum Punktestand')
+    expect(label.closest('li')).toHaveClass('bg-red-50')
+    expect(screen.getByText('+2')).toHaveClass('line-through')
+    await user.click(screen.getByRole('button', { name: /Zähne putzen/ }))
+    expect(calls.some((call) => call.key.includes('/restore'))).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Wieder aktivieren' }))
+    await screen.findByText('Wieder aktiviert')
+    expect(screen.queryByText('Zurückgenommen – zählt nicht zum Punktestand')).toBeNull()
+    expect(calls.find((call) => call.key.includes('/restore'))?.body).toEqual({ confirmed: true })
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('behält eine Rücknahme bei einem Wiederaktivierungskonflikt bei', async () => {
+    api({
+      'GET /api/members/1/activity': Response.json({
+        total: 0,
+        has_more: false,
+        transactions: [makeTransaction({ id: -4, inactive: true, restore_id: 1 })],
+      }),
+      'POST /api/activity-corrections/1/restore': Response.json(
+        { code: 'activity.restore_conflict' },
+        { status: 409 },
+      ),
+    })
+    const user = await openLena()
+    await user.click(await screen.findByRole('button', { name: /Zähne putzen/ }))
+    await user.click(screen.getByRole('button', { name: 'Wieder aktivieren' }))
+    expect(
+      await screen.findByText(/Diese Aufgabe wurde inzwischen erneut erledigt/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Zurückgenommen – zählt nicht zum Punktestand')).toBeInTheDocument()
+  })
+
   it('verlangt eine Begründung', async () => {
     const calls = api()
     const user = await openLena()

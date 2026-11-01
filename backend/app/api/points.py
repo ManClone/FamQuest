@@ -1,5 +1,5 @@
 from datetime import UTC
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request, status
 from pydantic import BaseModel, Field
@@ -284,6 +284,10 @@ class PointReversalIn(PraiseRevocationIn):
 
 def reverse_points_entry(member_id, transaction_id, body, auth, db, *, penalty_only=False):
     get_member(db, member_id)
+    from app.activity_corrections import capture_manual, finish_manual_reverse
+
+    lock_member(db, member_id)
+    state = capture_manual(db, db.get(PointTransaction, transaction_id), member_id, auth.user_id)
     reversal = reverse_manual(
         db,
         member_id,
@@ -294,6 +298,7 @@ def reverse_points_entry(member_id, transaction_id, body, auth, db, *, penalty_o
         existing_compensation_id=body.existing_compensation_id,
         compensation_reviewed=body.compensation_reviewed,
     )
+    finish_manual_reverse(db, state, reversal.refund_transaction_id, auth.user_id)
     db.commit()
     return {
         "transaction_id": reversal.transaction_id,
@@ -344,3 +349,31 @@ def get_activity(
 
     get_member(db, member_id)
     return activity_history(db, member_id, cursor, limit)
+
+
+class ActivityRestoreIn(BaseModel):
+    confirmed: Literal[True]
+
+
+class ActivityDeactivateIn(ActivityRestoreIn):
+    reason: str = Field(min_length=1, max_length=200, pattern=r"\S")
+
+
+@router.post("/activity-corrections/{correction_id}/restore", status_code=204)
+def restore_activity(
+    correction_id: int, body: ActivityRestoreIn, auth: ParentSession, db: DbSession
+) -> None:
+    from app.activity_corrections import restore
+
+    restore(db, correction_id, auth.user_id)
+    db.commit()
+
+
+@router.post("/activity-corrections/{correction_id}/deactivate", status_code=204)
+def deactivate_activity(
+    correction_id: int, body: ActivityDeactivateIn, auth: ParentSession, db: DbSession
+) -> None:
+    from app.activity_corrections import deactivate_manual
+
+    deactivate_manual(db, correction_id, auth.user_id, body.reason)
+    db.commit()

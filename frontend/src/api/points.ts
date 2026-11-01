@@ -20,6 +20,10 @@ export type PointKind =
 
 export interface PointTransaction {
   id: number
+  inactive?: boolean
+  restore_id?: number | null
+  correction_id?: number | null
+  reactivated?: boolean
   money_cents?: number
   undo_source?: 'task' | 'chore' | null
   undo_id?: number | null
