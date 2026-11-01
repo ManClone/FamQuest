@@ -942,21 +942,14 @@ def undo_done(
     completion = db.scalar(query.order_by(ChoreCompletion.id.desc()).limit(1).with_for_update())
     if completion is not None:
         credit = db.get(ChoreCredit, completion.id)
-        if credit is not None:
-            # Reversing parent-approved XP requires a parent account.
-            if auth_session.user.role not in ("admin", "parent"):
-                raise ApiError(status.HTTP_403_FORBIDDEN, "parent.locked")
-            lock_member(db, credit.member_id)
-            book(
-                db,
-                credit.member_id,
-                -credit.amount,
-                "chore_undone",
-                reason=chore.title,
-                task_date=completion.date,
-            )
-            db.delete(credit)
-        db.delete(completion)
+        if credit is not None and auth_session.user.role not in ("admin", "parent"):
+            raise ApiError(status.HTTP_403_FORBIDDEN, "parent.locked")
+        if completion.approved and completion.member_id is not None:
+            from app.activity_corrections import reverse_completion
+
+            reverse_completion(db, "chore", completion, chore, auth_session.user_id)
+        else:
+            db.delete(completion)
         db.commit()
     return _one_out(db, chore)
 

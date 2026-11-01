@@ -563,6 +563,11 @@
       "statement_changed": "The statement changed. Review and confirm it again.",
       "use_levels": "Use the fixed criticism levels for star deductions.",
       "request_conflict": "This request was already used for a different decision. Check the current state."
+    },
+    "activity": {
+      "restore_conflict": "This task has since been completed again. Duplicate credit is not allowed.",
+      "restore_unavailable": "This entry cannot be reactivated.",
+      "already_grouped": "This entry has already been linked."
     }
   },
   "rewards": {
@@ -1264,6 +1269,10 @@
       "light": "Light",
       "heavy": "Serious",
       "severe": "Very serious"
-    }
+    },
+    "inactive": "Reversed – excluded from the points balance",
+    "reactivated": "Reactivated",
+    "restore_confirm": "Reactivate this entry with its original points and bonus?",
+    "restore": "Reactivate"
   }
 }

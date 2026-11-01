@@ -2,6 +2,7 @@ import datetime as dt
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -971,3 +972,38 @@ class PenaltyReversal(Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ActivityCorrection(Base):
+    """Frozen execution/credit snapshot and its current activation state."""
+
+    __tablename__ = "activity_corrections"
+    __table_args__ = (
+        UniqueConstraint("source", "origin_id", "member_id", name="uq_activity_correction_origin"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(10))
+    origin_id: Mapped[int]
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    icon: Mapped[str | None] = mapped_column(String(100))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    inactive: Mapped[bool] = mapped_column(default=False, server_default="false")
+    restored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    changed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class ActivityJournalLink(Base):
+    """All original/compensating journal rows represented by one activity item."""
+
+    __tablename__ = "activity_journal_links"
+    journal_source: Mapped[str] = mapped_column(String(10), primary_key=True)
+    journal_id: Mapped[int] = mapped_column(primary_key=True)
+    correction_id: Mapped[int] = mapped_column(
+        ForeignKey("activity_corrections.id", ondelete="CASCADE"), index=True
+    )

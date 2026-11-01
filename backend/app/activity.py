@@ -8,6 +8,8 @@ from sqlalchemy import and_, func, literal, or_, select, union_all
 
 from app.errors import ApiError
 from app.models import (
+    ActivityCorrection,
+    ActivityJournalLink,
     Chore,
     ChoreCompletion,
     ChoreCredit,
@@ -106,7 +108,15 @@ def activity_history(db, member_id, cursor=None, limit=50):
         literal("point").label("source"),
         PointTransaction.id.label("id"),
         PointTransaction.created_at.label("occurred_at"),
-    ).where(PointTransaction.member_id == member_id)
+    ).where(
+        PointTransaction.member_id == member_id,
+        ~select(ActivityJournalLink.journal_id)
+        .where(
+            ActivityJournalLink.journal_source == "point",
+            ActivityJournalLink.journal_id == PointTransaction.id,
+        )
+        .exists(),
+    )
     zero_tasks = select(
         literal("task").label("source"),
         TaskCompletion.id.label("id"),
@@ -116,6 +126,13 @@ def activity_history(db, member_id, cursor=None, limit=50):
         TaskCompletion.approved_at.is_not(None),
         TaskCompletion.points == 0,
         TaskCompletion.money_cents == 0,
+        ~select(ActivityCorrection.id)
+        .where(
+            ActivityCorrection.source == "task",
+            ActivityCorrection.origin_id == TaskCompletion.id,
+            ActivityCorrection.member_id == member_id,
+        )
+        .exists(),
     )
     zero_chores = (
         select(
@@ -128,6 +145,13 @@ def activity_history(db, member_id, cursor=None, limit=50):
             ChoreCompletion.member_id == member_id,
             ChoreCompletion.approved.is_(True),
             ChoreCredit.completion_id.is_(None),
+            ~select(ActivityCorrection.id)
+            .where(
+                ActivityCorrection.source == "chore",
+                ActivityCorrection.origin_id == ChoreCompletion.id,
+                ActivityCorrection.member_id == member_id,
+            )
+            .exists(),
         )
     )
     money_only = select(
@@ -137,6 +161,12 @@ def activity_history(db, member_id, cursor=None, limit=50):
     ).where(
         MoneyTransaction.member_id == member_id,
         MoneyTransaction.kind.in_(("task_completed", "task_undone")),
+        ~select(ActivityJournalLink.journal_id)
+        .where(
+            ActivityJournalLink.journal_source == "money",
+            ActivityJournalLink.journal_id == MoneyTransaction.id,
+        )
+        .exists(),
         ~select(PointTransaction.id)
         .where(
             PointTransaction.member_id == MoneyTransaction.member_id,
@@ -145,7 +175,12 @@ def activity_history(db, member_id, cursor=None, limit=50):
         )
         .exists(),
     )
-    feed = union_all(points, zero_tasks, zero_chores, money_only).subquery()
+    states = select(
+        literal("state").label("source"),
+        ActivityCorrection.id.label("id"),
+        ActivityCorrection.occurred_at.label("occurred_at"),
+    ).where(ActivityCorrection.member_id == member_id)
+    feed = union_all(points, zero_tasks, zero_chores, money_only, states).subquery()
     query = select(feed)
     if cursor:
         try:
@@ -153,7 +188,7 @@ def activity_history(db, member_id, cursor=None, limit=50):
                 base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4))
             )
             stamp = dt.datetime.fromisoformat(stamp)
-            if stamp.tzinfo is None or source not in ("point", "task", "chore", "money"):
+            if stamp.tzinfo is None or source not in ("point", "task", "chore", "money", "state"):
                 raise ValueError
             if not isinstance(origin, int) or isinstance(origin, bool) or origin < 1:
                 raise ValueError
@@ -193,7 +228,37 @@ def activity_history(db, member_id, cursor=None, limit=50):
     }
     for row in rows[:limit]:
         source, origin = row["source"], row["id"]
-        if source == "point":
+        if source == "state":
+            state = db.get(ActivityCorrection, origin)
+            if state is None:
+                continue
+            available = not state.inactive
+            if state.source in ("task", "chore"):
+                model = TaskCompletion if state.source == "task" else ChoreCompletion
+                completion = db.get(model, state.origin_id)
+                available = (
+                    available and completion is not None and completion.member_id == member_id
+                )
+                if available and state.source == "chore" and state.snapshot["point_amount"]:
+                    credit = db.get(ChoreCredit, state.origin_id)
+                    available = credit is not None and credit.member_id == member_id
+            item = dict(
+                id=-4 * origin,
+                amount=state.snapshot["point_amount"],
+                money_cents=state.snapshot["money_cents"],
+                kind="manual" if state.source == "manual" else f"{state.source}_completed",
+                reason=state.title,
+                icon=state.icon,
+                task_date=state.snapshot.get("completion", {}).get("date"),
+                created_at=state.occurred_at,
+                inactive=not available,
+                correction_id=state.id,
+                restore_id=state.id if state.inactive else None,
+                reactivated=available and state.restored_at is not None,
+                undo_source=state.source if available and state.source != "manual" else None,
+                undo_id=state.origin_id if available and state.source != "manual" else None,
+            )
+        elif source == "point":
             entry = db.get(PointTransaction, origin)
             if entry is None:
                 continue

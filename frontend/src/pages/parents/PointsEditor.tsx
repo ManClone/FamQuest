@@ -251,15 +251,28 @@ function TransactionRow({
   const { t, i18n } = useTranslation()
   const [correcting, setCorrecting] = useState(false)
   const [undoing, setUndoing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const restore = useApprovalMutation(() =>
+    api<void>('POST', `/activity-corrections/${transaction.restore_id}/restore`, {
+      confirmed: true,
+    }),
+  )
   const undo = useApprovalMutation((id: number) =>
     transaction.undo_source === 'task' ? undoConfirmedTask(id) : undoConfirmedChore(id),
   )
   const [correction, setCorrection] = useState('')
   const reverse = useParentMutation(
     () =>
-      api('POST', `/members/${memberId}/points/${transaction.id}/reverse`, {
-        reason: correction.trim(),
-      }),
+      api(
+        'POST',
+        transaction.correction_id != null
+          ? `/activity-corrections/${transaction.correction_id}/deactivate`
+          : `/members/${memberId}/points/${transaction.id}/reverse`,
+        {
+          ...(transaction.correction_id != null ? { confirmed: true } : {}),
+          reason: correction.trim(),
+        },
+      ),
     [POINTS_KEY, PROGRESS_KEY, ['today']],
   )
   const language = i18n.resolvedLanguage ?? i18n.language
@@ -272,7 +285,11 @@ function TransactionRow({
   const positive = (transaction.amount || transaction.money_cents || 0) > 0
 
   const manualCredit =
-    transaction.kind === 'manual' && transaction.amount > 0 && !transaction.reversed_at
+    transaction.kind === 'manual' &&
+    transaction.amount > 0 &&
+    !transaction.reversed_at &&
+    !transaction.inactive
+  const canRestore = transaction.restore_id != null
   const canUndo = !!transaction.undo_source && transaction.undo_id != null
   const content = (
     <>
@@ -285,6 +302,12 @@ function TransactionRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-lg font-bold break-words text-slate-800">{transaction.reason}</span>
+        {transaction.inactive && (
+          <span className="text-sm font-bold text-red-800">{t('family_account.inactive')}</span>
+        )}
+        {transaction.reactivated && (
+          <span className="text-sm text-emerald-800">{t('family_account.reactivated')}</span>
+        )}
         {transaction.reversed_at && (
           <span className="text-sm text-slate-600">
             {t('points.reversed', { id: transaction.reversal_transaction_id })} ·{' '}
@@ -302,7 +325,7 @@ function TransactionRow({
         </span>
       </span>
       <span
-        className={`shrink-0 rounded-full px-3 py-1 text-xl font-extrabold tabular-nums ${positive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}
+        className={`shrink-0 rounded-full px-3 py-1 text-xl font-extrabold tabular-nums ${transaction.inactive ? 'bg-red-100 text-red-800 line-through' : positive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}
       >
         {transaction.amount === 0
           ? transaction.money_cents
@@ -317,19 +340,44 @@ function TransactionRow({
     </>
   )
   return (
-    <li className="flex flex-wrap items-center gap-3 py-3">
-      {canUndo || manualCredit ? (
+    <li
+      className={`flex flex-wrap items-center gap-3 py-3 ${transaction.inactive ? 'rounded-xl border border-red-200 bg-red-50' : ''}`}
+    >
+      {canRestore || canUndo || manualCredit ? (
         <button
           type="button"
           className="flex w-full min-w-0 items-center gap-3 rounded-xl p-2 text-left hover:bg-orange-50 focus-visible:outline-2 focus-visible:outline-orange-400"
-          disabled={undo.isPending || reverse.isPending}
-          aria-expanded={canUndo ? undoing : correcting}
-          onClick={() => (canUndo ? setUndoing(true) : setCorrecting(true))}
+          disabled={undo.isPending || reverse.isPending || restore.isPending}
+          aria-expanded={canRestore ? restoring : canUndo ? undoing : correcting}
+          onClick={() =>
+            canRestore ? setRestoring(true) : canUndo ? setUndoing(true) : setCorrecting(true)
+          }
         >
           {content}
         </button>
       ) : (
         <div className="flex w-full min-w-0 items-center gap-3">{content}</div>
+      )}
+      {canRestore && restoring && (
+        <div className="flex w-full flex-col gap-3 rounded-xl bg-red-50 p-3">
+          <p>{t('family_account.restore_confirm')}</p>
+          {restore.isError && <Alert>{errorMessage(t, restore.error)}</Alert>}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={restore.isPending}
+              onClick={() => restore.mutate(0, { onSuccess: () => setRestoring(false) })}
+            >
+              {t('family_account.restore')}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={restore.isPending}
+              onClick={() => setRestoring(false)}
+            >
+              {t('actions.cancel')}
+            </Button>
+          </div>
+        </div>
       )}
       {canUndo && undoing && (
         <div className="flex w-full flex-col gap-3 rounded-xl bg-orange-50 p-3">

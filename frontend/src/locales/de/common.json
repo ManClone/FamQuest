@@ -563,6 +563,11 @@
       "statement_changed": "Die Abrechnung hat sich geändert. Bitte neu prüfen und bestätigen.",
       "use_levels": "Bitte für Sternabzüge die festen Kritikstufen verwenden.",
       "request_conflict": "Diese Anfrage wurde bereits für eine andere Entscheidung verwendet. Bitte den aktuellen Stand prüfen."
+    },
+    "activity": {
+      "restore_conflict": "Diese Aufgabe wurde inzwischen erneut erledigt. Keine doppelte Gutschrift möglich.",
+      "restore_unavailable": "Dieser Eintrag kann nicht wieder aktiviert werden.",
+      "already_grouped": "Dieser Eintrag wurde bereits zugeordnet."
     }
   },
   "rewards": {
@@ -1264,6 +1269,10 @@
       "light": "Leicht",
       "heavy": "Schwer",
       "severe": "Sehr schwer"
-    }
+    },
+    "inactive": "Zurückgenommen – zählt nicht zum Punktestand",
+    "reactivated": "Wieder aktiviert",
+    "restore_confirm": "Diesen Eintrag mit den ursprünglichen Punkten und dem ursprünglichen Bonus wieder aktivieren?",
+    "restore": "Wieder aktivieren"
   }
 }
