@@ -22,6 +22,19 @@ class FamilyPrincipal:
     email: str = ""
 
 
+def lock_active_tenant(auth: Session, tenant_id: int) -> Tenant:
+    """Credential issuance serializes with operator suspension, after identity lock."""
+    tenant = auth.scalar(
+        select(Tenant)
+        .where(Tenant.id == tenant_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if tenant is None or tenant.status != "active":
+        raise PermissionError("Family is not active")
+    return tenant
+
+
 def resolve_family_principal(auth: Session, identity_id: int) -> FamilyPrincipal:
     identity = auth.get(Identity, identity_id)
     if identity is None or identity.is_superadmin:

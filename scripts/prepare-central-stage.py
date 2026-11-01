@@ -137,7 +137,7 @@ server {{
             {
                 "app": image,
                 "origin": origin,
-                "scope": "isolated two-family staging; read-only operator console requires separate setup",
+                "scope": "isolated two-family staging; operator console requires separate setup",
                 "databases": ["famquest_auth", "famquest_stage_a", "famquest_stage_b"],
             },
             indent=2,

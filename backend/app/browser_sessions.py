@@ -7,7 +7,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.auth_registry import BrowserSession, Identity, OAuthAuthorizationCode, OAuthGrant
-from app.family_principal import FamilyPrincipal, resolve_family_principal
+from app.family_principal import FamilyPrincipal, lock_active_tenant, resolve_family_principal
 from app.security import hash_secret, needs_rehash, new_token, token_hash, verify_secret
 
 COOKIE_NAME = "__Host-famquest_central"
@@ -31,6 +31,7 @@ def login_browser(db: Session, email: str, password: str) -> tuple[str, BrowserS
         raise PermissionError("Invalid credentials")
     assert identity is not None
     principal = resolve_family_principal(db, identity.id)
+    lock_active_tenant(db, principal.tenant_id)
     if needs_rehash(identity.password_hash):
         identity.password_hash = hash_secret(password)
     raw = new_token()

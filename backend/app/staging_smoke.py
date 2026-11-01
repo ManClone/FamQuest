@@ -6,10 +6,10 @@ from contextlib import ExitStack
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select, text, update
+from sqlalchemy import create_engine, delete, select, text, update
 from sqlalchemy.exc import OperationalError
 
-from app.auth_registry import Identity, Tenant
+from app.auth_registry import Identity, Tenant, TenantStatusEvent
 from app.config import Settings
 from app.multitenant_app import create_app
 from app.operator_setup import create_operator
@@ -204,6 +204,79 @@ def run(settings=None, environ=None):
                 operator_client.get("/api/members").status_code == 401,
                 "operator cookie cannot access family data",
             )
+            target = next(row for row in listing.json() if row["name"] == "Testfamilie A")
+            for key in (("A", "PARENT"), ("A", "CHILD"), ("B", "PARENT")):
+                family, role = key
+                prefix = "eltern" if role == "PARENT" else "kind"
+                require(
+                    clients[key]
+                    .post(
+                        "/api/auth/login",
+                        json={
+                            "email": f"{prefix}.{family.lower()}@famquest.test",
+                            "password": accounts[key],
+                        },
+                    )
+                    .status_code
+                    == 200,
+                    "fresh family login for status test",
+                )
+            action = {
+                "expected_status": "active",
+                "status": "disabled",
+                "family_name": target["name"],
+                "reason": "Isolated CI suspension test",
+                "confirmed": True,
+                "request_key": str(uuid4()),
+            }
+            path = f"/operator/api/families/{target['id']}/status"
+            operator_headers = {"x-csrf-token": operator_csrf}
+            first = operator_client.post(path, json=action, headers=operator_headers)
+            require(first.status_code == 200, "audited family suspension")
+            require(
+                operator_client.post(path, json=action, headers=operator_headers).json()
+                == first.json(),
+                "status retry is idempotent",
+            )
+            for role in ("PARENT", "CHILD"):
+                require(
+                    clients[("A", role)].get("/api/today").status_code == 401,
+                    "suspension revokes existing family session",
+                )
+            require(
+                clients[("B", "PARENT")].get("/api/today").status_code == 200,
+                "other family remains accessible",
+            )
+            require(
+                operator_client.post(
+                    path,
+                    json={
+                        **action,
+                        "expected_status": "disabled",
+                        "status": "active",
+                        "request_key": str(uuid4()),
+                    },
+                    headers=operator_headers,
+                ).status_code
+                == 200,
+                "audited family reactivation",
+            )
+            require(
+                clients[("A", "PARENT")].get("/api/today").status_code == 401,
+                "reactivation does not resurrect a session",
+            )
+            history = operator_client.get(f"/operator/api/families/{target['id']}/history").json()
+            require(len(history["items"]) == 2, "one audit entry per real change")
+            for client in clients.values():
+                me = client.get("/api/auth/me")
+                if me.status_code == 200:
+                    require(
+                        client.post(
+                            "/api/auth/logout", headers={"x-csrf-token": me.json()["csrf_token"]}
+                        ).status_code
+                        == 204,
+                        "status-test session cleanup",
+                    )
             require(
                 operator_client.post(
                     "/operator/api/logout", headers={"x-csrf-token": operator_csrf}
@@ -217,9 +290,16 @@ def run(settings=None, environ=None):
             )
         finally:
             with registry.session() as control:
+                # Disposable CI operator only; production API has no audit-delete route.
+                control.execute(
+                    delete(TenantStatusEvent).where(
+                        TenantStatusEvent.actor_identity_id == operator_id
+                    )
+                )
                 control.delete(control.get(Identity, operator_id))
                 control.commit()
         results.append("separate_operator_overview_and_session_boundary")
+        results.append("audited_suspension_reactivation_and_permanent_session_revocation")
     return results
 
 

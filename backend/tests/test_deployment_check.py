@@ -58,3 +58,29 @@ def test_missing_mapping_and_family_local_passwords_are_release_gates(environmen
 
     with pytest.raises(ApiError):
         verify(registry, router, auth_head="expected", family_head="expected")
+
+
+def test_all_disabled_families_can_restart_only_with_independent_operator(environment):
+    from sqlalchemy import select
+
+    from app.auth_registry import Identity, Tenant
+
+    _, registry, router, _ = environment
+    versions(registry, router)
+    with registry.session() as control:
+        for tenant in control.scalars(select(Tenant)):
+            tenant.status = "disabled"
+        control.commit()
+    with pytest.raises(RuntimeError, match="No active family"):
+        verify(registry, router, auth_head="expected", family_head="expected")
+    with registry.session() as control:
+        control.add(
+            Identity(id=99, email="operator@example.invalid", password_hash="!", is_superadmin=True)
+        )
+        control.commit()
+
+    class NoConnections:
+        def session(self, family):
+            raise AssertionError("Disabled family databases must not be opened")
+
+    assert verify(registry, NoConnections(), auth_head="expected", family_head="expected") == []
