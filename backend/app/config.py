@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     postgres_db: str = "famquest"
     # JSON mapping: database name -> dedicated role username/password. Empty disables routing.
     family_database_credentials: dict[str, FamilyDatabaseCredentials] = Field(default_factory=dict)
+    # Explicitly prepared empty databases; the web app never receives CREATE DATABASE rights.
+    family_creation_databases: list[str] = Field(default_factory=list)
     # Separate central identity registry login; never fall back to the legacy DB superuser.
     auth_database_credentials: FamilyDatabaseCredentials | None = None
 

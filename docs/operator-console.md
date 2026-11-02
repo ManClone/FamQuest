@@ -4,7 +4,8 @@ Die zentrale Testanwendung besitzt unter `/operator` eine getrennte Betreiberanm
 Sie zeigt Familiennamen, Status und Anzahl verknüpfter Konten. Sie öffnet keine Familien-DB
 und zeigt keine Aufgaben oder Bilder. Aktive Familien können mit Begründung, exakt eingegebenem
 Familiennamen und ausdrücklicher Bestätigung gesperrt bzw. wieder freigegeben werden.
-Familien anlegen oder löschen ist weiterhin nicht möglich.
+Familien können in ausdrücklich vorbereiteten leeren Datenbankplätzen angelegt werden
+(siehe [Familie anlegen](family-creation.md)). Familien löschen ist weiterhin nicht möglich.
 Der bisherige Elternbereich innerhalb einer Familie bleibt getrennt bestehen.
 
 ## Rechte und Anmeldung
@@ -104,6 +105,6 @@ Auch dort wird kein Betreiber automatisch eingerichtet.
   ohne gesperrte Familien-DBs zu öffnen. So bleibt Wiederfreigabe möglich. Eine leere bzw.
   unvollständige Registrierung ohne solchen Betreiber wird weiterhin abgewiesen.
 
-Noch offen bleiben weitere Betreiberaktionen wie Familienanlage/-löschung, Provisionierung echter
+Noch offen bleiben weitere Betreiberaktionen wie Familienlöschung, zusätzliche Kapazität und Provisionierung echter
 Familien und die produktive Wiederherstellungs-/Migrationsabnahme. Dieser Stand erteilt keine
 Freigabe zur Produktionsumstellung.

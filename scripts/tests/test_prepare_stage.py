@@ -35,7 +35,15 @@ class StagePackageTest(unittest.TestCase):
             self.assertNotEqual(runtime["POSTGRES_USER"], bootstrap["POSTGRES_USER"])
             self.assertNotIn("STAGE_A_PARENT_PASSWORD", runtime)
             credentials = json.loads(runtime["FAMILY_DATABASE_CREDENTIALS"])
-            self.assertEqual(set(credentials), {"famquest_stage_a", "famquest_stage_b"})
+            self.assertEqual(
+                set(credentials),
+                {
+                    "famquest_stage_a",
+                    "famquest_stage_b",
+                    "famquest_stage_c",
+                    "famquest_stage_d",
+                },
+            )
             passwords = [
                 bootstrap["POSTGRES_PASSWORD"],
                 json.loads(runtime["AUTH_DATABASE_CREDENTIALS"])["password"],
@@ -46,7 +54,7 @@ class StagePackageTest(unittest.TestCase):
                     if key.startswith("STAGE_")
                 ),
             ]
-            self.assertEqual(len(set(passwords)), 8)
+            self.assertEqual(len(set(passwords)), 10)
             original = (target / "postgres.env").read_bytes()
             with self.assertRaises(ValueError):
                 MODULE.prepare(

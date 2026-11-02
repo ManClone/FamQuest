@@ -361,7 +361,7 @@ def create_app(
 
     from app.operator_console import install as install_operator_console
 
-    install_operator_console(app, registry)
+    install_operator_console(app, registry, settings=settings, family_router=router)
 
     # Register before the SPA fallback, so unknown API requests never return HTML.
     @app.api_route(

@@ -2,6 +2,8 @@
 const element = (id) => document.getElementById(id);
 let csrf = null;
 let busy = false;
+let creationCapacity = 0;
+let creationKey = null;
 
 function message(text, error = false) {
   element('message').textContent = text;
@@ -14,6 +16,10 @@ function clearOverview() {
   element('count').textContent = '';
   element('overview').hidden = true;
   element('login-panel').hidden = false;
+  element('create-family-form').reset();
+  element('create-family-form').hidden = true;
+  element('creation-jobs').replaceChildren();
+  creationCapacity = 0;
 }
 async function api(path, options = {}) {
   const response = await fetch('/operator/api/' + path, { credentials: 'same-origin', cache: 'no-store', ...options });
@@ -34,7 +40,7 @@ function renderFamily(family) {
   const title = document.createElement('h3');
   title.textContent = family.name;
   const status = document.createElement('p');
-  const labels = {active: 'Aktiv', disabled: 'Gesperrt', provisioning: 'In Einrichtung'};
+  const labels = {active: 'Aktiv', disabled: 'Gesperrt', provisioning: 'In Einrichtung', provisioning_failed: 'Einrichtung fehlgeschlagen – manuell prüfen'};
   status.textContent = labels[family.status] || 'Unbekannter Status';
   status.className = 'state ' + (family.status === 'active' ? 'active' : 'disabled');
   const accounts = document.createElement('p');
@@ -133,6 +139,18 @@ async function loadHistory(area, familyId, before = null) {
 async function refresh() {
   const session = await api('session');
   const families = await api('families');
+  const capabilities = await api('capabilities');
+  const jobs = await api('family-creations');
+  creationCapacity = capabilities.family_creation_capacity;
+  element('creation-capacity').textContent = creationCapacity > 0
+    ? `${creationCapacity} freie Familienplätze verfügbar.` : 'Derzeit ist kein vorbereiteter Familienplatz frei.';
+  element('show-create').disabled = creationCapacity === 0;
+  element('creation-jobs').replaceChildren(...jobs.map((job) => {
+    const li = document.createElement('li');
+    const labels = {ready:'Eingerichtet', failed:'Fehlgeschlagen – Platz reserviert, manuell prüfen', provisioning:'In Einrichtung oder unterbrochen – nicht erneut anlegen'};
+    li.textContent = `${job.family_name} · ${labels[job.status] || job.status}\n${job.parent_email} · ${job.actor_email}`;
+    return li;
+  }));
   csrf = session.csrf_token;
   element('signed-in').textContent = 'Angemeldet als ' + session.email;
   element('families').replaceChildren(...families.map(renderFamily));
@@ -147,7 +165,7 @@ async function run(action) {
   document.querySelectorAll('button').forEach((button) => { button.disabled = true; });
   try { await action(); }
   catch (error) { message(error instanceof Error ? error.message : 'Verbindung fehlgeschlagen. Bitte aktualisieren und den Status prüfen.', true); }
-  finally { busy = false; document.querySelectorAll('button').forEach((button) => { button.disabled = false; }); }
+  finally { busy = false; document.querySelectorAll('button').forEach((button) => { button.disabled = false; }); element('show-create').disabled = creationCapacity === 0; }
 }
 element('login-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -159,6 +177,37 @@ element('login-form').addEventListener('submit', (event) => {
   });
 });
 element('refresh').addEventListener('click', () => { void run(refresh); });
+element('show-create').addEventListener('click', () => {
+  creationKey = crypto.randomUUID();
+  element('create-family-form').hidden = false;
+  element('new-family-name').focus();
+});
+element('cancel-create').addEventListener('click', () => {
+  element('create-family-form').reset();
+  element('create-family-form').hidden = true;
+  creationKey = null;
+});
+element('create-family-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (element('new-parent-password').value !== element('new-parent-password-repeat').value) {
+    message('Die beiden Passwörter stimmen nicht überein.', true);
+    return;
+  }
+  const body = {request_key:creationKey, family_name:element('new-family-name').value,
+    parent_name:element('new-parent-name').value, parent_email:element('new-parent-email').value,
+    password:element('new-parent-password').value, language:element('new-family-language').value,
+    timezone:element('new-family-timezone').value, confirmed:element('create-confirm').checked};
+  element('new-parent-password').value = '';
+  element('new-parent-password-repeat').value = '';
+  void run(async () => {
+    const job = await api('family-creations', {method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrf || ''},body:JSON.stringify(body)});
+    element('create-family-form').reset();
+    element('create-family-form').hidden = true;
+    await refresh();
+    message(job.status === 'ready' ? 'Familie eingerichtet. Der neue Elternzugang kann sich jetzt anmelden.'
+      : 'Die Einrichtung ist nicht abgeschlossen. Den reservierten Platz manuell prüfen; nicht erneut anlegen.', job.status !== 'ready');
+  });
+});
 element('logout').addEventListener('click', () => { void run(async () => {
   await api('logout', {method:'POST', headers:{'x-csrf-token':csrf || ''}});
   clearOverview();

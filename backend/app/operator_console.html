@@ -27,6 +27,23 @@
         <div><button id="refresh" type="button">Aktualisieren</button> <button id="logout" type="button">Abmelden</button></div>
       </div>
       <p>Die Anmeldung endet nach einer Stunde. Aufgaben, Bilder und Kennwörter werden hier nicht angezeigt.</p>
+      <section aria-labelledby="create-title">
+        <h3 id="create-title">Neue Familie</h3><p id="creation-capacity"></p>
+        <button id="show-create" type="button" disabled>Familie anlegen</button>
+        <form id="create-family-form" hidden>
+          <label for="new-family-name">Familienname</label><input id="new-family-name" required maxlength="100">
+          <label for="new-parent-name">Name des Elternteils</label><input id="new-parent-name" required maxlength="50">
+          <label for="new-parent-email">E-Mail des Elternzugangs</label><input id="new-parent-email" type="email" required maxlength="254" autocomplete="off">
+          <label for="new-parent-password">Anfangspasswort für den Elternzugang</label><input id="new-parent-password" type="password" required minlength="16" maxlength="128" autocomplete="new-password">
+          <label for="new-parent-password-repeat">Anfangspasswort wiederholen</label><input id="new-parent-password-repeat" type="password" required minlength="16" maxlength="128" autocomplete="new-password">
+          <p>Mindestens 16 Zeichen. Das Passwort wird nach dem Absenden nicht mehr angezeigt.</p>
+          <label for="new-family-language">Sprache</label><select id="new-family-language"><option value="de">Deutsch</option><option value="en">English</option></select>
+          <label for="new-family-timezone">Zeitzone</label><input id="new-family-timezone" value="Europe/Berlin" required maxlength="64">
+          <label class="check-label"><input id="create-confirm" type="checkbox" required>Ich bestätige die neue Familie und diesen eigenständigen Elternzugang.</label>
+          <button type="submit">Familie und Elternzugang einrichten</button><button id="cancel-create" type="button">Abbrechen</button>
+        </form>
+        <h4>Letzte Einrichtungsaufträge</h4><ul id="creation-jobs" aria-live="polite"></ul>
+      </section>
       <p id="count"></p><ul id="families" aria-label="Registrierte Familien"></ul>
     </section>
   </main>

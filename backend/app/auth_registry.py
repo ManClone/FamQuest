@@ -154,3 +154,29 @@ class TenantStatusEvent(AuthBase):
     to_status: Mapped[str] = mapped_column(String(20))
     reason: Mapped[str] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class FamilyCreation(AuthBase):
+    """Reserved family slot and operator provenance. Never persist plaintext passwords."""
+
+    __tablename__ = "family_creations"
+    __table_args__ = (UniqueConstraint("actor_identity_id", "request_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    actor_identity_id: Mapped[int] = mapped_column(ForeignKey("identities.id", ondelete="RESTRICT"))
+    request_key: Mapped[str] = mapped_column(String(36))
+    tenant_id: Mapped[int] = mapped_column(
+        ForeignKey("tenants.id", ondelete="RESTRICT"), unique=True
+    )
+    parent_identity_id: Mapped[int] = mapped_column(
+        ForeignKey("identities.id", ondelete="RESTRICT"), unique=True
+    )
+    family_name: Mapped[str] = mapped_column(String(100))
+    parent_name: Mapped[str] = mapped_column(String(50))
+    parent_email: Mapped[str] = mapped_column(String(254))
+    language: Mapped[str] = mapped_column(String(10))
+    timezone: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(20), default="provisioning")
+    error_code: Mapped[str | None] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

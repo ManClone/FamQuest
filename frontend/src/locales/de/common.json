@@ -406,6 +406,8 @@
       "family_mapping_required": "Dein Konto ist dieser Familie noch nicht vollständig zugeordnet. Bitte wende dich an die Familienverwaltung.",
       "not_authenticated": "Bitte melde dich an",
       "operator_required": "Dieser Bereich erfordert einen separaten Betreiberzugang",
+      "family_creation_conflict": "Adresse oder Einrichtungsauftrag ist bereits vergeben. Bitte aktualisieren.",
+      "family_creation_capacity": "Derzeit ist kein vorbereiteter Familienplatz frei.",
       "operator_conflict": "Der Status oder dieser Auftrag wurde bereits geändert. Bitte aktualisieren.",
       "operator_confirmation_failed": "Der eingegebene Familienname stimmt nicht überein. Bitte aktualisieren.",
       "operator_status_unavailable": "Familien in Einrichtung können hier noch nicht freigegeben werden.",
