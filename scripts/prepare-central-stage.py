@@ -8,7 +8,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-def prepare(output, origin, image, target_dir=None):
+def prepare(output, origin, image, target_dir=None, spare_families=2):
+    if spare_families not in (0, 2):
+        raise ValueError("Choose zero or two prepared staging slots")
     parsed = urlsplit(origin)
     if (
         parsed.scheme != "https"
@@ -38,13 +40,15 @@ def prepare(output, origin, image, target_dir=None):
     if '"' in directory or "\n" in directory or not directory.startswith("/"):
         raise ValueError("An absolute container-host directory is required")
     origin = origin.rstrip("/")
-    passwords = {key: secrets.token_hex(24) for key in ("owner", "auth", "a", "b")}
+    parts = ("a", "b", "c", "d") if spare_families else ("a", "b")
+    slots = ["famquest_stage_c", "famquest_stage_d"] if spare_families else []
+    passwords = {key: secrets.token_hex(24) for key in ("owner", "auth", *parts)}
     credentials = {
         f"famquest_stage_{part}": {
             "username": f"famquest_stage_{part}_app",
             "password": passwords[part],
         }
-        for part in ("a", "b")
+        for part in parts
     }
     common = {
         "POSTGRES_HOST": "central-stage-db",
@@ -59,6 +63,7 @@ def prepare(output, origin, image, target_dir=None):
             separators=(",", ":"),
         ),
         "FAMILY_DATABASE_CREDENTIALS": json.dumps(credentials, separators=(",", ":")),
+        "FAMILY_CREATION_DATABASES": json.dumps(slots),
     }
     runtime = {
         **common,
@@ -138,7 +143,12 @@ server {{
                 "app": image,
                 "origin": origin,
                 "scope": "isolated two-family staging; operator console requires separate setup",
-                "databases": ["famquest_auth", "famquest_stage_a", "famquest_stage_b"],
+                "databases": [
+                    "famquest_auth",
+                    "famquest_stage_a",
+                    "famquest_stage_b",
+                    *slots,
+                ],
             },
             indent=2,
         )
@@ -156,6 +166,9 @@ server {{
         (root / "docs/operator-console.md").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
+    (output / "FAMILIE-ANLEGEN.md").write_text(
+        (root / "docs/family-creation.md").read_text(encoding="utf-8"), encoding="utf-8"
+    )
     for private_file in (
         "postgres.env",
         "bootstrap.env",
@@ -172,8 +185,11 @@ def main():
     parser.add_argument("--origin", required=True)
     parser.add_argument("--image", required=True)
     parser.add_argument("--target-dir")
+    parser.add_argument("--spare-families", type=int, choices=(0, 2), default=2)
     args = parser.parse_args()
-    result = prepare(args.output, args.origin, args.image, args.target_dir)
+    result = prepare(
+        args.output, args.origin, args.image, args.target_dir, args.spare_families
+    )
     print(f"Private staging package prepared in {result.name}; no secrets printed.")
 
 

@@ -406,6 +406,8 @@
       "family_mapping_required": "Your account is not fully linked to this family yet. Please contact your family administrator.",
       "not_authenticated": "Please sign in",
       "operator_required": "This area requires a separate operator account",
+      "family_creation_conflict": "This address or setup request is already reserved. Please refresh.",
+      "family_creation_capacity": "No prepared family slot is currently available.",
       "operator_conflict": "The status or this request has already changed. Please refresh.",
       "operator_confirmation_failed": "The entered family name does not match. Please refresh.",
       "operator_status_unavailable": "Families being provisioned cannot be activated here yet.",

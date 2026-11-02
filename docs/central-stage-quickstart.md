@@ -14,7 +14,8 @@ Unter `/operator` ist eine **separate Betreiberverwaltung** vorbereitet. Sie ben
 einen ausdrücklich separat eingerichteten Betreiberzugang (siehe `BETREIBERVERWALTUNG.md`
 im erzeugten Paket). Die vier Zugänge dieses Pakets sind Eltern- und Kinderzugänge zweier
 Testfamilien, keine Betreiber-Administratoren. Sperren und Wiederfreigeben erfordern eine
-Begründung und Bestätigung. Familien anlegen oder löschen ist weiterhin nicht möglich.
+Begründung und Bestätigung. Neue Pakete enthalten zwei getrennte vorbereitete Plätze für
+weitere Familien; siehe `FAMILIE-ANLEGEN.md`. Familien löschen ist weiterhin nicht möglich.
 Die automatisierte Sperrprüfung erfolgt ausschließlich im neu angelegten isolierten Testcluster.
 
 ## Vorbereitung auf QNAP

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, delete, select, text, update
 from sqlalchemy.exc import OperationalError
 
-from app.auth_registry import Identity, Tenant, TenantStatusEvent
+from app.auth_registry import FamilyCreation, Identity, OperatorSession, Tenant, TenantStatusEvent
 from app.config import Settings
 from app.multitenant_app import create_app
 from app.operator_setup import create_operator
@@ -28,10 +28,18 @@ def run(settings=None, environ=None):
     admin = create_engine(settings.database_url("postgres"))
     try:
         with admin.connect() as connection:
-            require(inspect_cluster(connection, settings.public_url) == "ready", "staging marker")
+            require(
+                inspect_cluster(
+                    connection,
+                    settings.public_url,
+                    (*DATABASES, *settings.family_creation_databases),
+                )
+                == "ready",
+                "staging marker",
+            )
     finally:
         admin.dispose()
-    require(len(check_ready(settings)) == 2, "two-family preflight")
+    require(len(check_ready(settings)) >= 2, "two-family preflight")
     app = create_app(settings)
     results = []
     created = []
@@ -196,10 +204,17 @@ def run(settings=None, environ=None):
             operator_csrf = response.json()["csrf_token"]
             listing = operator_client.get("/operator/api/families")
             require(
-                listing.status_code == 200 and len(listing.json()) == 2,
+                listing.status_code == 200 and len(listing.json()) >= 2,
                 "operator two-family registry overview",
             )
-            require(all(row["accounts"] == 2 for row in listing.json()), "operator account counts")
+            require(
+                all(
+                    row["accounts"] == 2
+                    for row in listing.json()
+                    if row["name"] in {"Testfamilie A", "Testfamilie B"}
+                ),
+                "operator account counts",
+            )
             require(
                 operator_client.get("/api/members").status_code == 401,
                 "operator cookie cannot access family data",
@@ -257,6 +272,21 @@ def run(settings=None, environ=None):
                 == 200,
                 "suspend second disposable family for recovery check",
             )
+            auxiliary = [
+                row
+                for row in listing.json()
+                if row["name"] not in {"Testfamilie A", "Testfamilie B"}
+            ]
+            for row in auxiliary:
+                require(
+                    operator_client.post(
+                        f"/operator/api/families/{row['id']}/status",
+                        json={**action, "family_name": row["name"], "request_key": str(uuid4())},
+                        headers=operator_headers,
+                    ).status_code
+                    == 200,
+                    "suspend disposable additional family for recovery test",
+                )
             require(
                 check_ready(settings) == [],
                 "operator recovery preflight with all families disabled",
@@ -275,6 +305,22 @@ def run(settings=None, environ=None):
                 == 200,
                 "restore second disposable family",
             )
+            for row in auxiliary:
+                require(
+                    operator_client.post(
+                        f"/operator/api/families/{row['id']}/status",
+                        json={
+                            **action,
+                            "family_name": row["name"],
+                            "expected_status": "disabled",
+                            "status": "active",
+                            "request_key": str(uuid4()),
+                        },
+                        headers=operator_headers,
+                    ).status_code
+                    == 200,
+                    "restore disposable additional family",
+                )
             require(
                 operator_client.post(
                     path,
@@ -315,6 +361,93 @@ def run(settings=None, environ=None):
                         == 204,
                         "status-test session cleanup",
                     )
+            capacity = operator_client.get("/operator/api/capabilities").json()[
+                "family_creation_capacity"
+            ]
+            require(capacity > 0, "prepared spare family capacity")
+            new_email, new_password = f"created-{uuid4().hex}@famquest.test", new_token()
+            creation = {
+                "request_key": str(uuid4()),
+                "family_name": f"Neue Testfamilie {uuid4().hex[:8]}",
+                "parent_name": "Eltern Neu",
+                "parent_email": new_email,
+                "password": new_password,
+                "language": "de",
+                "timezone": "Europe/Berlin",
+                "confirmed": True,
+            }
+            created_response = operator_client.post(
+                "/operator/api/family-creations", json=creation, headers=operator_headers
+            )
+            require(
+                created_response.status_code == 201
+                and created_response.json()["status"] == "ready",
+                "operator creates a family in its own prepared database",
+            )
+            require(
+                operator_client.post(
+                    "/operator/api/family-creations", json=creation, headers=operator_headers
+                ).json()
+                == created_response.json(),
+                "family creation request is idempotent",
+            )
+            require(
+                operator_client.get("/operator/api/capabilities").json()["family_creation_capacity"]
+                == capacity - 1,
+                "one family slot consumed",
+            )
+            new_parent = stack.enter_context(
+                TestClient(
+                    app, base_url=settings.public_url, headers={"origin": settings.public_url}
+                )
+            )
+            login_response = new_parent.post(
+                "/api/auth/login", json={"email": new_email, "password": new_password}
+            )
+            require(login_response.status_code == 200, "new family parent can log in")
+            require(
+                [member["name"] for member in new_parent.get("/api/members").json()]
+                == ["Eltern Neu"],
+                "new parent sees only own member",
+            )
+            require(
+                new_parent.get("/operator/api/families").status_code == 401,
+                "new parent is not operator",
+            )
+            marker = f"Creation isolation {uuid4().hex[:12]}"
+            new_csrf = {"x-csrf-token": login_response.json()["csrf_token"]}
+            todo = new_parent.post(
+                "/api/todos",
+                json={"title": marker, "icon": "fluent-emoji-flat:broom"},
+                headers=new_csrf,
+            )
+            require(todo.status_code == 201, "new family can store business data")
+            # Re-authenticate A after its test logout, then verify both directions.
+            a_login = clients[("A", "PARENT")].post(
+                "/api/auth/login",
+                json={"email": "eltern.a@famquest.test", "password": accounts[("A", "PARENT")]},
+            )
+            require(a_login.status_code == 200, "existing family remains usable after creation")
+            require(
+                marker not in json.dumps(clients[("A", "PARENT")].get("/api/chores").json()),
+                "new family data hidden from A",
+            )
+            require(
+                new_parent.delete(f"/api/todos/{todo.json()['id']}", headers=new_csrf).status_code
+                == 204,
+                "new family test todo cleaned",
+            )
+            require(
+                new_parent.post("/api/auth/logout", headers=new_csrf).status_code == 204,
+                "new parent logout",
+            )
+            require(
+                clients[("A", "PARENT")]
+                .post("/api/auth/logout", headers={"x-csrf-token": a_login.json()["csrf_token"]})
+                .status_code
+                == 204,
+                "A cleanup after creation test",
+            )
             require(
                 operator_client.post(
                     "/operator/api/logout", headers={"x-csrf-token": operator_csrf}
@@ -334,10 +467,24 @@ def run(settings=None, environ=None):
                         TenantStatusEvent.actor_identity_id == operator_id
                     )
                 )
-                control.delete(control.get(Identity, operator_id))
+                operator = control.get(Identity, operator_id)
+                if control.scalar(
+                    select(FamilyCreation.id)
+                    .where(FamilyCreation.actor_identity_id == operator_id)
+                    .limit(1)
+                ):
+                    # Keep creation provenance; disable its temporary CI actor.
+                    operator.is_superadmin = False
+                    operator.password_hash = "!"
+                    control.execute(
+                        delete(OperatorSession).where(OperatorSession.identity_id == operator_id)
+                    )
+                else:
+                    control.delete(operator)
                 control.commit()
         results.append("separate_operator_overview_and_session_boundary")
         results.append("audited_suspension_reactivation_and_permanent_session_revocation")
+        results.append("operator_family_creation_login_and_business_data_isolation")
     return results
 
 

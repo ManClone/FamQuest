@@ -9,9 +9,17 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.auth_registry import Identity, Membership, OperatorSession, Tenant, TenantStatusEvent
+from app.auth_registry import (
+    FamilyCreation,
+    Identity,
+    Membership,
+    OperatorSession,
+    Tenant,
+    TenantStatusEvent,
+)
 from app.central_auth import LoginIn
 from app.errors import ApiError
+from app.family_creation import CreationRequest, available_slots, creation_out, submit_creation
 from app.security import (
     RateLimiter,
     hash_secret,
@@ -48,7 +56,7 @@ def authenticate(db, raw, csrf=None, *, writing=False):
     return session, identity
 
 
-def install(app, registry):
+def install(app, registry, *, settings, family_router):
     limiter = RateLimiter(max_failures=5, window_seconds=900)
 
     @app.get("/operator", response_class=HTMLResponse, include_in_schema=False)
@@ -147,6 +155,36 @@ def install(app, registry):
                 }
                 for tenant, count in rows
             ]
+
+    @app.get("/operator/api/capabilities", include_in_schema=False)
+    def capabilities(request: Request):
+        with registry.session() as db:
+            authenticate(db, request.cookies.get(COOKIE))
+            return {"family_creation_capacity": len(available_slots(db, settings))}
+
+    @app.get("/operator/api/family-creations", include_in_schema=False)
+    def creations(request: Request):
+        with registry.session() as db:
+            authenticate(db, request.cookies.get(COOKIE))
+            rows = db.execute(
+                select(FamilyCreation, Identity.email)
+                .join(Identity, Identity.id == FamilyCreation.actor_identity_id)
+                .order_by(FamilyCreation.id.desc())
+                .limit(20)
+            ).all()
+            return [{**creation_out(job), "actor_email": email} for job, email in rows]
+
+    @app.post("/operator/api/family-creations", status_code=201, include_in_schema=False)
+    def create(body: CreationRequest, request: Request):
+        with registry.session() as db:
+            _, actor = authenticate(
+                db, request.cookies.get(COOKIE), request.headers.get("x-csrf-token"), writing=True
+            )
+            try:
+                return creation_out(submit_creation(db, settings, family_router, actor.id, body))
+            except IntegrityError as exc:
+                db.rollback()
+                raise ApiError(409, "auth.family_creation_conflict") from exc
 
     @app.post("/operator/api/families/{tenant_id}/status", include_in_schema=False)
     def status(tenant_id: int, body: StatusChange, request: Request):

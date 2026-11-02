@@ -21,6 +21,7 @@ def test_auth_registry_is_separate_from_legacy_metadata():
         "browser_sessions",
         "operator_sessions",
         "tenant_status_events",
+        "family_creations",
     }
     assert not set(AuthBase.metadata.tables).intersection(Base.metadata.tables)
 

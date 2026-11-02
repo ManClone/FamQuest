@@ -20,6 +20,7 @@ from app.security import hash_secret
 from app.tenant_provisioner import provision_empty_family
 
 DATABASES = ("famquest_stage_a", "famquest_stage_b")
+SPARE_DATABASES = ("famquest_stage_c", "famquest_stage_d")
 AUTH_DB = "famquest_auth"
 OWNER = "famquest_stage_owner"
 HOST = "central-stage-db"
@@ -48,14 +49,19 @@ def validated_inputs(settings, environ):
     auth = settings.auth_database_credentials
     if auth is None or auth.username != "famquest_auth_app":
         raise ValueError("Dedicated registry credentials required")
-    if set(settings.family_database_credentials) != set(DATABASES):
-        raise ValueError("Only the two staging family databases are allowed")
+    slots = settings.family_creation_databases
+    if len(slots) != len(set(slots)) or not set(slots).issubset(SPARE_DATABASES):
+        raise ValueError("Only the two fixed additional staging slots are allowed")
+    databases = (*DATABASES, *slots)
+    if set(settings.family_database_credentials) != set(databases):
+        raise ValueError("Only the configured staging family databases are allowed")
     secrets = [settings.postgres_password, auth.password]
-    for name in DATABASES:
+    for name in databases:
         credentials = settings.family_database_credentials[name]
         if credentials.username != f"{name}_app":
             raise ValueError("Unexpected staging family role")
         secrets.append(credentials.password)
+    database_secret_count = len(secrets)
     accounts = {}
     for family in ("A", "B"):
         for role in ("PARENT", "CHILD"):
@@ -64,19 +70,23 @@ def validated_inputs(settings, environ):
                 raise ValueError("Four independently generated staging login passwords required")
             accounts[(family, role)] = value
             secrets.append(value)
-    if any(len(value) < 32 for value in secrets[:4]) or len(set(secrets)) != len(secrets):
+    if any(len(value) < 32 for value in secrets[:database_secret_count]) or len(
+        set(secrets)
+    ) != len(secrets):
         raise ValueError("Independent strong staging credentials required")
     return accounts
 
 
-def inspect_cluster(conn, origin):
+def inspect_cluster(conn, origin, databases=DATABASES):
     """Return fresh/ready, refusing foreign or partial clusters before writing anything."""
-    databases = set(conn.scalars(text("SELECT datname FROM pg_database WHERE NOT datistemplate")))
+    actual_databases = set(
+        conn.scalars(text("SELECT datname FROM pg_database WHERE NOT datistemplate"))
+    )
     marker = conn.scalar(text("SELECT to_regclass('public.famquest_central_stage_v1')"))
     roles = set(conn.scalars(text("SELECT rolname FROM pg_roles WHERE rolname NOT LIKE 'pg_%'")))
-    expected_roles = {OWNER, "famquest_auth_app", *(f"{name}_app" for name in DATABASES)}
+    expected_roles = {OWNER, "famquest_auth_app", *(f"{name}_app" for name in databases)}
     if marker is None:
-        if databases != {"postgres"} or roles != {OWNER}:
+        if actual_databases != {"postgres"} or roles != {OWNER}:
             raise RuntimeError("Database cluster is not empty; refusing existing or partial data")
         tables = conn.scalar(
             text("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
@@ -84,7 +94,7 @@ def inspect_cluster(conn, origin):
         if tables:
             raise RuntimeError("Existing public tables; refusing to initialize")
         return "fresh"
-    if databases != {"postgres", AUTH_DB, *DATABASES} or roles != expected_roles:
+    if actual_databases != {"postgres", AUTH_DB, *databases} or roles != expected_roles:
         raise RuntimeError("Staging database or role inventory changed; manual review required")
     recorded = conn.scalars(text("SELECT origin FROM public.famquest_central_stage_v1")).all()
     if recorded != [origin.rstrip("/")]:
@@ -145,12 +155,14 @@ def bootstrap(settings=None, environ=None):
         with admin.connect() as conn:
             conn.execute(text("SELECT pg_advisory_lock(:key)"), {"key": LOCK})
             try:
-                state = inspect_cluster(conn, settings.public_url)
+                state = inspect_cluster(
+                    conn, settings.public_url, (*DATABASES, *settings.family_creation_databases)
+                )
                 if state == "ready":
                     check_ready(settings)
                     return "already-ready"
                 _registry_database(conn, settings.auth_database_credentials.password)
-                for name in DATABASES:
+                for name in (*DATABASES, *settings.family_creation_databases):
                     provision_empty_family(
                         admin, name, settings.family_database_credentials[name].password
                     )
@@ -214,6 +226,10 @@ def bootstrap(settings=None, environ=None):
                                     )
                                 )
                             family.commit()
+                    for name in settings.family_creation_databases:
+                        engines.append(
+                            _migrate(settings, name, settings.family_database_credentials[name])
+                        )
                     auth.commit()
                 check_ready(settings)
                 conn.exec_driver_sql(
