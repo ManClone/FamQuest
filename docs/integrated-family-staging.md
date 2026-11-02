@@ -1,0 +1,67 @@
+# Integrierter Familien-Testserver
+
+`app.multitenant_app.create_app` verbindet den zentralen Login mit den bestehenden
+Fachdaten-Routern. Der produktive Einstieg `app.main:app` bleibt unverändert.
+Es gibt keinen automatischen Migrationslauf, keine automatische Familienaktivierung
+und keinen Zugriff auf produktive Testdaten beim Import.
+
+## Neue Sicherheitsgrenze
+
+Die zentral verifizierte Sitzung liefert Familie und Rolle sowie einen expliziten,
+familienlokalen User-Verweis. Dieser wird vor jedem Fachdatenzugriff validiert.
+Die lokale Rolle muss zur zentralen Rolle passen. Die API behält lokale Audit-IDs,
+verwendet aber niemals einen lokalen Passwort-Hash zur Anmeldung. Browser-Sitzungen
+liegen zentral; vorhandene Legacy-Sitzungen und globale MCP-Parent-Header sind
+keine Anmeldung für den integrierten Server.
+
+Alle eingebundenen Fachrouten verwenden die überschreibbare gemeinsame DB-
+Abhängigkeit. Dadurch erhalten Aufgaben, Routinen, Haushalt, Belohnungen, Punkte,
+Freigaben, Profil, Wetter, Mahlzeiten, Einkauf und Kalender jeweils eine Session
+zur richtigen Familien-Datenbank. Uploads verwenden getrennte Familienordner.
+
+Die Login-/Me-Antwort entspricht jetzt dem Format der vorhandenen Oberfläche.
+Private Browser-Caches werden bei einem Kontowechsel geleert. Die unabhängige
+Auth-Revision `e20261031_actors` ergänzt die explizite lokale Actor-Zuordnung;
+Bestandszuordnungen werden nicht geraten oder ungeprüft aktiviert.
+
+Eltern können inzwischen Konten anlegen, vorhandene Konten mit Profilen verbinden
+und Logins bzw. Rollen bearbeiten. Passwort-Hashes werden ausschließlich zentral
+geschrieben; lokale User-Zeilen enthalten nur eine nicht anmeldbare Markierung.
+Rollen-/Passwortänderungen widerrufen zentrale Sitzungen und Connector-Freigaben.
+Die Familien-Transaktion wird vor der zentralen Freischaltung abgeschlossen.
+Schlägt der zweite Commit fehl, meldet die API den unvollständigen Zugang und
+aktiviert keine neuen Anmeldedaten. Das sichtbare Profil lässt sich anschließend
+gezielt reparieren, ohne ein zweites Profil anzulegen.
+
+## Prüfungen und Grenzen
+
+Lokale HTTP-Tests verwenden getrennte Auth-/Sertl-/Henning-Datenbanken und prüfen
+gleichzeitige Anmeldungen, Lesen, Schreiben, manipulierte Header, CSRF, gleiche
+Bilddateinamen, Sperrung, fehlende Zuordnung, PIN-Reste, zentrale Passwortänderung
+und gebundene MCP-Lesezugriffe. Ein separater PostgreSQL-Test provisioniert drei
+temporäre Datenbanken mit eigenen Rollen, migriert vollständige Schemas und prüft
+Fachdatenzugriffe sowie die verweigerte Verbindung von Family-A-Rollen auf Family B.
+Dieser PostgreSQL-Test und beide vollständigen Prüfläufe sind für den Kontenstand
+`49df099a27c8f5224f4dcfe5dc5176301c0e9c0a` bestanden.
+
+Der integrierte Server bietet inzwischen eigene OAuth-Metadaten, einen
+Eltern-Zustimmungsdialog und Code-/Refresh-/Widerrufs-Endpunkte. Die Oberfläche
+kehrt nach der Anmeldung ausschließlich zum lokalen Zustimmungsdialog zurück.
+Öffentliche Clients benötigen eine exakt hinterlegte HTTPS-Weiterleitungsadresse,
+S256 und die Ressourcenadresse dieser Installation. Dynamische Registrierung ist
+standardmäßig aus; `OAUTH_DYNAMIC_REGISTRATION=true` schaltet sie gezielt ein.
+Es werden keine fremden Client-Metadatenadressen abgerufen. Siehe
+`mcp-authorization-staging.md` für Grenzen und Prüfungen dieses zusätzlichen Standes.
+
+Der aktuelle Stand ist ein überprüfbarer Integrationszwischenstand, **kein
+Mehrfamilien-Produktivrelease**. Google-Neuanbindung ist noch absichtlich
+gesperrt. Der alternative zentrale MCP-Dienst und die family-lokale
+Auftragsreservierung sind jetzt integriert; die vollständige PostgreSQL-CI
+dieser zusätzlichen Änderungen steht noch aus. Der integrierte Server kann
+das konfigurierte gebaute Frontend samt Login ohne Legacy-App-Import ausliefern.
+Familiengebundene Hintergrundprüfungen sind jetzt ausdrücklich zuschaltbar und
+standardmäßig aus; Kalenderjobs benötigen eine zusätzliche Freischaltung.
+Ein alternativer zentraler Containerstart prüft nur lesend die Schemata und
+Kontozuordnungen und führt keine automatische Migration durch. Siehe
+`central-deployment-preflight.md`. Die verbleibenden Implementierungen und der Restore-/Cutover-
+Probelauf sind vor einem Deployment abzuschließen. Siehe `legacy-settings-audit.md`.

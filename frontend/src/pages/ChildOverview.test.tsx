@@ -19,7 +19,8 @@ beforeEach(async () => {
 afterEach(() => {
   vi.unstubAllGlobals()
 })
-function setup(path = '/tasks', progress: Record<string, number> = {}) {
+function setup(path = '/tasks', progress: Record<string, number | string | null> = {}) {
+  let dragonName = progress.dragon_name ?? null
   let redeemed = false
   let pendingChore = false
   const member = makeMember({ name: 'Tim' })
@@ -41,6 +42,7 @@ function setup(path = '/tasks', progress: Record<string, number> = {}) {
           title: 'Clean litter box',
           icon: 'fluent-emoji-flat:cat',
           points: 4,
+          money_cents: 50,
           repeatable: true,
           days_left: 0,
           done_today: false,
@@ -56,6 +58,7 @@ function setup(path = '/tasks', progress: Record<string, number> = {}) {
           title: 'Clean litter box',
           icon: 'fluent-emoji-flat:cat',
           points: 4,
+          money_cents: 50,
           repeatable: true,
           days_left: 0,
           done_today: false,
@@ -71,14 +74,20 @@ function setup(path = '/tasks', progress: Record<string, number> = {}) {
           points: [{ member_id: 1, today: 5, total: redeemed ? 22 : 32 }],
         }),
       ),
-    'GET /api/members/1/progress': Response.json({
-      earned_xp: 132,
-      level: 2,
-      level_progress: 32,
-      level_size: 100,
-      remaining_xp: 68,
-      ...progress,
-    }),
+    'GET /api/members/1/progress': () =>
+      Response.json({
+        earned_xp: 132,
+        level: 2,
+        level_progress: 32,
+        level_size: 100,
+        remaining_xp: 68,
+        ...progress,
+        dragon_name: dragonName,
+      }),
+    'PUT /api/members/1/dragon': (body) => {
+      dragonName = (body as { name: string }).name
+      return Response.json({ dragon_name: dragonName })
+    },
     'GET /api/tasks/week': Response.json({
       start: '2026-09-28',
       today: '2026-10-03',
@@ -199,4 +208,30 @@ it('zeigt automatisch zugeteilte Hausarbeit separat und wartet auf die Eltern', 
   expect(await within(household).findByText('1 completions awaiting approval')).toBeVisible()
   expect(screen.getByLabelText('32 stars')).toBeVisible()
   expect(calls.some((call) => call.key === 'GET /api/chores')).toBe(false)
+})
+
+it('zeigt den Haushalts-Geldbonus neben den Sternen', async () => {
+  setup('/tasks')
+  expect(await screen.findByText('€0.50 Bonus')).toBeVisible()
+})
+
+it('zeigt den gespeicherten Drachen und behält seinen Namen', async () => {
+  setup('/tasks', { dragon_name: 'Funki' })
+  expect(await screen.findByRole('heading', { name: 'Funki' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Name your dragon' })).toBeNull()
+})
+
+it('benennt den Drachen einmalig und lädt den gespeicherten Namen neu', async () => {
+  const user = userEvent.setup()
+  const calls = setup('/tasks')
+  await user.click(await screen.findByRole('button', { name: 'Name your dragon' }))
+  expect(
+    screen.getByText('Choose the name together. It is set once and will be kept.'),
+  ).toBeVisible()
+  await user.type(screen.getByLabelText('Dragon name'), 'Funki')
+  await user.click(screen.getByRole('button', { name: 'Set name' }))
+  expect(await screen.findByRole('heading', { name: 'Funki' })).toBeVisible()
+  expect(calls.find((call) => call.key === 'PUT /api/members/1/dragon')?.body).toEqual({
+    name: 'Funki',
+  })
 })

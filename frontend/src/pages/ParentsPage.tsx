@@ -23,9 +23,6 @@ import { ParentsNav } from './parents/ParentsNav'
 import { FamilySection } from './parents/FamilySection'
 import { MemberEditor } from './parents/MemberEditor'
 import { MembersSection } from './parents/MembersSection'
-import { PointsEditor } from './parents/PointsEditor'
-import { PointsSection } from './parents/PointsSection'
-import { PocketMoneySection } from './parents/PocketMoneySection'
 import { RewardEditor } from './parents/RewardEditor'
 import { RewardPoolPicker } from './parents/RewardPoolPicker'
 import { RewardsSection } from './parents/RewardsSection'
@@ -100,7 +97,6 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
   const chores = useChores()
   const [editingMember, setEditingMember] = useState<Member | 'new' | null>(null)
   const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
-  const [pointsMember, setPointsMember] = useState<Member | null>(null)
   const [taskFilter, setTaskFilter] = useState<number | null>(null)
   // Neuer Schritt einer Routine (Editor ohne Personen, Tageszeit und Wiederholung).
   const [newStep, setNewStep] = useState<{ routine: Routine; label: string } | null>(null)
@@ -136,9 +132,7 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
               ? 'room'
               : choreWizard
                 ? 'wizard'
-                : pointsMember
-                  ? 'points'
-                  : 'overview'
+                : 'overview'
   useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [view, area])
@@ -160,6 +154,7 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
     }
     return (
       <MemberEditor
+        timeZone={me.family.timezone}
         member={editingMember === 'new' ? undefined : editingMember}
         members={members.data ?? []}
         onSaved={(name) => closeWith(t('members.saved', { name }))}
@@ -307,16 +302,6 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
     )
   }
 
-  if (pointsMember) {
-    return (
-      <PointsEditor
-        member={pointsMember}
-        timeZone={me.family.timezone}
-        onBack={() => setPointsMember(null)}
-      />
-    )
-  }
-
   return (
     <div className="flex min-h-dvh">
       <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 p-4 pb-32 sm:p-6 md:pb-6">
@@ -339,15 +324,6 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
         {area === 'review' && (
           <>
             <ApprovalsSection members={members.data ?? []} today={today.data?.date} />
-            <PointsSection
-              members={members.data ?? []}
-              today={today.data}
-              error={today.error}
-              onOpen={(member) => {
-                setNotice(undefined)
-                setPointsMember(member)
-              }}
-            />
           </>
         )}
         {area === 'profile' && <PersonalSettings />}
@@ -367,7 +343,6 @@ function ParentSettings({ me, area }: { me: Me; area: ParentArea }) {
               }}
             />
             <WeatherSection onSaved={setNotice} />
-            <PocketMoneySection children={childMembers} />
           </>
         )}
         {area === 'tasks' && (

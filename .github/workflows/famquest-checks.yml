@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -43,6 +45,8 @@ jobs:
       POSTGRES_DB: famquest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
         working-directory: backend
@@ -50,12 +54,16 @@ jobs:
         working-directory: backend
       - run: uv run alembic heads
         working-directory: backend
+      - run: uv run ruff check . && uv run ruff format --check .
+        working-directory: backend
       - run: uv run pytest
         working-directory: backend
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - run: docker build --target runtime -t famquest:ci .
       - name: Verify non-root runtime permissions
         run: >-
@@ -63,11 +71,14 @@ jobs:
           'test "$(id -u)" != 0;
           test -r /app/alembic.ini;
           test -x /app/docker-entrypoint.sh;
-          python -c "import app.main"'
+          test -r /app/docker-entrypoint.central.sh;
+          python -c "import app.main; import app.deployment_check"'
   mcp:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: astral-sh/setup-uv@v6
       - run: uv python install 3.12
       - run: uv venv --python 3.12 mcp/.venv
@@ -75,3 +86,81 @@ jobs:
       - run: .venv/bin/python -m unittest discover -s tests -v
         working-directory: mcp
       - run: docker build -t famquest-mcp:ci mcp
+  central-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check private package generator
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Build isolated staging application
+        run: docker build --target runtime -t famquest:central-ci .
+      - name: Prepare private throwaway staging inputs
+        run: >-
+          python3 scripts/prepare-central-stage.py --output "$PWD/.central-stage"
+          --origin https://famtest.example.test --image famquest:central-ci --spare-families 0
+      - name: Validate isolated compose
+        run: docker compose -f .central-stage/compose.yml config --quiet
+      - name: Initialize new isolated cluster and verify safe rerun
+        run: |
+          docker compose -f .central-stage/compose.yml run --rm central-stage-init
+          docker compose -f .central-stage/compose.yml run --rm central-stage-init
+      - name: Prepare empty family slots and verify safe rerun
+        run: |
+          docker compose -f .central-stage/compose.yml run --rm --no-deps --user 0:0 -v "$PWD/.central-stage:/stage-config" --entrypoint python central-stage-init -m app.family_slots --config-dir /stage-config
+          docker compose -f .central-stage/compose.yml run --rm --no-deps --user 0:0 -v "$PWD/.central-stage:/stage-config" --entrypoint python central-stage-init -m app.family_slots --config-dir /stage-config
+      - name: Start integrated app and trusted private gateway
+        run: |
+          docker compose -f .central-stage/compose.yml up -d central-stage-app
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors -H 'Host: famtest.example.test' http://127.0.0.1:11902/api/health
+      - name: Exercise two-family logins, role boundaries and revocation
+        run: docker compose -f .central-stage/compose.yml run --rm --no-deps --entrypoint python central-stage-init -m app.staging_smoke
+      - name: Restart and verify persisted isolated setup
+        run: |
+          docker compose -f .central-stage/compose.yml restart central-stage-app
+          curl --fail --retry 20 --retry-delay 2 --retry-all-errors -H 'Host: famtest.example.test' http://127.0.0.1:11902/api/health
+          docker compose -f .central-stage/compose.yml run --rm --no-deps --entrypoint python central-stage-init -m app.staging_smoke
+      - name: Cleanup only the isolated CI project
+        if: always()
+        run: |
+          if [ -f .central-stage/compose.yml ]; then
+            docker compose -f .central-stage/compose.yml down -v --remove-orphans
+          fi
+  publish-test-images:
+    # Only this repository's explicitly authorized draft branch may publish test
+    # images. Fork PRs cannot reach package credentials. Never touch :latest.
+    needs: [frontend, backend, docker, mcp, central-staging]
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'feature/multifamily-foundation'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish verified application test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          push: true
+          tags: ghcr.io/manclone/famquest:test-${{ github.event.pull_request.head.sha }}
+          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+      - name: Publish verified central MCP test image
+        uses: docker/build-push-action@v6
+        with:
+          context: mcp
+          push: true
+          tags: ghcr.io/manclone/famquest-mcp:test-${{ github.event.pull_request.head.sha }}
+          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}

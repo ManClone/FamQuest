@@ -268,7 +268,9 @@
     "kids_only_link": "zum Bereich „Haushalt“",
     "repeatable": "Mehrmals täglich",
     "repeatable_hint": "Nach jeder Elternbestätigung wieder verfügbar. Jede Ausführung wird einzeln geprüft und vergütet.",
-    "multiple_times": "Mehrere Tageszeiten möglich. Jeder gewählte Abschnitt bekommt einen eigenen Durchgang."
+    "multiple_times": "Mehrere Tageszeiten möglich. Jeder gewählte Abschnitt bekommt einen eigenen Durchgang.",
+    "euro_bonus": "Optionaler Euro-Bonus pro Erledigung",
+    "euro_bonus_hint": "0,00 bedeutet kein Euro-Bonus. Gilt zusätzlich zu Sternen und getrennt vom Grundtaschengeld."
   },
   "routines": {
     "section": "Routinen",
@@ -371,7 +373,9 @@
     "kind_penalty_reversed": "Strafpunkte storniert",
     "kind_manual_reversed": "Manuelle Buchung storniert",
     "reversed": "Storniert · Gegenbuchung #{{id}}",
-    "compensates": "Ausgleich für Buchung #{{id}}"
+    "compensates": "Ausgleich für Buchung #{{id}}",
+    "kind_consequence": "Kritik",
+    "kind_consequence_reversed": "Kritik zurückgenommen"
   },
   "errors": {
     "common": {
@@ -397,7 +401,16 @@
       "password_mismatch": "Die Passwörter stimmen nicht überein"
     },
     "auth": {
+      "central_account_setup_required": "Die Kontoverwaltung ist hier noch nicht freigeschaltet.",
+      "account_save_incomplete": "Das Profil wurde gespeichert, der Zugang aber noch nicht vollständig eingerichtet. Bitte lade die Seite neu und ergänze den Zugang beim vorhandenen Profil.",
+      "family_mapping_required": "Dein Konto ist dieser Familie noch nicht vollständig zugeordnet. Bitte wende dich an die Familienverwaltung.",
       "not_authenticated": "Bitte melde dich an",
+      "operator_required": "Dieser Bereich erfordert einen separaten Betreiberzugang",
+      "family_creation_conflict": "Adresse oder Einrichtungsauftrag ist bereits vergeben. Bitte aktualisieren.",
+      "family_creation_capacity": "Derzeit ist kein vorbereiteter Familienplatz frei.",
+      "operator_conflict": "Der Status oder dieser Auftrag wurde bereits geändert. Bitte aktualisieren.",
+      "operator_confirmation_failed": "Der eingegebene Familienname stimmt nicht überein. Bitte aktualisieren.",
+      "operator_status_unavailable": "Familien in Einrichtung können hier noch nicht freigegeben werden.",
       "invalid_credentials": "E-Mail oder Passwort ist falsch",
       "email_taken": "Diese E-Mail-Adresse wird bereits verwendet.",
       "invalid_role": "Diese Kontorolle ist nicht erlaubt.",
@@ -465,6 +478,7 @@
       "not_found": "Diese Erledigung wurde schon geprüft oder zurückgenommen."
     },
     "calendar": {
+      "central_oauth_required": "Neue Kalenderverbindungen sind in dieser Version noch nicht verfügbar.",
       "not_configured": "Der Google Kalender ist noch nicht eingerichtet",
       "state_invalid": "Die Anmeldung bei Google ist abgelaufen oder ungültig. Bitte nochmal versuchen.",
       "access_denied": "Die Anmeldung bei Google wurde abgebrochen",
@@ -527,7 +541,10 @@
     "money": {
       "child_required": "Diese Funktion ist nur für Kinder verfügbar",
       "invalid_allowance": "Ungültiger Taschengeldbetrag",
-      "invalid_pagination": "Ungültige Seitennummerierung"
+      "invalid_pagination": "Ungültige Seitennummerierung",
+      "task_history_protected": "Für diese Aufgabe gibt es Bonus-Nachweise. Bitte die Aufgabe deaktivieren, statt diese Nachweise zu löschen.",
+      "chore_history_protected": "Diese Hausarbeit hat bestätigte Geldboni. Bitte zuerst die betreffenden Erledigungen zurücknehmen; alternativ die Hausarbeit deaktivieren.",
+      "chore_recipient_protected": "Diese Erledigung hat einen Geldbonus. Zum Personenwechsel zuerst zurücknehmen und neu erledigen."
     },
     "profile": {
       "own_only": "Du kannst nur dein eigenes Profil und deine eigenen Aufgaben bearbeiten.",
@@ -538,9 +555,30 @@
       "request_conflict": "Dieses Lob wurde bereits anders gespeichert. Bitte neu laden."
     },
     "mcp": {
+      "request_key_required": "Für diese Aktion fehlt ein eindeutiger Auftragsschlüssel.",
+      "request_key_reused": "Dieser Auftragsschlüssel wurde bereits für eine andere Aktion verwendet.",
+      "request_too_large": "Die Assistenten-Anfrage ist zu groß.",
+      "outcome_unknown_check_state": "Das Ergebnis ist unklar. Bitte den aktuellen Stand prüfen, bevor die Aktion erneut beauftragt wird.",
+      "central_gateway_required": "Schreibaktionen über den Assistenten sind hier noch nicht freigeschaltet.",
       "operation_forbidden": "Diese Aktion ist nicht für MCP freigegeben.",
       "parent_confirmation_required": "Diese Entscheidung braucht eine ausdrückliche Elternbestätigung.",
       "parent_required": "Das MCP-Konto muss einem vorhandenen Elternkonto zugeordnet sein."
+    },
+    "criticism": {
+      "current_week_required": "Kritik darf nur für die aktuelle Woche erfasst werden; zukünftige Angaben sind nicht möglich.",
+      "bonus_protected": "Dieser Bonusabzug ist nicht zulässig. Ein positiver, noch nicht ausgezahlter Wochenbonus muss erhalten bleiben.",
+      "week_closed": "Diese Woche ist bereits abgeschlossen oder als bezahlt erfasst.",
+      "statement_changed": "Die Abrechnung hat sich geändert. Bitte neu prüfen und bestätigen.",
+      "use_levels": "Bitte für Sternabzüge die festen Kritikstufen verwenden.",
+      "request_conflict": "Diese Anfrage wurde bereits für eine andere Entscheidung verwendet. Bitte den aktuellen Stand prüfen."
+    },
+    "activity": {
+      "restore_conflict": "Diese Aufgabe wurde inzwischen erneut erledigt. Keine doppelte Gutschrift möglich.",
+      "restore_unavailable": "Dieser Eintrag kann nicht wieder aktiviert werden.",
+      "already_grouped": "Dieser Eintrag wurde bereits zugeordnet."
+    },
+    "dragon": {
+      "already_named": "Dein Drache hat bereits einen festen Namen."
     }
   },
   "rewards": {
@@ -604,13 +642,28 @@
     "choose_member": "Familienmitglied wählen"
   },
   "care": {
-    "title": "Wer hat’s gemacht?",
+    "title": "Haushalt im Überblick",
+    "parent_time": "Eltern: geschätzter Zeitaufwand",
+    "child_legend_one": "{{name}}: {{count}} Aufgabe · {{percent}} %",
+    "child_legend_other": "{{name}}: {{count}} Aufgaben · {{percent}} %",
+    "child_count_one": "{{count}} Aufgabe",
+    "child_count_other": "{{count}} Aufgaben",
+    "minutes": "{{minutes}} Min.",
+    "time_basis": "Geschätzter Zeitaufwand aus den Zeitvorgaben der Hausarbeiten. Ältere Erledigungen nutzen die heutige Zeitvorgabe. Einmalige To-dos ohne Zeitangabe sind nicht enthalten.",
     "period": "letzte {{days}} Tage",
     "legend_one": "{{name}}: {{percent}} % ({{count}}-mal)",
     "legend_other": "{{name}}: {{percent}} % ({{count}}-mal)",
     "count_one": "{{count}}-mal",
     "count_other": "{{count}}-mal",
-    "percent": "{{percent}} %"
+    "percent": "{{percent}} %",
+    "time_legend_one": "{{name}}: {{count}} Aufgabe · {{minutes}} Min. geschätzt · {{percent}} %",
+    "time_legend_other": "{{name}}: {{count}} Aufgaben · {{minutes}} Min. geschätzt · {{percent}} %",
+    "percent_basis": "Prozente: Eltern nach ihrem Zeitanteil unter den Eltern; Kinder nach ihrem Aufgabenanteil an allen Erledigungen der Familie.",
+    "range": "Zeitraum",
+    "days_7": "7 Tage",
+    "days_30": "30 Tage",
+    "year": "1 Jahr",
+    "empty": "Noch keine zugeordneten Erledigungen in diesem Zeitraum."
   },
   "approvals": {
     "section": "Zu prüfen",
@@ -1048,7 +1101,9 @@
     "awaiting": "{{count}} Erledigungen warten auf Bestätigung",
     "child_complete": "Erledigt!",
     "who_before_completion": "Wer hat {{title}} erledigt?",
-    "confirm_undo": "„{{title}}“ wirklich zurücknehmen?"
+    "confirm_undo": "„{{title}}“ wirklich zurücknehmen?",
+    "money_bonus": "Kinderbonus pro Erledigung in Euro",
+    "money_bonus_hint": "Wird nach Elternfreigabe beim Wochenbonus gutgeschrieben. Leer lassen für keinen Geldbonus. Erwachsene erhalten keinen Geldbonus."
   },
   "todos": {
     "title": "Zu erledigen",
@@ -1182,5 +1237,72 @@
     "compensation_review": "Spätere Gutschriften könnten diesen Abzug bereits ausgeglichen haben. Vor einer Erstattung prüfen.",
     "compensation_unrelated": "Ich habe geprüft: Diese Gutschriften gehören nicht zu diesem Abzug.",
     "existing_compensation": "Bestehende Ausgleichsbuchung verknüpfen (optional)"
+  },
+  "criticism": {
+    "title": "Kritik und Wochenbonus",
+    "protection": "Sterne, Level-XP und Euro bleiben getrennt. Grundtaschengeld und Bankguthaben werden nicht gekürzt.",
+    "allowance": "Gebuchtes Grundtaschengeld",
+    "earned": "Verdiente Wochenboni",
+    "deductions": "Bestätigte Bonusabzüge",
+    "remaining": "Verbleibender Wochenbonus",
+    "total": "Wochenabrechnung insgesamt",
+    "closed": "Diese Wochenabrechnung ist abgeschlossen. Weitere Geldabzüge sind gesperrt.",
+    "review": "Nach dem Abschluss haben sich Nachweise geändert. Die abgeschlossene Abrechnung bleibt unverändert. Bitte die Änderung separat prüfen; keine automatische Rückforderung oder neue Auszahlung.",
+    "level": "Kritikstufe",
+    "conversation": "Gespräch / Wiedergutmachung – kein Abzug",
+    "light": "Leicht – 1 Stern, kein Geld",
+    "heavy": "Schwer – 2 Sterne, optional 0,50 € Bonusabzug",
+    "severe": "Sehr schwer – 3 Sterne, optional 1,00 € Bonusabzug",
+    "optional_money": "Zusätzlich {{amount}} vom offenen Wochenbonus abziehen (nur mit verbleibendem Restbonus)",
+    "reason": "Kurze Begründung",
+    "preview": "Abzug: {{stars}} Sterne und {{amount}} Bonus. Danach verbleiben {{remaining}} Wochenbonus.",
+    "confirm": "Ich bestätige diese konkrete Entscheidung und Begründung.",
+    "save": "Entscheidung speichern",
+    "saved": "Entscheidung gespeichert.",
+    "close_hint": "Nur eine tatsächlich bestätigte Wochenabrechnung abschließen. Dies startet keine Überweisung. Spätere Änderungen werden zur getrennten Prüfung angezeigt.",
+    "paid_confirm": "Ich bestätige die Abrechnung über {{amount}} als ausgezahlt bzw. abschließend geklärt.",
+    "close": "Wochenabrechnung unveränderlich abschließen",
+    "history": "Entscheidungen und Korrekturen",
+    "record": "{{stars}} Sterne · {{amount}} Bonusabzug",
+    "reversed": "Zurückgenommen",
+    "reverse": "Korrektur vorbereiten",
+    "correction_reason": "Grund der Korrektur",
+    "reverse_confirm": "Ich bestätige die Rücknahme dieser Entscheidung.",
+    "reverse_save": "Rücknahme speichern",
+    "allowance_settings": "Grundtaschengeld einstellen",
+    "allowance_hint": "Ein fester Wochenbetrag, unabhängig von Aufgaben und Kritik. Bereits gebuchte Wochen werden nicht verändert. 0,00 beendet nur künftige automatische Buchungen. Es erfolgt keine Überweisung.",
+    "allowance_amount": "Wöchentliches Grundtaschengeld in Euro",
+    "allowance_save": "Grundtaschengeld speichern",
+    "allowance_saved": "Einstellung gespeichert."
+  },
+  "family_account": {
+    "week": "Wochenbonus und Abrechnung",
+    "completed_tasks": "Erledigte Kinderaufgaben",
+    "undo_confirm": "Diese Erledigung zurücknehmen? Die damaligen Punkte und der Euro-Bonus werden zurückgebucht. Die Aufgabe ist für diesen Tag wieder offen.",
+    "correct_credit": "Gutschrift korrigieren",
+    "credit_hint": "Diese Gutschrift von {{count}} Punkten zurücknehmen? Es wird eine nachvollziehbare Gegenbuchung erstellt.",
+    "confirm_credit": "Gutschrift mit Begründung zurücknehmen",
+    "credit_title": "Punkte gutschreiben und korrigieren",
+    "criticism": "Kritik festlegen",
+    "levels": {
+      "conversation": "Gespräch / Wiedergutmachung",
+      "light": "Leicht",
+      "heavy": "Schwer",
+      "severe": "Sehr schwer"
+    },
+    "inactive": "Zurückgenommen – zählt nicht zum Punktestand",
+    "reactivated": "Wieder aktiviert",
+    "restore_confirm": "Diesen Eintrag mit den ursprünglichen Punkten und dem ursprünglichen Bonus wieder aktivieren?",
+    "restore": "Wieder aktivieren"
+  },
+  "dragon": {
+    "title": "Dein Drachenbegleiter",
+    "unnamed": "Dein Drache",
+    "of": "Drachenbegleiter von {{name}}",
+    "hint": "Gemeinsam auf Abenteuerreise!",
+    "name_action": "Drachen benennen",
+    "name": "Drachenname",
+    "name_hint": "Wähle den Namen gemeinsam mit deinem Kind. Er wird einmalig festgelegt und bleibt erhalten.",
+    "save": "Namen festlegen"
   }
 }

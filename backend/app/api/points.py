@@ -1,7 +1,7 @@
 from datetime import UTC
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -9,7 +9,7 @@ from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, ensure_member_access
 from app.errors import ApiError
 from app.levels import progress
-from app.models import PenaltyReversal, PointTransaction, Praise
+from app.models import ConsequenceEntry, PenaltyReversal, PointTransaction, Praise
 from app.point_reversals import compensation_candidates, reverse_manual
 from app.points import balance, book, lock_member
 from app.schemas import PointBookingIn, PointHistoryOut, PointTransactionOut
@@ -82,10 +82,20 @@ def get_points(
 
 @router.post("/members/{member_id}/points", status_code=status.HTTP_201_CREATED)
 def add_points(
-    member_id: int, body: PointBookingIn, auth_session: ParentSession, db: DbSession
+    member_id: int,
+    body: PointBookingIn,
+    auth_session: ParentSession,
+    db: DbSession,
+    request: Request,
 ) -> PointHistoryOut:
     """Manuelle Gutschrift oder Abzug; der Punktestand darf dabei nicht negativ werden."""
-    get_member(db, member_id)
+    member = get_member(db, member_id)
+    if (
+        getattr(request.app.state, "multitenant", False)
+        and member.role == "child"
+        and body.amount < 0
+    ):
+        raise ApiError(422, "criticism.use_levels")
     lock_member(db, member_id)
     if body.amount < 0 and balance(db, member_id) + body.amount < 0:
         raise ApiError(status.HTTP_409_CONFLICT, "points.insufficient")
@@ -100,7 +110,7 @@ def member_progress(
 ) -> dict[str, int | str | None]:
     """Levels use earned task XP, never the balance spent on rewards."""
     ensure_member_access(db, auth, member_id)
-    get_member(db, member_id)
+    member = get_member(db, member_id)
     latest = db.scalar(
         select(Praise)
         .where(Praise.member_id == member_id, Praise.revoked_at.is_(None))
@@ -116,7 +126,7 @@ def member_progress(
         select(PointTransaction)
         .where(
             PointTransaction.member_id == member_id,
-            PointTransaction.kind == "manual",
+            PointTransaction.kind.in_(("manual", "consequence")),
             PointTransaction.amount < 0,
             ~select(PenaltyReversal.transaction_id)
             .where(PenaltyReversal.transaction_id == PointTransaction.id)
@@ -124,11 +134,18 @@ def member_progress(
             ~select(PenaltyReversal.transaction_id)
             .where(PenaltyReversal.refund_transaction_id == PointTransaction.id)
             .exists(),
+            ~select(ConsequenceEntry.id)
+            .where(
+                ConsequenceEntry.star_transaction_id == PointTransaction.id,
+                ConsequenceEntry.reversed_at.is_not(None),
+            )
+            .exists(),
         )
         .order_by(PointTransaction.id.desc())
         .limit(1)
     )
     return {
+        "dragon_name": member.dragon_name,
         "latest_deduction_id": deduction.id if deduction else 0,
         "latest_deduction_reason": deduction.reason if deduction else None,
         "latest_deduction_amount": -deduction.amount if deduction else 0,
@@ -268,6 +285,10 @@ class PointReversalIn(PraiseRevocationIn):
 
 def reverse_points_entry(member_id, transaction_id, body, auth, db, *, penalty_only=False):
     get_member(db, member_id)
+    from app.activity_corrections import capture_manual, finish_manual_reverse
+
+    lock_member(db, member_id)
+    state = capture_manual(db, db.get(PointTransaction, transaction_id), member_id, auth.user_id)
     reversal = reverse_manual(
         db,
         member_id,
@@ -278,6 +299,7 @@ def reverse_points_entry(member_id, transaction_id, body, auth, db, *, penalty_o
         existing_compensation_id=body.existing_compensation_id,
         compensation_reviewed=body.compensation_reviewed,
     )
+    finish_manual_reverse(db, state, reversal.refund_transaction_id, auth.user_id)
     db.commit()
     return {
         "transaction_id": reversal.transaction_id,
@@ -314,3 +336,45 @@ def reverse_points(
     Existing compensation must be explicitly linked, or reviewed as unrelated.
     """
     return reverse_points_entry(member_id, transaction_id, body, auth, db)
+
+
+@router.get("/members/{member_id}/activity")
+def get_activity(
+    member_id: int,
+    _: ParentSession,
+    db: DbSession,
+    cursor: str | None = Query(default=None, max_length=512),
+    limit: int = Query(default=50, ge=1, le=50),
+) -> dict:
+    from app.activity import activity_history
+
+    get_member(db, member_id)
+    return activity_history(db, member_id, cursor, limit)
+
+
+class ActivityRestoreIn(BaseModel):
+    confirmed: Literal[True]
+
+
+class ActivityDeactivateIn(ActivityRestoreIn):
+    reason: str = Field(min_length=1, max_length=200, pattern=r"\S")
+
+
+@router.post("/activity-corrections/{correction_id}/restore", status_code=204)
+def restore_activity(
+    correction_id: int, body: ActivityRestoreIn, auth: ParentSession, db: DbSession
+) -> None:
+    from app.activity_corrections import restore
+
+    restore(db, correction_id, auth.user_id)
+    db.commit()
+
+
+@router.post("/activity-corrections/{correction_id}/deactivate", status_code=204)
+def deactivate_activity(
+    correction_id: int, body: ActivityDeactivateIn, auth: ParentSession, db: DbSession
+) -> None:
+    from app.activity_corrections import deactivate_manual
+
+    deactivate_manual(db, correction_id, auth.user_id, body.reason)
+    db.commit()

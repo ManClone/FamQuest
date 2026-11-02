@@ -6,6 +6,7 @@ import type { Member } from '../../api/members'
 import { LEVEL_COLORS, statusText } from '../../chores'
 import { Avatar } from '../../components/Avatar'
 import { TaskIcon } from '../../components/TaskIcon'
+import { Button } from '../../components/ui'
 
 /**
  * Hausarbeit als Karte wie die Aufgaben der Kinder daneben: links die Ampelfarbe statt der
@@ -16,12 +17,16 @@ export function ChoreCard({
   room,
   doneBy,
   onToggle,
+  onRepeat,
+  busy = false,
 }: {
   chore: Chore
   room?: ChoreRoom
   /** Wer es heute erledigt hat, falls angegeben. */
   doneBy?: Member
   onToggle: () => void
+  onRepeat?: () => void
+  busy?: boolean
 }) {
   const { t } = useTranslation()
   const colors = LEVEL_COLORS[chore.level]
@@ -33,6 +38,7 @@ export function ChoreCard({
         type="button"
         aria-pressed={done}
         onClick={onToggle}
+        disabled={busy}
         className={`flex min-h-18 w-full items-center gap-3 rounded-3xl border-4 px-3 py-2 text-left shadow-sm transition-transform select-none focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-orange-400 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 ${done ? 'border-emerald-500 bg-emerald-50' : `border-transparent bg-white ${colors.edge}`}`}
       >
         <TaskIcon icon={chore.icon} className="size-12" />
@@ -69,6 +75,21 @@ export function ChoreCard({
             </span>
           ))}
       </button>
+      {done && chore.repeatable && onRepeat && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+          <span className="text-sm font-semibold text-slate-600">
+            {t('chores.today_count', { count: chore.completion_count_today ?? 1 })}
+          </span>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={onRepeat}
+            aria-label={t('chores.repeat_title', { title: chore.title })}
+          >
+            {t('chores.repeat')}
+          </Button>
+        </div>
+      )}
     </li>
   )
 }

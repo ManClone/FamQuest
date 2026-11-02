@@ -1,12 +1,13 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 
 import { type DemoInfo, useDemo, useDemoLogin, useLogin } from '../api/auth'
 import { Logo } from '../components/Logo'
 import { Alert, Button, CenteredCard, TextField } from '../components/ui'
 import { errorMessage } from '../errors'
 import { applyFamilyLanguage } from '../i18n'
+import { oauthReturnPath } from '../oauth-return'
 
 export function LoginPage() {
   const demo = useDemo()
@@ -16,13 +17,22 @@ export function LoginPage() {
 function PasswordLogin() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const oauthTarget = oauthReturnPath(useLocation().search)
   const login = useLogin()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    login.mutate({ email, password }, { onSuccess: () => navigate('/', { replace: true }) })
+    login.mutate(
+      { email, password },
+      {
+        onSuccess: () => {
+          // LoginRoute resumes a valid OAuth request after useMe receives the session.
+          if (!oauthTarget) navigate('/', { replace: true })
+        },
+      },
+    )
   }
 
   return (

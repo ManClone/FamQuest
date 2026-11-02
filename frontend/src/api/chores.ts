@@ -19,6 +19,7 @@ export interface ChoreRoom {
 export interface Chore {
   repeatable?: boolean
   child_enabled?: boolean
+  money_cents?: number
   child_xp?: number
   child_member_ids?: number[]
   id: number
@@ -72,7 +73,7 @@ export interface ChorePlan {
   /** So viele Tage zählt die faire Verteilung zurück (heute eingeschlossen). */
   share_days: number
   /** Wer in dieser Zeit wie oft etwas erledigt hat (Putzplan und Liste); nur mit „Wer war's?“. */
-  shares: { member_id: number; count: number }[]
+  shares: { member_id: number; count: number; estimated_minutes?: number }[]
 }
 
 export interface RoomData {
@@ -83,6 +84,7 @@ export interface RoomData {
 export interface ChoreData {
   repeatable?: boolean
   child_enabled?: boolean
+  money_cents?: number
   child_xp?: number
   child_member_ids?: number[]
   room_id: number
@@ -115,10 +117,11 @@ export const CHORES_KEY = ['chores'] as const
 /** Erledigt jemand etwas am Handy, zieht das Display nach; die Ampel rückt ohnehin täglich vor. */
 export const CHORES_REFETCH_MS = 60 * 1000
 
-export function useChores() {
+export function useChores(shareDays = 30) {
   return useQuery({
-    queryKey: CHORES_KEY,
-    queryFn: () => apiGet<ChorePlan>('/chores'),
+    queryKey: shareDays === 30 ? CHORES_KEY : [...CHORES_KEY, 'statistics', shareDays],
+    queryFn: () =>
+      apiGet<ChorePlan>(shareDays === 30 ? '/chores' : `/chores?share_days=${shareDays}`),
     refetchInterval: CHORES_REFETCH_MS,
   })
 }
@@ -146,9 +149,16 @@ function useDoneMutation<TVariables, TItem extends { id: number }>(
     },
     onSettled: () =>
       Promise.all(
-        [CHORES_KEY, TODAY_KEY, POINTS_KEY, PROGRESS_KEY].map((queryKey) =>
-          queryClient.invalidateQueries({ queryKey }),
-        ),
+        [
+          CHORES_KEY,
+          TODAY_KEY,
+          POINTS_KEY,
+          PROGRESS_KEY,
+          ['money'],
+          ['criticism'],
+          ['approvals'],
+          ['my-chores'],
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       ),
   })
 }
@@ -220,6 +230,7 @@ export const choreData = (chore: Chore): ChoreData => ({
   repeatable: chore.repeatable ?? false,
   child_enabled: chore.child_enabled ?? false,
   child_xp: chore.child_xp ?? 0,
+  money_cents: chore.money_cents ?? 0,
   child_member_ids: chore.child_member_ids ?? [],
   room_id: chore.room_id,
   title: chore.title,
@@ -240,7 +251,14 @@ export const setupChores = (rooms: SetupRoom[]) =>
 export function useChoresMutation<TVariables, TResult>(
   request: (variables: TVariables) => Promise<TResult>,
 ) {
-  return useParentMutation(request, [CHORES_KEY])
+  return useParentMutation(request, [
+    CHORES_KEY,
+    ['my-chores'],
+    ['money'],
+    ['criticism'],
+    POINTS_KEY,
+    TODAY_KEY,
+  ])
 }
 
 /** Read-only weekly household assignment suggestions; never persists assignments. */

@@ -21,7 +21,7 @@ _CODE_PATTERNS = (
 def backend_error_codes() -> set[str]:
     codes = set(_VALIDATION_CODES.values()) | {"validation.invalid"}
     for path in APP_DIR.rglob("*.py"):
-        source = path.read_text()
+        source = path.read_text(encoding="utf-8")
         for pattern in _CODE_PATTERNS:
             codes.update(pattern.findall(source))
     return codes
@@ -40,7 +40,9 @@ def test_finds_error_codes():
 @pytest.mark.skipif(not LOCALES_DIR.exists(), reason="Frontend nicht vorhanden (Container)")
 @pytest.mark.parametrize("language", ["de", "en"])
 def test_every_error_code_is_translated(language):
-    translations = json.loads((LOCALES_DIR / language / "common.json").read_text())["errors"]
+    translations = json.loads((LOCALES_DIR / language / "common.json").read_text(encoding="utf-8"))[
+        "errors"
+    ]
 
     missing = []
     for code in sorted(backend_error_codes()):

@@ -2,6 +2,7 @@ import datetime as dt
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    LargeBinary,
     SmallInteger,
     String,
     Text,
@@ -22,6 +24,21 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+
+class McpAction(Base):
+    """Family-local retry record; central identity IDs are references, not credentials."""
+
+    __tablename__ = "mcp_actions"
+    identity_id: Mapped[int] = mapped_column(primary_key=True)
+    request_key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    status_code: Mapped[int | None] = mapped_column(SmallInteger)
+    response_body: Mapped[bytes | None] = mapped_column(LargeBinary)
+    content_type: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Family(Base):
@@ -72,6 +89,9 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    family_id: Mapped[int | None] = mapped_column(
+        ForeignKey("families.id", ondelete="RESTRICT"), index=True
+    )
     role: Mapped[str] = mapped_column(String(20))
     language: Mapped[str | None] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -399,6 +419,9 @@ class PointTransaction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Stable origin survives deleting a completion; never infer a repeat execution by title.
+    completion_source: Mapped[str | None] = mapped_column(String(10))
+    completion_id: Mapped[int | None]
     member_id: Mapped[int] = mapped_column(
         ForeignKey("family_members.id", ondelete="CASCADE"), index=True
     )
@@ -693,6 +716,7 @@ class Chore(Base):
 
     repeatable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     child_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     child_xp: Mapped[int] = mapped_column(default=0, server_default="0")
     child_member_ids: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
 
@@ -739,8 +763,11 @@ class ChoreCompletion(Base):
         ),
     )
 
+    money_cents: Mapped[int] = mapped_column(default=0, server_default="0")
     approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     points: Mapped[int] = mapped_column(default=0, server_default="0")
+    # Snapshot; NULL for historical executions whose old time estimate is unknown.
+    estimated_minutes: Mapped[int | None] = mapped_column(SmallInteger)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id", ondelete="CASCADE"))
@@ -834,6 +861,17 @@ class ConsequenceEntry(Base):
 
     __tablename__ = "consequence_entries"
     __table_args__ = (
+        CheckConstraint(
+            "severity IS NULL OR "
+            "(severity = 'conversation' AND xp_penalty_requested = 0 "
+            "AND money_penalty_cents = 0) OR "
+            "(severity = 'light' AND xp_penalty_requested = 1 AND money_penalty_cents = 0) OR "
+            "(severity = 'heavy' AND xp_penalty_requested = 2 "
+            "AND money_penalty_cents IN (0,50)) OR "
+            "(severity = 'severe' AND xp_penalty_requested = 3 AND money_penalty_cents IN (0,100))",
+            name="criticism_fixed_levels",
+        ),
+        UniqueConstraint("created_by_user_id", "request_key", name="uq_criticism_actor_request"),
         CheckConstraint("money_penalty_cents >= 0", name="consequence_entry_money_nonnegative"),
         CheckConstraint("xp_penalty_requested >= 0", name="consequence_entry_xp_nonnegative"),
         CheckConstraint("xp_penalty_applied >= 0", name="consequence_entry_applied_nonnegative"),
@@ -851,6 +889,11 @@ class ConsequenceEntry(Base):
         ForeignKey("consequence_presets.id", ondelete="SET NULL")
     )
     title: Mapped[str] = mapped_column(String(100))
+    severity: Mapped[str | None] = mapped_column(String(20))
+    request_key: Mapped[str | None] = mapped_column(String(32))
+    star_transaction_id: Mapped[int | None] = mapped_column(
+        ForeignKey("point_transactions.id", ondelete="SET NULL")
+    )
     note: Mapped[str | None] = mapped_column(String(500))
     effective_date: Mapped[dt.date] = mapped_column(Date, index=True)
     money_penalty_cents: Mapped[int]
@@ -865,6 +908,33 @@ class ConsequenceEntry(Base):
     )
     reversal_note: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BonusWeekClose(Base):
+    """Immutable parent-confirmed weekly statement; never an instruction to a bank."""
+
+    __tablename__ = "bonus_week_closes"
+    __table_args__ = (
+        CheckConstraint(
+            "allowance_cents >= 0 AND earned_bonus_cents >= 0 AND penalty_cents >= 0 "
+            "AND payable_bonus_cents >= 0",
+            name="closed_week_nonnegative",
+        ),
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), primary_key=True
+    )
+    week_start: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    allowance_cents: Mapped[int]
+    earned_bonus_cents: Mapped[int]
+    penalty_cents: Mapped[int]
+    payable_bonus_cents: Mapped[int]
+    confirmed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    confirmed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class Praise(Base):
@@ -904,3 +974,38 @@ class PenaltyReversal(Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ActivityCorrection(Base):
+    """Frozen execution/credit snapshot and its current activation state."""
+
+    __tablename__ = "activity_corrections"
+    __table_args__ = (
+        UniqueConstraint("source", "origin_id", "member_id", name="uq_activity_correction_origin"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(10))
+    origin_id: Mapped[int]
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("family_members.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    icon: Mapped[str | None] = mapped_column(String(100))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    inactive: Mapped[bool] = mapped_column(default=False, server_default="false")
+    restored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    changed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class ActivityJournalLink(Base):
+    """All original/compensating journal rows represented by one activity item."""
+
+    __tablename__ = "activity_journal_links"
+    journal_source: Mapped[str] = mapped_column(String(10), primary_key=True)
+    journal_id: Mapped[int] = mapped_column(primary_key=True)
+    correction_id: Mapped[int] = mapped_column(
+        ForeignKey("activity_corrections.id", ondelete="CASCADE"), index=True
+    )

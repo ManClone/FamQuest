@@ -10,6 +10,7 @@ interface ChildChore {
   id: number
   title: string
   icon: string
+  money_cents?: number
   points: number
   repeatable: boolean
   days_left: number
@@ -18,7 +19,7 @@ interface ChildChore {
   pending: number
 }
 export function ChildHouseholdTasks({ currentOnly }: { currentOnly: boolean }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const query = useQuery({
     queryKey: ['my-chores'],
@@ -54,6 +55,15 @@ export function ChildHouseholdTasks({ currentOnly }: { currentOnly: boolean }) {
               <div className="min-w-0">
                 <h3 className="text-xl font-extrabold break-words">{item.title}</h3>
                 <p className="font-bold text-amber-700">⭐ {item.points}</p>
+                {!!item.money_cents && (
+                  <p className="font-bold text-emerald-700">
+                    {new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language, {
+                      style: 'currency',
+                      currency: 'EUR',
+                    }).format(item.money_cents / 100)}{' '}
+                    Bonus
+                  </p>
+                )}
               </div>
             </div>
             {item.pending > 0 && (

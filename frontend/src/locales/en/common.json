@@ -268,7 +268,9 @@
     "kids_only_link": "go to “Household”",
     "repeatable": "Repeat during the day",
     "repeatable_hint": "Available again after each parent approval. Each execution is reviewed and rewarded separately.",
-    "multiple_times": "Choose multiple times. Each selected period gets its own execution."
+    "multiple_times": "Choose multiple times. Each selected period gets its own execution.",
+    "euro_bonus": "Optional euro bonus per completion",
+    "euro_bonus_hint": "0.00 means no euro bonus. Separate from stars and unconditional base allowance."
   },
   "routines": {
     "section": "Routines",
@@ -371,7 +373,9 @@
     "kind_penalty_reversed": "Star deduction reversed",
     "kind_manual_reversed": "Manual booking reversed",
     "reversed": "Reversed · correction #{{id}}",
-    "compensates": "Compensation for booking #{{id}}"
+    "compensates": "Compensation for booking #{{id}}",
+    "kind_consequence": "Criticism",
+    "kind_consequence_reversed": "Criticism reversed"
   },
   "errors": {
     "common": {
@@ -397,7 +401,16 @@
       "password_mismatch": "The passwords don't match"
     },
     "auth": {
+      "central_account_setup_required": "Account management is not available here yet.",
+      "account_save_incomplete": "The profile was saved, but account setup is incomplete. Please reload the page and finish account setup on the existing profile.",
+      "family_mapping_required": "Your account is not fully linked to this family yet. Please contact your family administrator.",
       "not_authenticated": "Please sign in",
+      "operator_required": "This area requires a separate operator account",
+      "family_creation_conflict": "This address or setup request is already reserved. Please refresh.",
+      "family_creation_capacity": "No prepared family slot is currently available.",
+      "operator_conflict": "The status or this request has already changed. Please refresh.",
+      "operator_confirmation_failed": "The entered family name does not match. Please refresh.",
+      "operator_status_unavailable": "Families being provisioned cannot be activated here yet.",
       "invalid_credentials": "Email or password is incorrect",
       "email_taken": "This email address is already in use.",
       "invalid_role": "This account role is not allowed.",
@@ -465,6 +478,7 @@
       "not_found": "This has already been checked or undone."
     },
     "calendar": {
+      "central_oauth_required": "New calendar connections are not available in this version yet.",
       "not_configured": "Google Calendar is not set up yet",
       "state_invalid": "The Google sign-in expired or is invalid. Please try again.",
       "access_denied": "The Google sign-in was cancelled",
@@ -527,7 +541,10 @@
     "money": {
       "child_required": "This feature is only available for children",
       "invalid_allowance": "Invalid pocket money amount",
-      "invalid_pagination": "Invalid pagination parameters"
+      "invalid_pagination": "Invalid pagination parameters",
+      "task_history_protected": "This task has bonus records. Deactivate the task instead of deleting those records.",
+      "chore_history_protected": "This chore has approved money bonuses. Reverse the relevant completions first, or deactivate the chore.",
+      "chore_recipient_protected": "This completion has a money bonus. Reverse it and complete it again to change the recipient."
     },
     "profile": {
       "own_only": "You can only access your own profile and tasks.",
@@ -538,9 +555,30 @@
       "request_conflict": "This praise was already saved differently. Please reload."
     },
     "mcp": {
+      "request_key_required": "This action requires a unique request key.",
+      "request_key_reused": "This request key was already used for a different action.",
+      "request_too_large": "The assistant request is too large.",
+      "outcome_unknown_check_state": "The outcome is uncertain. Check the current state before requesting this action again.",
+      "central_gateway_required": "Changes through the assistant are not available here yet.",
       "operation_forbidden": "This operation is not available through MCP.",
       "parent_confirmation_required": "This decision requires explicit parent confirmation.",
       "parent_required": "MCP must be linked to an existing parent account."
+    },
+    "criticism": {
+      "current_week_required": "Record criticism only for the current week; future dates are not permitted.",
+      "bonus_protected": "This deduction is not allowed. A positive unpaid weekly bonus must remain.",
+      "week_closed": "This week is already closed or recorded as paid.",
+      "statement_changed": "The statement changed. Review and confirm it again.",
+      "use_levels": "Use the fixed criticism levels for star deductions.",
+      "request_conflict": "This request was already used for a different decision. Check the current state."
+    },
+    "activity": {
+      "restore_conflict": "This task has since been completed again. Duplicate credit is not allowed.",
+      "restore_unavailable": "This entry cannot be reactivated.",
+      "already_grouped": "This entry has already been linked."
+    },
+    "dragon": {
+      "already_named": "Your dragon already has a permanent name."
     }
   },
   "rewards": {
@@ -604,13 +642,28 @@
     "choose_member": "Choose a family member"
   },
   "care": {
-    "title": "Who did it?",
+    "minutes": "{{minutes}} min",
+    "time_basis": "Estimated time from household task durations. Older executions use today's task estimate. One-off to-dos without a duration are not included.",
+    "title": "Household overview",
+    "parent_time": "Parents: estimated time",
+    "child_legend_one": "{{name}}: {{count}} task · {{percent}}%",
+    "child_legend_other": "{{name}}: {{count}} tasks · {{percent}}%",
+    "child_count_one": "{{count}} task",
+    "child_count_other": "{{count}} tasks",
     "period": "last {{days}} days",
     "legend_one": "{{name}}: {{percent}}% ({{count}} time)",
     "legend_other": "{{name}}: {{percent}}% ({{count}} times)",
     "count_one": "{{count}} time",
     "count_other": "{{count}} times",
-    "percent": "{{percent}}%"
+    "percent": "{{percent}}%",
+    "time_legend_one": "{{name}}: {{count}} task · {{minutes}} estimated min · {{percent}}%",
+    "time_legend_other": "{{name}}: {{count}} tasks · {{minutes}} estimated min · {{percent}}%",
+    "percent_basis": "Percentages: parents by their share of the parents’ time; children by their share of all family completions.",
+    "range": "Time range",
+    "days_7": "7 days",
+    "days_30": "30 days",
+    "year": "1 year",
+    "empty": "No attributed completions in this time range yet."
   },
   "approvals": {
     "section": "To check",
@@ -1048,7 +1101,9 @@
     "awaiting": "{{count}} completions awaiting approval",
     "child_complete": "Done!",
     "who_before_completion": "Who completed {{title}}?",
-    "confirm_undo": "Really undo “{{title}}”?"
+    "confirm_undo": "Really undo “{{title}}”?",
+    "money_bonus": "Child bonus per completion in euros",
+    "money_bonus_hint": "Added to the weekly bonus after parent approval. Leave empty for no money bonus. Adults do not receive a money bonus."
   },
   "todos": {
     "title": "To do",
@@ -1182,5 +1237,72 @@
     "compensation_review": "Later credits may already compensate this deduction. Review before refunding.",
     "compensation_unrelated": "I checked: these credits are unrelated to this deduction.",
     "existing_compensation": "Link an existing compensation (optional)"
+  },
+  "criticism": {
+    "title": "Criticism and weekly bonus",
+    "protection": "Stars, level XP and euros remain separate. Base allowance and bank balances are never reduced.",
+    "allowance": "Booked base allowance",
+    "earned": "Earned weekly bonuses",
+    "deductions": "Confirmed bonus deductions",
+    "remaining": "Remaining weekly bonus",
+    "total": "Total weekly statement",
+    "closed": "This weekly statement is closed. Further monetary deductions are blocked.",
+    "review": "Supporting records changed after closure. The confirmed statement stays unchanged. Review the change separately; no automatic repayment claim or additional payment is created.",
+    "level": "Criticism level",
+    "conversation": "Conversation / making amends – no deduction",
+    "light": "Light – 1 star, no money",
+    "heavy": "Serious – 2 stars, optional €0.50 bonus deduction",
+    "severe": "Very serious – 3 stars, optional €1.00 bonus deduction",
+    "optional_money": "Also deduct {{amount}} from the unpaid weekly bonus (a positive remainder is required)",
+    "reason": "Brief reason",
+    "preview": "Deduction: {{stars}} stars and {{amount}} bonus. The remaining weekly bonus is {{remaining}}.",
+    "confirm": "I confirm this specific decision and reason.",
+    "save": "Save decision",
+    "saved": "Decision saved.",
+    "close_hint": "Only close an actually confirmed weekly statement. This does not initiate a transfer. Later changes are shown for separate review.",
+    "paid_confirm": "I confirm the {{amount}} statement as paid or conclusively settled.",
+    "close": "Permanently close weekly statement",
+    "history": "Decisions and corrections",
+    "record": "{{stars}} stars · {{amount}} bonus deduction",
+    "reversed": "Reversed",
+    "reverse": "Prepare correction",
+    "correction_reason": "Reason for correction",
+    "reverse_confirm": "I confirm reversing this decision.",
+    "reverse_save": "Save reversal",
+    "allowance_settings": "Configure base allowance",
+    "allowance_hint": "A fixed weekly amount, independent of tasks and criticism. Existing weekly credits stay unchanged. 0.00 disables future automatic credits only. No transfer is initiated.",
+    "allowance_amount": "Weekly base allowance in euros",
+    "allowance_save": "Save base allowance",
+    "allowance_saved": "Setting saved."
+  },
+  "family_account": {
+    "week": "Weekly bonus and settlement",
+    "completed_tasks": "Completed child tasks",
+    "undo_confirm": "Undo this completion? Its original points and euro bonus will be reversed. The task will be open again for that day.",
+    "correct_credit": "Correct credit",
+    "credit_hint": "Reverse this credit of {{count}} points? An auditable compensating entry will be created.",
+    "confirm_credit": "Reverse credit with reason",
+    "credit_title": "Credit and correct points",
+    "criticism": "Record criticism",
+    "levels": {
+      "conversation": "Conversation / making amends",
+      "light": "Light",
+      "heavy": "Serious",
+      "severe": "Very serious"
+    },
+    "inactive": "Reversed – excluded from the points balance",
+    "reactivated": "Reactivated",
+    "restore_confirm": "Reactivate this entry with its original points and bonus?",
+    "restore": "Reactivate"
+  },
+  "dragon": {
+    "title": "Your dragon companion",
+    "unnamed": "Your dragon",
+    "of": "{{name}}’s dragon companion",
+    "hint": "On an adventure together!",
+    "name_action": "Name your dragon",
+    "name": "Dragon name",
+    "name_hint": "Choose the name together. It is set once and will be kept.",
+    "save": "Set name"
   }
 }

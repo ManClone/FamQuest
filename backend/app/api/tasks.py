@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from app.api.members import get_member
 from app.auth import CurrentSession, DbSession, ParentSession, child_member_id
 from app.errors import ApiError
-from app.models import Routine, RoutineStep, Task, TaskAssignment, TaskRecurrence
+from app.models import Routine, RoutineStep, Task, TaskAssignment, TaskCompletion, TaskRecurrence
 from app.schemas import MemberPositionOut, TaskIn, TaskOut, TimeOfDay, WeeklyRecurrence
 
 router = APIRouter(tags=["tasks"])
@@ -73,6 +73,10 @@ def get_task(db: DbSession, task_id: int) -> Task:
 
 
 def apply_task(db: DbSession, task: Task, body: TaskIn) -> None:
+    # Paid definitions (including approval, schedule and repeatability) must be
+    # managed by parents in the UI, not through an assistant's task payload.
+    if db.info.get("mcp_request") and (body.money_cents or task.money_cents):
+        raise ApiError(403, "mcp.operation_forbidden")
     for member_id in body.member_ids:
         if get_member(db, member_id).role != "child":
             # Hausarbeit der Erwachsenen steht im Putzplan (api/chores), nicht bei den Aufgaben.
@@ -198,5 +202,19 @@ def update_task(task_id: int, body: TaskIn, _: ParentSession, db: DbSession) -> 
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: int, _: ParentSession, db: DbSession) -> None:
-    db.delete(get_task(db, task_id))
+    task = get_task(db, task_id)
+    paid_history = (
+        db.scalar(
+            select(TaskCompletion.id)
+            .where(TaskCompletion.task_id == task_id, TaskCompletion.money_cents > 0)
+            .limit(1)
+        )
+        is not None
+    )
+    if paid_history:
+        # Deleting a definition must not cascade away the source of earned bonuses.
+        raise ApiError(409, "money.task_history_protected")
+    if db.info.get("mcp_request") and (task.money_cents):
+        raise ApiError(403, "mcp.operation_forbidden")
+    db.delete(task)
     db.commit()

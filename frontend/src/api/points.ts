@@ -15,9 +15,18 @@ export type PointKind =
   | 'chore_undone'
   | 'penalty_reversed'
   | 'manual_reversed'
+  | 'consequence'
+  | 'consequence_reversed'
 
 export interface PointTransaction {
   id: number
+  inactive?: boolean
+  restore_id?: number | null
+  correction_id?: number | null
+  reactivated?: boolean
+  money_cents?: number
+  undo_source?: 'task' | 'chore' | null
+  undo_id?: number | null
   amount: number
   kind: PointKind
   /** Aufgabentitel zum Buchungszeitpunkt bzw. Begründung der Eltern. */
@@ -36,6 +45,7 @@ export interface PointHistory {
   total: number
   transactions: PointTransaction[]
   has_more: boolean
+  next_cursor?: string | null
 }
 
 export interface PointBooking {
@@ -55,10 +65,10 @@ export function usePointHistory(memberId: number) {
     queryKey: [...POINTS_KEY, memberId],
     queryFn: ({ pageParam }) =>
       apiGet<PointHistory>(
-        `/members/${memberId}/points${pageParam === null ? '' : `?before=${pageParam}`}`,
+        `/members/${memberId}/activity${pageParam === null ? '' : `?cursor=${encodeURIComponent(pageParam)}`}`,
       ),
-    initialPageParam: null as number | null,
-    getNextPageParam: (page) => (page.has_more ? (page.transactions.at(-1)?.id ?? null) : null),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
   })
 }
 
@@ -75,6 +85,7 @@ export function useBookPoints(memberId: number) {
 
 export const PROGRESS_KEY = ['member-progress'] as const
 export interface MemberProgress {
+  dragon_name?: string | null
   latest_deduction_id?: number
   latest_deduction_reason?: string | null
   latest_deduction_amount?: number

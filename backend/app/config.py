@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -9,16 +10,30 @@ from sqlalchemy import URL
 REPO_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 
+class FamilyDatabaseCredentials(BaseModel):
+    username: str = Field(min_length=1)
+    password: str = Field(min_length=32)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=REPO_ROOT_ENV, extra="ignore")
 
     quest_import_token: str = ""
     mcp_service_token: str = ""
+    oauth_dynamic_registration: bool = False
+    central_background_jobs: bool = False
+    central_calendar_jobs: bool = False
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "famquest"
     postgres_password: str = ""
     postgres_db: str = "famquest"
+    # JSON mapping: database name -> dedicated role username/password. Empty disables routing.
+    family_database_credentials: dict[str, FamilyDatabaseCredentials] = Field(default_factory=dict)
+    # Explicitly prepared empty databases; the web app never receives CREATE DATABASE rights.
+    family_creation_databases: list[str] = Field(default_factory=list)
+    # Separate central identity registry login; never fall back to the legacy DB superuser.
+    auth_database_credentials: FamilyDatabaseCredentials | None = None
 
     # Verzeichnis mit dem gebauten Frontend; leer = nur API (lokale Entwicklung mit Vite).
     static_dir: Path | None = None

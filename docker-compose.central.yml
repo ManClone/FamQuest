@@ -1,0 +1,16 @@
+# Isolated staging deployment only. Use restored test databases and uploads.
+services:
+  famquest-central:
+    image: ${FAMQUEST_CENTRAL_IMAGE:?Set the tested immutable image reference}
+    pull_policy: never
+    entrypoint: ["/bin/sh", "/app/docker-entrypoint.central.sh"]
+    env_file: .env.central
+    ports:
+      - "127.0.0.1:11902:8080"
+    volumes:
+      - ${FAMQUEST_CENTRAL_UPLOADS:?Set an isolated restored upload directory}:/data/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

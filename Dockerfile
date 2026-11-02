@@ -30,9 +30,10 @@ COPY backend/ ./
 COPY --from=frontend /frontend/dist ./static
 # QNAP ZIP sources may have restrictive permissions. Keep the uv environment untouched.
 RUN chmod 755 /app \
-    && chmod 644 /app/pyproject.toml /app/uv.lock /app/.python-version /app/alembic.ini \
-    && find /app/app /app/alembic -type d -exec chmod 755 {} + \
-    && find /app/app /app/alembic -type f -exec chmod 644 {} + \
+    && chmod 644 /app/pyproject.toml /app/uv.lock /app/.python-version /app/alembic.ini /app/auth_alembic.ini \
+    && find /app/app /app/alembic /app/auth_alembic -type d -exec chmod 755 {} + \
+    && find /app/app /app/alembic /app/auth_alembic -type f -exec chmod 644 {} + \
+    && chmod 644 /app/docker-entrypoint.stage.sh \
     && chmod 755 /app/docker-entrypoint.sh
 
 USER app

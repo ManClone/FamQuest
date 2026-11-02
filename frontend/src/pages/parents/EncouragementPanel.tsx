@@ -1,15 +1,17 @@
-import { PenaltyHistory, PENALTY_HISTORY_KEY } from './PenaltyHistory'
+import { PenaltyHistory } from './PenaltyHistory'
+import { CriticismPanel } from './CriticismPanel'
 import { PraiseHistory, PRAISE_HISTORY_KEY } from './PraiseHistory'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../api/client'
 import type { Member } from '../../api/members'
 import { useParentMutation } from '../../api/mutations'
-import { bookPoints, POINTS_KEY, PROGRESS_KEY, useMemberProgress } from '../../api/points'
+import { POINTS_KEY, PROGRESS_KEY, useMemberProgress } from '../../api/points'
 import { TODAY_KEY } from '../../api/today'
 import { Avatar } from '../../components/Avatar'
 import { Alert, Button, Section, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
+import { newRequestKey } from '../../request-key'
 
 export function EncouragementPanel({ members }: { members: Member[] }) {
   const { t } = useTranslation()
@@ -42,8 +44,7 @@ function EncouragementForm({ member }: { member: Member }) {
   const progress = useMemberProgress(member.id)
   const [mode, setMode] = useState<'praise' | 'deduct' | null>(null)
   const [reason, setReason] = useState('')
-  const [amount, setAmount] = useState(1)
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID().replaceAll('-', ''))
+  const [requestKey, setRequestKey] = useState(newRequestKey)
   const [saved, setSaved] = useState(false)
   const save = useParentMutation(async () => {
     if (mode === 'praise')
@@ -51,8 +52,8 @@ function EncouragementForm({ member }: { member: Member }) {
         reason: reason.trim(),
         request_key: requestKey,
       })
-    return bookPoints(member.id, { amount: -amount, reason: reason.trim() })
-  }, [POINTS_KEY, PROGRESS_KEY, TODAY_KEY, PRAISE_HISTORY_KEY, PENALTY_HISTORY_KEY])
+    throw new Error('Praise mode required')
+  }, [POINTS_KEY, PROGRESS_KEY, TODAY_KEY, PRAISE_HISTORY_KEY])
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!mode || !reason.trim()) return
@@ -62,7 +63,7 @@ function EncouragementForm({ member }: { member: Member }) {
         setSaved(true)
         setMode(null)
         setReason('')
-        setRequestKey(crypto.randomUUID().replaceAll('-', ''))
+        setRequestKey(newRequestKey())
       },
     })
   }
@@ -105,20 +106,8 @@ function EncouragementForm({ member }: { member: Member }) {
             {t('praise.deduct')}
           </Button>
         </div>
-        {mode && (
+        {mode === 'praise' && (
           <div className="flex flex-col gap-3 rounded-2xl bg-orange-50 p-3">
-            {mode === 'deduct' && (
-              <TextField
-                label={t('praise.amount')}
-                type="number"
-                min={1}
-                max={1000}
-                step={1}
-                required
-                value={amount}
-                onChange={(event) => setAmount(Number(event.target.value))}
-              />
-            )}
             <TextField
               label={t('praise.reason')}
               required
@@ -152,7 +141,15 @@ function EncouragementForm({ member }: { member: Member }) {
         {saved && <p role="status">{t('praise.saved')}</p>}
       </form>
       <PraiseHistory memberId={member.id} />
-      <PenaltyHistory memberId={member.id} />
+      {mode === 'deduct' && (
+        <>
+          <CriticismPanel key={member.id} memberId={member.id} mode="criticism" />
+          <PenaltyHistory memberId={member.id} />
+          <Button variant="secondary" onClick={() => setMode(null)}>
+            {t('actions.cancel')}
+          </Button>
+        </>
+      )}
     </>
   )
 }

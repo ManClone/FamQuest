@@ -32,7 +32,7 @@ WRITE = (
 
 
 def allowed(method: str, path: str) -> bool:
-    if method == "GET" and path == "/api/internal/mcp/schema":
+    if method == "GET" and path in {"/api/internal/mcp/schema", "/api/internal/mcp/context"}:
         return True
     patterns = READ if method == "GET" else WRITE if method in {"POST", "PUT", "DELETE"} else ()
     return any(re.fullmatch(pattern, path) for pattern in patterns)
@@ -40,6 +40,11 @@ def allowed(method: str, path: str) -> bool:
 
 def tool_schema(spec: dict) -> dict:
     result = deepcopy(spec)
+    for schema_name in ("TaskIn", "ChoreIn", "ChoreCreateIn"):
+        schema = result.get("components", {}).get("schemas", {}).get(schema_name, {})
+        schema.get("properties", {}).pop("money_cents", None)
+        if "required" in schema:
+            schema["required"] = [name for name in schema["required"] if name != "money_cents"]
     result["paths"] = {}
     for path, operations in spec["paths"].items():
         # Validate path templates against the same boundary as real requests.

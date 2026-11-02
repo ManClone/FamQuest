@@ -13,10 +13,16 @@ import type { Member } from '../../api/members'
 import { Alert, Button, Section } from '../../components/ui'
 import { errorMessage } from '../../errors'
 
-export function PocketMoneySection({ children }: { children: Member[] }) {
+export function PocketMoneySection({
+  children,
+  fixedMemberId,
+}: {
+  children: Member[]
+  fixedMemberId?: number
+}) {
   const { t, i18n } = useTranslation()
   const [memberId, setMemberId] = useState<number | null>(null)
-  const selected = children.find((child) => child.id === memberId) ?? children[0]
+  const selected = children.find((child) => child.id === (fixedMemberId ?? memberId)) ?? children[0]
   const id = selected?.id ?? 0
   const overview = useMoneyOverview(id)
   const status = useAllowancePaymentStatus(id)
@@ -35,24 +41,26 @@ export function PocketMoneySection({ children }: { children: Member[] }) {
         <p>{t('pocket_money.no_child')}</p>
       ) : (
         <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 font-bold">
-            {t('pocket_money.child')}
-            <select
-              value={selected.id}
-              onChange={(event) => {
-                setMemberId(Number(event.target.value))
-                setWeeklyAmount('')
-                setMessage('')
-              }}
-              className="min-h-12 rounded-xl border-2 border-slate-200 bg-white p-2"
-            >
-              {children.map((child) => (
-                <option key={child.id} value={child.id}>
-                  {child.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {fixedMemberId === undefined && (
+            <label className="flex flex-col gap-1 font-bold">
+              {t('pocket_money.child')}
+              <select
+                value={selected.id}
+                onChange={(event) => {
+                  setMemberId(Number(event.target.value))
+                  setWeeklyAmount('')
+                  setMessage('')
+                }}
+                className="min-h-12 rounded-xl border-2 border-slate-200 bg-white p-2"
+              >
+                {children.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {overview.isError && <Alert>{errorMessage(t, overview.error)}</Alert>}
           {overview.data && (
             <dl className="grid grid-cols-2 gap-3">

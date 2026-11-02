@@ -2,7 +2,7 @@ import datetime as dt
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.api.tasks import get_task
@@ -246,6 +246,8 @@ def complete_task(
             reason=task.title,
             task_id=task_id,
             task_date=today,
+            completion_source="task",
+            completion_id=created,
         )
     if created is not None and not task.needs_approval:
         book_money(db, member_id, task.money_cents, "task_completed", task.title, created)
@@ -271,36 +273,20 @@ def undo_task(
     # Approved repeat executions remain historical; only cancel the current pending execution.
     if task.repeatable:
         condition.append(TaskCompletion.approved_at.is_(None))
-    removed = db.execute(
-        delete(TaskCompletion)
-        .where(*condition)
-        .returning(
-            TaskCompletion.member_id,
-            TaskCompletion.points,
-            TaskCompletion.approved_at,
-            TaskCompletion.money_cents,
-            TaskCompletion.id,
+    from app.activity_corrections import reverse_completion
+
+    completions = list(
+        db.scalars(
+            select(TaskCompletion)
+            .where(*condition)
+            .order_by(TaskCompletion.member_id, TaskCompletion.id)
+            .execution_options(populate_existing=True)
+            .with_for_update(of=TaskCompletion)
         )
-    ).all()
-    # Mehrere Zeilen nur, wenn eine Aufgabe erst nachträglich auf „Einer für alle“ gestellt wurde.
-    for completion in removed:
+    )
+    for completion in completions:
         if completion.approved_at is None:
-            continue
-        book_money(
-            db,
-            completion.member_id,
-            -completion.money_cents,
-            "task_undone",
-            task.title,
-            completion.id,
-        )
-        book(
-            db,
-            completion.member_id,
-            -completion.points,
-            "task_undone",
-            reason=task.title,
-            task_id=task_id,
-            task_date=today,
-        )
+            db.delete(completion)
+        else:
+            reverse_completion(db, "task", completion, task, auth.user_id)
     db.commit()

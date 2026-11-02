@@ -227,27 +227,30 @@ describe('Haushalt', () => {
     mockChores({
       ...PLAN,
       shares: [
-        { member_id: 3, count: 3 },
-        { member_id: 1, count: 1 },
+        { member_id: 3, count: 3, estimated_minutes: 45 },
+        { member_id: 1, count: 1, estimated_minutes: 15 },
       ],
     })
     renderApp('/household')
 
-    const share = within(await screen.findByRole('region', { name: /Wer hat’s gemacht/ }))
-    expect(share.getByText('letzte 30 Tage')).toBeVisible()
+    const share = within(await screen.findByRole('region', { name: /Haushalt im Überblick/ }))
+    expect(share.getByRole('combobox', { name: 'Zeitraum' })).toHaveValue('30')
     // Reihenfolge wie in der Familie; Kinder stehen dabei, wenn sie mitgeholfen haben.
-    expect(share.getAllByText(/-mal\)$/).map((item) => item.textContent)).toEqual([
-      'Lena: 25 % (1-mal)',
-      'Mama: 75 % (3-mal)',
+    expect(share.getAllByText(/Min\. geschätzt/).map((item) => item.textContent)).toEqual([
+      'Mama: 3 Aufgaben · 45 Min. geschätzt · 100 %',
     ])
+    expect(share.getByText('Lena: 1 Aufgabe · 25 %')).toBeVisible()
+    expect(share.queryByText(/Lena:.*Min/)).not.toBeInTheDocument()
   })
 
-  it('zeigt keine Verteilung, solange niemand „Wer war’s?“ angetippt hat', async () => {
+  it('hält die Zeitraumwahl ohne Erledigungen erreichbar', async () => {
     mockChores()
     renderApp('/household')
 
     await screen.findByRole('button', { name: /Toilette putzen/ })
-    expect(screen.queryByRole('region', { name: /Wer hat’s gemacht/ })).toBeNull()
+    expect(screen.getByRole('region', { name: /Haushalt im Überblick/ })).toHaveTextContent(
+      'Noch keine zugeordneten Erledigungen in diesem Zeitraum.',
+    )
   })
 
   it('lobt, wenn nichts dran ist', async () => {
@@ -490,4 +493,39 @@ it('asks for the person before booking a fixed chore', async () => {
   await user.click(within(who).getByRole('button', { name: mama.name }))
   await waitFor(() => expect(bodiesOf(calls, 'PUT /api/chores/1/done')).toHaveLength(1))
   expect(bodiesOf(calls, 'PUT /api/chores/1/done')[0]).toMatchObject({ member_id: mama.id })
+})
+
+it('lädt 7 Tage und 1 Jahr mit eigener Abfrage und hält die Auswahl auch bei leeren Daten sichtbar', async () => {
+  const user = userEvent.setup()
+  mockChores()
+  const previousFetch = globalThis.fetch
+  const requested: string[] = []
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input), 'http://localhost')
+    const days = url.searchParams.get('share_days')
+    if (url.pathname === '/api/chores' && days) {
+      requested.push(url.pathname + url.search)
+      const count = days === '7' ? 1 : 10
+      return Promise.resolve(
+        Response.json({
+          ...PLAN,
+          share_days: Number(days),
+          shares: [{ member_id: 3, count, estimated_minutes: count * 15 }],
+        }),
+      )
+    }
+    return previousFetch(input, init)
+  })
+  renderApp('/household')
+  const range = await screen.findByRole('combobox', { name: 'Zeitraum' })
+  expect(range).toHaveValue('30')
+  await user.selectOptions(range, '7')
+  expect(await screen.findByText('Mama: 1 Aufgabe · 15 Min. geschätzt · 100 %')).toBeVisible()
+  await user.selectOptions(range, '365')
+  expect(await screen.findByText('Mama: 10 Aufgaben · 150 Min. geschätzt · 100 %')).toBeVisible()
+  await user.selectOptions(range, '30')
+  expect(
+    await screen.findByText('Noch keine zugeordneten Erledigungen in diesem Zeitraum.'),
+  ).toBeVisible()
+  expect(requested).toEqual(['/api/chores?share_days=7', '/api/chores?share_days=365'])
 })

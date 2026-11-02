@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Request, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, exists, func, select
+from sqlalchemy.orm import sessionmaker
 
 from app import google
 from app.auth import (
@@ -33,6 +34,30 @@ router = APIRouter(prefix="/calendar", tags=["calendar"])
 STATE_LIFETIME = timedelta(minutes=10)
 # Nach der Rückkehr von Google landen die Eltern wieder hier.
 PARENTS_PAGE = "/parents/connections"
+
+
+def sync_operation(request: Request, db: DbSession):
+    if not getattr(request.app.state, "multitenant", False):
+        return sync_all
+    from app.auth_registry import Tenant
+
+    principal = request.state.family_principal
+    selected_engine = db.get_bind()
+    sessions = sessionmaker(bind=selected_engine, expire_on_commit=False)
+    registry = request.app.state.auth_registry
+
+    def run_scoped_sync():
+        with registry.session() as control:
+            tenant = control.get(Tenant, principal.tenant_id)
+            if (
+                tenant is None
+                or tenant.status != "active"
+                or tenant.database_name != principal.database_name
+            ):
+                return False
+        return sync_all(database_engine=selected_engine, session_factory=sessions)
+
+    return run_scoped_sync
 
 
 class CalendarOut(BaseModel):
@@ -186,7 +211,7 @@ def update_calendar(
     db.commit()
     if newly_selected and get_settings().calendar_configured:
         # Termine gleich laden, nicht erst beim nächsten Durchlauf im Hintergrund.
-        background.add_task(sync_all)
+        background.add_task(sync_operation(request, db))
     return settings_out(request, db)
 
 
@@ -215,7 +240,7 @@ def set_holidays(
     db.commit()
     if body.region and body.school:
         # Ferien gleich laden (passiert nur, wenn sie fehlen oder veraltet sind).
-        background.add_task(sync_all)
+        background.add_task(sync_operation(request, db))
     return settings_out(request, db)
 
 
@@ -224,7 +249,7 @@ def sync_now(request: Request, auth_session: ParentSession, db: DbSession) -> Ca
     """„Jetzt aktualisieren“; läuft gerade ein Durchlauf, gilt dessen Ergebnis."""
     if not get_settings().calendar_configured:
         raise ApiError(status.HTTP_409_CONFLICT, "calendar.not_configured")
-    sync_all()
+    sync_operation(request, db)()
     db.expire_all()
     return settings_out(request, db)
 

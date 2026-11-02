@@ -27,6 +27,7 @@ import {
 import { TaskIcon } from '../../components/TaskIcon'
 import { Alert, Button, Switch, TextField } from '../../components/ui'
 import { errorMessage } from '../../errors'
+import { euroCents, euroInput } from '../../euro-input'
 import { iconId, iconLabel, iconName, suggestIcon } from '../../icons/catalog'
 import { formatDate } from '../../weekdays'
 import { IconPicker } from './IconPicker'
@@ -76,10 +77,12 @@ export function ChoreEditor({
   const [minutes, setMinutes] = useState(chore?.estimated_minutes ?? 15)
   const [repeatable, setRepeatable] = useState(chore?.repeatable ?? false)
   const [childEnabled, setChildEnabled] = useState(chore?.child_enabled ?? false)
-  const [childXp, setChildXp] = useState(chore?.child_xp ?? 0)
+  const [childXp, setChildXp] = useState(String(chore?.child_xp ?? 0))
+  const [bonus, setBonus] = useState(chore?.money_cents ? euroInput(chore.money_cents) : '')
+  const moneyCents = euroCents(bonus)
   const [childIds, setChildIds] = useState<number[]>(chore?.child_member_ids ?? [])
   const children = (members.data ?? []).filter((member) => member.role === 'child')
-  const [adultXp, setAdultXp] = useState(chore?.adult_xp ?? 0)
+  const [adultXp, setAdultXp] = useState(String(chore?.adult_xp ?? 0))
   const [assignmentMode, setAssignmentMode] = useState<'fixed' | 'rotate' | 'flexible'>(
     chore?.assignment_mode ?? 'flexible',
   )
@@ -99,10 +102,11 @@ export function ChoreEditor({
       active,
       repeatable,
       child_enabled: childEnabled,
-      child_xp: childXp,
+      child_xp: Number(childXp),
+      money_cents: moneyCents ?? 0,
       child_member_ids: childEnabled ? childIds : [],
       estimated_minutes: minutes,
-      adult_xp: adultXp,
+      adult_xp: Number(adultXp),
       assignment_mode: assignmentMode,
       fixed_member_id: assignmentMode === 'fixed' ? fixedMemberId : null,
     }
@@ -149,6 +153,7 @@ export function ChoreEditor({
     setSubmitted(true)
     if (
       !title.trim() ||
+      moneyCents === null ||
       dateError ||
       (state === 'date' && !chore && !countedFrom) ||
       (assignmentMode === 'fixed' && fixedMemberId === null)
@@ -268,7 +273,7 @@ export function ChoreEditor({
               max={1000}
               required
               value={adultXp}
-              onChange={(event) => setAdultXp(Number(event.target.value))}
+              onChange={(event) => setAdultXp(event.target.value)}
               className="min-h-12 rounded-xl border border-slate-300 bg-white p-3"
             />
           </label>
@@ -290,7 +295,7 @@ export function ChoreEditor({
                 max={1000}
                 label={t('chores.child_xp')}
                 value={childXp}
-                onChange={(event) => setChildXp(Number(event.target.value))}
+                onChange={(event) => setChildXp(event.target.value)}
               />
               <Field label={t('chores.eligible_children')}>
                 <div className="flex flex-wrap gap-2">
@@ -312,7 +317,17 @@ export function ChoreEditor({
                 </div>
               </Field>
               <p className="text-sm text-slate-500">{t('chores.child_hint')}</p>
-              <TextField label={t('chores.future_money')} disabled value="" />
+              <TextField
+                label={t('chores.money_bonus')}
+                value={bonus}
+                inputMode="decimal"
+                maxLength={8}
+                onChange={(event) => setBonus(event.target.value)}
+                hint={t('chores.money_bonus_hint')}
+                error={
+                  submitted && moneyCents === null ? t('errors.validation.invalid') : undefined
+                }
+              />
             </>
           )}
           <label className="flex flex-col gap-2 font-semibold text-slate-700">

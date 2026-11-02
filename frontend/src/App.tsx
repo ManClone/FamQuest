@@ -22,6 +22,7 @@ import { TasksWeekPage } from './pages/TasksWeekPage'
 import { ChildTasksPage } from './pages/ChildTasksPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { oauthReturnPath, resumeOAuth } from './oauth-return'
 
 function Loading() {
   const { t } = useTranslation()
@@ -83,10 +84,20 @@ function RequireAuth() {
   return <Outlet />
 }
 
+function ResumeOAuth({ target }: { target: string }) {
+  useEffect(() => {
+    resumeOAuth(target)
+  }, [target])
+  return <Loading />
+}
+
 function LoginRoute() {
   const me = useMe()
-  const from = (useLocation().state as { from?: string } | null)?.from
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from
+  const oauthTarget = oauthReturnPath(location.search)
   if (me.isPending) return <Loading />
+  if (me.isSuccess && oauthTarget) return <ResumeOAuth target={oauthTarget} />
   return me.isSuccess ? (
     <Navigate to={from === KITCHEN_PATH ? KITCHEN_PATH : '/'} replace />
   ) : (

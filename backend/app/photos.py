@@ -11,8 +11,8 @@ from fastapi import Request, status
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.avatars import read_body
-from app.config import get_settings
 from app.errors import ApiError
+from app.tenant_storage import upload_root
 
 # Handyfotos sind oft 5–15 MB groß; der Server verkleinert sie ohnehin.
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -89,7 +89,7 @@ def process_photo(data: bytes) -> ProcessedPhoto:
 
 
 def photo_dir() -> Path:
-    return get_settings().upload_dir / "photos"
+    return upload_root() / "photos"
 
 
 def _paths(key: str) -> tuple[Path, Path]:

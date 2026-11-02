@@ -419,6 +419,7 @@ class ApprovalOut(BaseModel):
     task_id: int
     title: str
     icon: str
+    money_cents: int = 0
     points: int
     member_id: int
     date: dt.date

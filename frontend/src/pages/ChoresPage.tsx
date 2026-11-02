@@ -27,7 +27,9 @@ type Grouping = 'urgency' | 'rooms'
  */
 export function ChoresPage() {
   const { t } = useTranslation()
+  const [shareDays, setShareDays] = useState(30)
   const plan = useChores()
+  const statistics = useChores(shareDays)
   const members = useMembers()
   const [grouping, setGrouping] = useState<Grouping>('urgency')
 
@@ -36,7 +38,7 @@ export function ChoresPage() {
   const todos = plan.data?.todos ?? []
   const done = useChoreDone(chores, todos)
   const roomOf = (chore: Chore) => rooms.find((room) => room.id === chore.room_id)
-  const shares = plan.data && careShares(members.data ?? [], plan.data.shares)
+  const shares = statistics.data && careShares(members.data ?? [], statistics.data.shares)
 
   const row = (chore: Chore, showRoom: boolean) => (
     <ChoreRow
@@ -115,7 +117,16 @@ export function ChoresPage() {
         ))
       )}
 
-      {plan.data && shares && <ChoreShare shares={shares} days={plan.data.share_days} />}
+      {plan.data && (
+        <ChoreShare
+          shares={shares ?? []}
+          days={shareDays}
+          onDaysChange={setShareDays}
+          loading={statistics.isPending}
+          error={statistics.error}
+          onRetry={() => void statistics.refetch()}
+        />
+      )}
 
       <WhoBar done={done} />
     </main>

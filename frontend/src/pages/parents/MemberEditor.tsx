@@ -1,3 +1,6 @@
+import { PocketMoneySection } from './PocketMoneySection'
+import { CriticismPanel } from './CriticismPanel'
+import { PointsEditor } from './PointsEditor'
 import { type FormEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CameraIcon from '~icons/fluent-emoji-flat/camera'
@@ -36,12 +39,20 @@ interface MemberEditorProps {
   /** Ohne `member` wird eine neue Person angelegt. */
   member?: Member
   members: Member[]
+  timeZone?: string
   onSaved: (name: string) => void
   onDeleted: (name: string) => void
   onCancel: () => void
 }
 
-export function MemberEditor({ member, members, onSaved, onDeleted, onCancel }: MemberEditorProps) {
+export function MemberEditor({
+  member,
+  members,
+  timeZone = 'Europe/Berlin',
+  onSaved,
+  onDeleted,
+  onCancel,
+}: MemberEditorProps) {
   const { t } = useTranslation()
   const accounts = useAccounts()
   const linked = accounts.data?.find((account) => account.member_id === member?.id)
@@ -321,6 +332,18 @@ export function MemberEditor({ member, members, onSaved, onDeleted, onCancel }: 
           </Button>
         </div>
       </form>
+
+      {member && (
+        <>
+          {member.role === 'child' && (
+            <>
+              <PocketMoneySection children={[member]} fixedMemberId={member.id} />
+              <CriticismPanel memberId={member.id} mode="money" />
+            </>
+          )}
+          <PointsEditor member={member} timeZone={timeZone} embedded />
+        </>
+      )}
 
       {member &&
         (confirmDelete ? (

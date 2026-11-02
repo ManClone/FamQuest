@@ -1,6 +1,7 @@
 """Exercise actual account roles and keep sanctions separate from base allowance."""
 
 import datetime as dt
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.orm import Session
@@ -67,21 +68,40 @@ def test_excess_sanction_preserves_allowance_and_level_xp(client, parent, lena, 
         },
         headers=csrf(parent),
     )
+    assert response.status_code == 422, response.text
+    response = client.post(
+        "/api/consequences",
+        json={
+            "member_id": lena,
+            "title": "Test consequence",
+            "severity": "severe",
+            "apply_money": True,
+            "confirmed": True,
+            "request_key": uuid4().hex,
+            "expected_bonus_cents": 125,
+        },
+        headers=csrf(parent),
+    )
     assert response.status_code == 201, response.text
     entry = response.json()
-    assert entry["xp_penalty_applied"] == 20
+    assert entry["xp_penalty_applied"] == 3
     bonus_url = f"/api/members/{lena}/weekly-bonus?date={SATURDAY}"
     preview = client.get(bonus_url)
     assert preview.status_code == 200
     assert preview.json()["earned_bonus_cents"] == 125
-    assert preview.json()["payable_bonus_cents"] == 0
+    assert preview.json()["payable_bonus_cents"] == 25
     with Session(engine) as db:
         assert allowance_balance(db, lena) == 500
         assert level_xp(db, lena) == 20
-        assert spendable_xp(db, lena) == 0
+        assert spendable_xp(db, lena) == 17
     reverse_url = f"/api/consequences/{entry['id']}/reverse"
     for _ in range(2):
-        assert client.post(reverse_url, headers=csrf(parent)).status_code == 200
+        assert (
+            client.post(
+                reverse_url, json={"confirmed": True, "reason": "Korrektur"}, headers=csrf(parent)
+            ).status_code
+            == 200
+        )
     assert client.get(bonus_url).json()["payable_bonus_cents"] == 125
     with Session(engine) as db:
         assert allowance_balance(db, lena) == 500

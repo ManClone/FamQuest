@@ -140,6 +140,60 @@ describe('Putzplan im Elternbereich', () => {
     expect(calls.map((call) => call.key)).toContain('DELETE /api/chores/rooms/1')
   })
 
+  it('lässt XP vollständig löschen und durch eine neue Zahl ersetzen', async () => {
+    const user = userEvent.setup()
+    const calls = api()
+    renderApp('/parents/household')
+
+    await user.click(await screen.findByRole('button', { name: 'Toilette putzen bearbeiten' }))
+    const adult = screen.getByRole('spinbutton', { name: 'Erwachsenen-XP' })
+    await user.clear(adult)
+    expect(adult).toHaveValue(null)
+    await user.type(adult, '5')
+    expect(adult).toHaveValue(5)
+    await user.click(screen.getByRole('switch', { name: 'Für Kinder verfügbar' }))
+    const child = screen.getByRole('spinbutton', { name: 'Kinder-XP' })
+    await user.clear(child)
+    expect(child).toHaveValue(null)
+    await user.type(child, '5')
+    expect(child).toHaveValue(5)
+    await user.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(await screen.findByText('„Toilette putzen“ ist gespeichert.')).toBeVisible()
+    expect(bodyOf(calls, 'PUT /api/chores/1')).toMatchObject({ adult_xp: 5, child_xp: 5 })
+  })
+
+  it('speichert den Kinderbonus als Cent und lässt das Geldfeld vollständig leeren', async () => {
+    const user = userEvent.setup()
+    const calls = api()
+    renderApp('/parents/household')
+    await user.click(await screen.findByRole('button', { name: 'Toilette putzen bearbeiten' }))
+    await user.click(screen.getByRole('switch', { name: 'Für Kinder verfügbar' }))
+    const bonus = screen.getByLabelText('Kinderbonus pro Erledigung in Euro')
+    expect(bonus).toHaveValue('')
+    await user.type(bonus, '0,50')
+    await user.clear(bonus)
+    expect(bonus).toHaveValue('')
+    await user.type(bonus, '0,50')
+    await user.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(await screen.findByText('„Toilette putzen“ ist gespeichert.')).toBeVisible()
+    expect(bodyOf(calls, 'PUT /api/chores/1')).toMatchObject({ money_cents: 50 })
+  })
+
+  it('weist ungültige Geldbeträge vor dem Speichern zurück', async () => {
+    const user = userEvent.setup()
+    const calls = api()
+    renderApp('/parents/household')
+    await user.click(await screen.findByRole('button', { name: 'Toilette putzen bearbeiten' }))
+    await user.click(screen.getByRole('switch', { name: 'Für Kinder verfügbar' }))
+    await user.type(screen.getByLabelText('Kinderbonus pro Erledigung in Euro'), '0,005')
+    await user.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(calls.some((call) => call.key === 'PUT /api/chores/1')).toBe(false)
+    expect(screen.getByLabelText('Kinderbonus pro Erledigung in Euro')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+  })
+
   it('legt eine Aufgabe mit eigenem Abstand und Stand an', async () => {
     const user = userEvent.setup()
     const calls = api()

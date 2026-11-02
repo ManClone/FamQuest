@@ -29,6 +29,7 @@ def list_approvals(_: ParentSession, db: DbSession) -> list[ApprovalOut]:
             title=completion.task.title,
             icon=completion.task.icon,
             points=completion.points,
+            money_cents=completion.money_cents,
             member_id=completion.member_id,
             date=completion.date,
             completed_at=completion.completed_at,
@@ -48,6 +49,7 @@ def list_approvals(_: ParentSession, db: DbSession) -> list[ApprovalOut]:
                 title=chore.title,
                 icon=chore.icon,
                 points=completion.points,
+                money_cents=completion.money_cents,
                 member_id=completion.member_id,
                 date=completion.date,
                 completed_at=completion.completed_at,
@@ -64,6 +66,12 @@ def approve(
     praise: bool = Query(default=False),
 ) -> None:
     """Bestätigt die Erledigung und bucht ihre Punkte, genau einmal (auch bei Doppel-Tipp)."""
+    # Keep the same task -> completion -> member lock order as completion and undo.
+    # Otherwise an approval holding the completion can wait for the task FK while
+    # a correction holding the task waits for that completion.
+    task_id = db.scalar(select(TaskCompletion.task_id).where(TaskCompletion.id == completion_id))
+    if task_id is not None:
+        db.execute(select(Task.id).where(Task.id == task_id).with_for_update())
     approved = db.execute(
         update(TaskCompletion)
         .where(TaskCompletion.id == completion_id, TaskCompletion.approved_at.is_(None))
@@ -89,6 +97,8 @@ def approve(
         task_id=approved.task_id,
         task_date=approved.date,
         user_id=auth_session.user_id,
+        completion_source="task",
+        completion_id=approved.id,
     )
     book_money(
         db,
@@ -146,6 +156,8 @@ def approve_chore(
     )
     if completion is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "approval.not_found")
+    if db.info.get("mcp_request") and completion.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
     if completion.approved:
         return
     completion.approved = True
@@ -159,6 +171,8 @@ def approve_chore(
             reason=chore.title,
             task_date=completion.date,
             user_id=_.user_id,
+            completion_source="chore",
+            completion_id=completion.id,
         )
         db.add(
             ChoreCredit(
@@ -167,6 +181,9 @@ def approve_chore(
                 amount=completion.points,
             )
         )
+    from app.chore_money import credit_chore_money
+
+    credit_chore_money(db, completion, chore.title)
     if praise and completion.member_id is not None:
         from app.praise import grant_praise
 
@@ -199,6 +216,7 @@ def confirmed_chores(
     _: ParentSession,
     db: DbSession,
     before: int | None = Query(default=None, ge=1),
+    member_id: int | None = Query(default=None, ge=1),
 ) -> dict:
     """Confirmed household executions, newest first, including earlier days."""
     query = (
@@ -211,6 +229,8 @@ def confirmed_chores(
     )
     if before is not None:
         query = query.where(ChoreCompletion.id < before)
+    if member_id is not None:
+        query = query.where(ChoreCompletion.member_id == member_id)
     rows = list(db.execute(query))
     return {
         "items": [
@@ -234,7 +254,8 @@ def confirmed_chores(
 @router.delete("/chore-approvals/{completion_id}/confirmed", status_code=204)
 def undo_confirmed_chore(completion_id: int, auth: ParentSession, db: DbSession) -> None:
     """Remove exactly one execution and reverse its original credit once."""
-    from app.api.chores import _get_chore, _reverse_chore_credits
+    from app.activity_corrections import reverse_completion
+    from app.api.chores import _get_chore
 
     old = db.get(ChoreCompletion, completion_id)
     if old is None:
@@ -250,6 +271,72 @@ def undo_confirmed_chore(completion_id: int, auth: ParentSession, db: DbSession)
         return
     if not completion.approved:
         raise ApiError(status.HTTP_409_CONFLICT, "approval.not_found")
-    _reverse_chore_credits(db, [completion], chore.title)
-    db.delete(completion)
+    reverse_completion(db, "chore", completion, chore, auth.user_id)
+    db.commit()
+
+
+@router.get("/approvals/confirmed")
+def confirmed_tasks(
+    _: ParentSession,
+    db: DbSession,
+    before: int | None = Query(default=None, ge=1),
+    member_id: int | None = Query(default=None, ge=1),
+) -> dict:
+    """Confirmed child tasks, paginated and filtered before applying the limit."""
+    query = (
+        select(TaskCompletion, Task)
+        .join(Task)
+        .where(TaskCompletion.approved_at.is_not(None))
+        .order_by(TaskCompletion.id.desc())
+        .limit(51)
+    )
+    if before is not None:
+        query = query.where(TaskCompletion.id < before)
+    if member_id is not None:
+        query = query.where(TaskCompletion.member_id == member_id)
+    rows = list(db.execute(query))
+    return {
+        "items": [
+            ApprovalOut(
+                id=c.id,
+                task_id=task.id,
+                title=task.title,
+                icon=task.icon,
+                points=c.points,
+                member_id=c.member_id,
+                date=c.date,
+                completed_at=c.completed_at,
+            )
+            for c, task in rows[:50]
+        ],
+        "has_more": len(rows) > 50,
+    }
+
+
+@router.delete("/approvals/{completion_id}/confirmed", status_code=204)
+def undo_confirmed_task(completion_id: int, auth: ParentSession, db: DbSession) -> None:
+    """Reverse exactly one execution using its original point and bonus snapshots."""
+    old = db.get(TaskCompletion, completion_id)
+    if old is None:
+        return
+    # Same task lock as completion creation; refresh after waiting for concurrent actions.
+    task_id = old.task_id
+    task = db.scalar(select(Task).where(Task.id == task_id).with_for_update(of=Task))
+    completion = db.scalar(
+        select(TaskCompletion)
+        .where(TaskCompletion.id == completion_id)
+        .execution_options(populate_existing=True)
+        .with_for_update(of=TaskCompletion)
+    )
+    if completion is None:
+        return
+    if completion.approved_at is None:
+        raise ApiError(409, "approval.not_found")
+    if db.info.get("mcp_request") and completion.money_cents:
+        raise ApiError(403, "mcp.operation_forbidden")
+    from app.activity_corrections import reverse_completion
+
+    if task is None:
+        raise ApiError(409, "activity.restore_unavailable")
+    reverse_completion(db, "task", completion, task, auth.user_id)
     db.commit()

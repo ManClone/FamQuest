@@ -208,15 +208,17 @@ def _sync_connection(
             db.commit()
 
 
-def sync_all(now: dt.datetime | None = None) -> bool:
+def sync_all(now: dt.datetime | None = None, *, database_engine=None, session_factory=None) -> bool:
     """Ein Durchlauf: Schulferien und alle Google-Verbindungen. False, wenn schon einer läuft."""
     now = now or utcnow()
     # Eigene Verbindung ohne offene Transaktion, die die Sperre bis zum Ende hält.
-    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as lock:
+    selected_engine = database_engine if database_engine is not None else engine
+    selected_sessions = session_factory if session_factory is not None else SessionLocal
+    with selected_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as lock:
         if not lock.scalar(select(func.pg_try_advisory_lock(_LOCK_KEY))):
             return False
         try:
-            with SessionLocal() as db:
+            with selected_sessions() as db:
                 family = db.scalars(select(Family)).one_or_none()
                 if family is None:
                     return True

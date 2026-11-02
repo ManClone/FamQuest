@@ -1,4 +1,5 @@
 .git
+.central-stage
 .env
 .env.*
 docs

@@ -177,9 +177,14 @@ export function useSetDone(taskId: number, memberId: number) {
       const dayChanged = error instanceof ApiError && error.code === 'completion.day_changed'
       if (dayChanged || queryClient.isMutating({ mutationKey: SET_DONE_KEY }) === 1) {
         return Promise.all(
-          [TODAY_KEY, ['member-progress']].map((queryKey) =>
-            queryClient.invalidateQueries({ queryKey }),
-          ),
+          [
+            TODAY_KEY,
+            ['points'],
+            ['member-progress'],
+            ['money'],
+            ['criticism'],
+            ['confirmed-tasks'],
+          ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
         )
       }
     },

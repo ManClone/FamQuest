@@ -131,6 +131,7 @@ def test_create_room_and_chore(client, parent, now):
         "repeatable": False,
         "child_enabled": False,
         "child_xp": 0,
+        "money_cents": 0,
         "child_member_ids": [],
         "assignment_mode": "flexible",
         "fixed_member_id": None,
@@ -415,7 +416,7 @@ def test_last_done_after_a_completion_keeps_it(client, parent, now):
         SATURDAY,
         12,
     )
-    assert plan(client)["shares"] == [{"member_id": lena, "count": 1}]
+    assert plan(client)["shares"] == [{"member_id": lena, "count": 1, "estimated_minutes": 15}]
 
 
 def test_unchanged_last_done_keeps_completions(client, parent, now):
@@ -570,11 +571,11 @@ def test_shares_count_who_did_it_in_the_last_30_days(client, parent, now):
     done(client, parent, anonymous["id"])
 
     assert plan(client)["shares"] == [
-        {"member_id": lena, "count": 1},
-        {"member_id": tom, "count": 2},
+        {"member_id": lena, "count": 1, "estimated_minutes": 15},
+        {"member_id": tom, "count": 2, "estimated_minutes": 30},
     ]
 
     # Zurückgenommenes zählt nicht mehr, und nach 30 Tagen fällt Lenas Erledigung heraus.
     client.delete(f"/api/chores/{floor['id']}/done", headers=csrf(parent))
     now["value"] += dt.timedelta(days=1)
-    assert plan(client)["shares"] == [{"member_id": tom, "count": 1}]
+    assert plan(client)["shares"] == [{"member_id": tom, "count": 1, "estimated_minutes": 15}]

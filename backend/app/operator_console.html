@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FamQuest · Betreiberverwaltung</title>
+  <link rel="stylesheet" href="/operator/assets/console.css">
+  <script src="/operator/assets/console.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><a href="/">Zur Familienanmeldung</a><h1>FamQuest Betreiberverwaltung</h1>
+      <p>Registrierte Familien verwalten: Status prüfen, begründet sperren und wieder freigeben.</p>
+    </header>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="login-panel" aria-labelledby="login-title">
+      <h2 id="login-title">Als Betreiber anmelden</h2>
+      <p>Nur für einen separat eingerichteten Betreiberzugang. Eltern- und Kinderkonten gelten hier nicht.</p>
+      <form id="login-form">
+        <label for="email">E-Mail</label><input id="email" type="email" autocomplete="username" required maxlength="254">
+        <label for="password">Passwort</label><input id="password" type="password" autocomplete="current-password" required maxlength="256">
+        <button id="login-button" type="submit">Anmelden</button>
+      </form>
+    </section>
+    <section id="overview" hidden aria-labelledby="overview-title">
+      <div class="toolbar"><div><h2 id="overview-title">Familienübersicht</h2><p id="signed-in"></p></div>
+        <div><button id="refresh" type="button">Aktualisieren</button> <button id="logout" type="button">Abmelden</button></div>
+      </div>
+      <p>Die Anmeldung endet nach einer Stunde. Aufgaben, Bilder und Kennwörter werden hier nicht angezeigt.</p>
+      <section aria-labelledby="create-title">
+        <h3 id="create-title">Neue Familie</h3><p id="creation-capacity"></p>
+        <button id="show-create" type="button" disabled>Familie anlegen</button>
+        <form id="create-family-form" hidden>
+          <label for="new-family-name">Familienname</label><input id="new-family-name" required maxlength="100">
+          <label for="new-parent-name">Name des Elternteils</label><input id="new-parent-name" required maxlength="50">
+          <label for="new-parent-email">E-Mail des Elternzugangs</label><input id="new-parent-email" type="email" required maxlength="254" autocomplete="off">
+          <label for="new-parent-password">Anfangspasswort für den Elternzugang</label><input id="new-parent-password" type="password" required minlength="16" maxlength="128" autocomplete="new-password">
+          <label for="new-parent-password-repeat">Anfangspasswort wiederholen</label><input id="new-parent-password-repeat" type="password" required minlength="16" maxlength="128" autocomplete="new-password">
+          <p>Mindestens 16 Zeichen. Das Passwort wird nach dem Absenden nicht mehr angezeigt.</p>
+          <label for="new-family-language">Sprache</label><select id="new-family-language"><option value="de">Deutsch</option><option value="en">English</option></select>
+          <label for="new-family-timezone">Zeitzone</label><input id="new-family-timezone" value="Europe/Berlin" required maxlength="64">
+          <label class="check-label"><input id="create-confirm" type="checkbox" required>Ich bestätige die neue Familie und diesen eigenständigen Elternzugang.</label>
+          <button type="submit">Familie und Elternzugang einrichten</button><button id="cancel-create" type="button">Abbrechen</button>
+        </form>
+        <h4>Letzte Einrichtungsaufträge</h4><ul id="creation-jobs" aria-live="polite"></ul>
+      </section>
+      <p id="count"></p><ul id="families" aria-label="Registrierte Familien"></ul>
+    </section>
+  </main>
+</body>
+</html>
