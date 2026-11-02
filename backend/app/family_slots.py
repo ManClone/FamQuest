@@ -39,12 +39,16 @@ def read_config(path):
     return values, Settings(_env_file=None, **fields)
 
 
-def private_copy(path, data):
+def private_copy(path, data, owner=None):
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "wb") as output:
         output.write(data)
         output.flush()
         os.fsync(output.fileno())
+    if owner is not None and hasattr(os, "chown"):
+        current = path.stat()
+        if (current.st_uid, current.st_gid) != owner:
+            os.chown(path, *owner)
 
 
 def replace_settings(original, changes):
@@ -101,8 +105,11 @@ def prepare(directory):
         if any(path.exists() for path in backups):
             raise ValueError("Existing configuration backups are never overwritten")
         originals = [path.read_bytes() for path in (runtime_path, bootstrap_path)]
-        for path, data in zip(backups, originals, strict=True):
-            private_copy(path, data)
+        owners = [
+            (path.stat().st_uid, path.stat().st_gid) for path in (runtime_path, bootstrap_path)
+        ]
+        for path, data, owner in zip(backups, originals, owners, strict=True):
+            private_copy(path, data, owner)
         credentials = dict(settings.family_database_credentials)
         for name in SPARE_DATABASES:
             secret = secrets.token_hex(24)
@@ -124,10 +131,12 @@ def prepare(directory):
         # Stage both private files before replacing either. A partial failure is
         # deliberately not retried automatically or repaired by deleting data.
         staged = []
-        for path, data in zip((runtime_path, bootstrap_path), originals, strict=True):
+        for path, data, owner in zip(
+            (runtime_path, bootstrap_path), originals, owners, strict=True
+        ):
             content = replace_settings(data.decode("utf-8"), changes)
             temporary = path.with_name(path.name + ".family-create-new")
-            private_copy(temporary, content.encode("utf-8"))
+            private_copy(temporary, content.encode("utf-8"), owner)
             staged.append((temporary, path))
         for temporary, path in staged:
             os.replace(temporary, path)

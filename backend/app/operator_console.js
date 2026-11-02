@@ -44,7 +44,7 @@ function renderFamily(family) {
   status.textContent = labels[family.status] || 'Unbekannter Status';
   status.className = 'state ' + (family.status === 'active' ? 'active' : 'disabled');
   const accounts = document.createElement('p');
-  accounts.textContent = `${family.accounts} verknüpfte Konten`;
+  accounts.textContent = family.accounts === 1 ? '1 verknüpftes Konto' : `${family.accounts} verknüpfte Konten`;
   li.append(title, status, accounts);
   if (family.status === 'active' || family.status === 'disabled') {
     const change = document.createElement('button');
@@ -143,7 +143,8 @@ async function refresh() {
   const jobs = await api('family-creations');
   creationCapacity = capabilities.family_creation_capacity;
   element('creation-capacity').textContent = creationCapacity > 0
-    ? `${creationCapacity} freie Familienplätze verfügbar.` : 'Derzeit ist kein vorbereiteter Familienplatz frei.';
+    ? (creationCapacity === 1 ? '1 freier Familienplatz verfügbar.' : `${creationCapacity} freie Familienplätze verfügbar.`)
+    : 'Derzeit ist kein vorbereiteter Familienplatz frei.';
   element('show-create').disabled = creationCapacity === 0;
   element('creation-jobs').replaceChildren(...jobs.map((job) => {
     const li = document.createElement('li');

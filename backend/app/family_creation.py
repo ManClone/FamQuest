@@ -1,5 +1,6 @@
 """Create families only in explicitly prepared, empty databases using dedicated roles."""
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -189,6 +190,7 @@ def submit_creation(db, settings, router, actor_id, request):
         job.status, job.finished_at = "ready", datetime.now(UTC)
         db.commit()
     except Exception as exc:
+        logging.getLogger(__name__).error("Family setup %s failed (%s)", job_id, type(exc).__name__)
         db.rollback()
         tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id).with_for_update())
         job = db.get(FamilyCreation, job_id, populate_existing=True)
