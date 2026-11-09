@@ -144,6 +144,30 @@ class CentralTests(unittest.IsolatedAsyncioTestCase):
         ):
             central_parent()
 
+    async def test_transport_replaces_inherited_unsupported_response_encodings(self):
+        observed = []
+
+        def handler(request):
+            observed.append(request.headers["accept-encoding"])
+            return httpx.Response(200, json=[{"name": "Eltern mit Umlaut: Jörg"}])
+
+        token = AccessToken(
+            token="family-parent-token",
+            client_id="registered",
+            scopes=[SCOPE],
+            claims={"tenant_id": 2, "parent_user_id": 1},
+        )
+        with patch("central_server.get_access_token", return_value=token):
+            async with httpx.AsyncClient(
+                base_url="https://family.example.invalid",
+                transport=CentralTransport(httpx.MockTransport(handler)),
+            ) as client:
+                response = await client.get(
+                    "/api/members", headers={"accept-encoding": "br, zstd, gzip"}
+                )
+                self.assertEqual(response.json()[0]["name"], "Eltern mit Umlaut: Jörg")
+        self.assertEqual(observed, ["gzip, deflate"])
+
     async def check_forwarding(self, token, calls, handler):
         async with httpx.AsyncClient(
             base_url="https://family.example.invalid",

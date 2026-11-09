@@ -67,6 +67,9 @@ def code(client):
     assert "Sertl" in consent.text
     assert "client.example.invalid" in consent.text
     assert "frame-ancestors 'none'" in consent.headers["content-security-policy"]
+    assert "form-action 'self' https://client.example.invalid;" in consent.headers[
+        "content-security-policy"
+    ]
     response = client.post(
         "/authorize",
         data={**parameters(), "csrf_token": csrf, "decision": "allow"},

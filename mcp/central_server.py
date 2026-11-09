@@ -81,6 +81,10 @@ class CentralTransport(httpx.AsyncBaseTransport):
         request.headers.pop("cookie", None)
         request.headers.pop("x-famquest-parent-id", None)
         request.headers["authorization"] = "Bearer " + token.token
+        # OpenAPI tools inherit the MCP caller's transport headers. That caller
+        # may advertise Brotli/Zstandard which this service cannot decode.
+        # Negotiate only the HTTPX decoders guaranteed by the Python runtime.
+        request.headers["accept-encoding"] = "gzip, deflate"
         if request.method not in {"GET", "POST", "PUT", "DELETE"}:
             return httpx.Response(403, json={"code": "mcp.operation_forbidden"})
         return await self.upstream.handle_async_request(request)

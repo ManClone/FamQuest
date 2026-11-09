@@ -8,7 +8,7 @@ and authorization requires an active parent browser session plus consent.
 import html
 import json
 import secrets
-from urllib.parse import parse_qs, parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -215,6 +215,11 @@ def install_oauth_routes(app, registry, settings, *, validate_family=None):
                 for key, value in fields.items()
             )
             host = html.escape(urlsplit(client.redirect_uri).netloc)
+            # Chromium applies form-action to the POST's redirect chain too.
+            # Permit only this registered client's origin; exact callback matching
+            # remains enforced by authorize_request and the code exchange.
+            callback = urlsplit(client.redirect_uri)
+            callback_origin = callback.scheme + "://" + quote(callback.netloc, safe=".-:[]")
             name = html.escape(family.name)
             page = f"""<!doctype html><html lang="de"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>FamQuest verbinden</title>
@@ -234,7 +239,8 @@ Elternfreigaben bleiben erforderlich.</p>
                 headers={
                     **HEADERS,
                     "Content-Security-Policy": (
-                        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; "
+                        "default-src 'none'; style-src 'unsafe-inline'; "
+                        f"form-action 'self' {callback_origin}; "
                         "frame-ancestors 'none'; base-uri 'none'"
                     ),
                 },
