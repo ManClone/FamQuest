@@ -1,0 +1,134 @@
+# Update the EXISTING Container Station application famquest-live.
+# Import the tested image archive first. The existing cloudflared stays running.
+services:
+  live-db:
+    restart: unless-stopped
+    security_opt: &id001
+    - no-new-privileges:true
+    image: postgres:16-alpine
+    env_file: /share/Container/famquest-central-stage/postgres.env
+    entrypoint:
+    - /bin/sh
+    - -ec
+    command:
+    - test -s /var/lib/postgresql/data/PG_VERSION; test "$$(cat /var/lib/postgresql/data/PG_VERSION)" = 16; exec docker-entrypoint.sh postgres
+    volumes:
+    - live-db:/var/lib/postgresql/data
+    networks:
+    - data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U "$$POSTGRES_USER" -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  live-gateway:
+    restart: unless-stopped
+    security_opt: *id001
+    image: nginx:stable-alpine
+    entrypoint:
+    - nginx
+    - -c
+    - /live-config/nginx.conf
+    - -g
+    - daemon off;
+    volumes:
+    - live-config:/live-config:ro
+    networks:
+      front: {}
+      tunnel:
+        aliases:
+        - famquest-live-gateway
+    read_only: true
+    tmpfs:
+    - /tmp
+    - /var/cache/nginx
+    - /var/run
+  live-app:
+    restart: unless-stopped
+    security_opt: *id001
+    image: famquest:sternchen-review-20261109
+    entrypoint:
+    - python
+    - -c
+    command:
+    - 'import json, os, socket, subprocess
+
+      from pathlib import Path
+
+      values = json.loads(Path(''/live-config/runtime.json'').read_text())
+
+      os.environ.update(values)
+
+      subprocess.run([''python'', ''-m'', ''app.deployment_check''], check=True)
+
+      trusted = socket.gethostbyname(''live-gateway'')
+
+      os.execvp(''uvicorn'', [''uvicorn'', ''app.multitenant_app:create_app'', ''--factory'', ''--host'', ''0.0.0.0'', ''--port'', ''8080'', ''--proxy-headers'', ''--forwarded-allow-ips'', trusted, ''--log-level'', ''info''])
+
+      '
+    volumes:
+    - live-config:/live-config:ro
+    - live-uploads:/data/uploads
+    networks:
+    - front
+    - data
+    - egress
+    depends_on:
+      live-db:
+        condition: service_healthy
+      live-gateway:
+        condition: service_started
+    read_only: true
+    tmpfs:
+    - /tmp
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; req=urllib.request.Request('http://live-gateway:8080/api/health',headers={'Host':'famquest.websiteclone.de'}); res=urllib.request.urlopen(req,timeout=3); assert res.status==200
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    pull_policy: never
+  live-mcp:
+    restart: unless-stopped
+    security_opt: *id001
+    image: ghcr.io/manclone/famquest-mcp@sha256:31ef5593c50ae2db0edeac6d5d18b593aca5bd7d93fdd8d5131d30e0b4d2bb2e
+    command:
+    - python
+    - -c
+    - "import asyncio\nimport central_server\noriginal = central_server.CentralTransport.handle_async_request\nasync def supported_encoding(self, request):\n    request.headers['accept-encoding'] = 'gzip, deflate'\n    return await original(self, request)\ncentral_server.CentralTransport.handle_async_request = supported_encoding\nasyncio.run(central_server.main())\n"
+    environment:
+      FAMQUEST_PUBLIC_URL: https://famquest.websiteclone.de
+    depends_on:
+      live-app:
+        condition: service_healthy
+    networks:
+    - front
+    - egress
+    read_only: true
+    tmpfs:
+    - /tmp
+networks:
+  data:
+    internal: true
+  front:
+    internal: true
+  egress: {}
+  tunnel:
+    external: true
+    name: famquest_default
+volumes:
+  live-db:
+    external: true
+    name: famquest-release-v2-db
+  live-uploads:
+    external: true
+    name: famquest-release-v2-runtime-uploads
+  live-config:
+    external: true
+    name: famquest-live-config-v1

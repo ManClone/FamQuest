@@ -1,5 +1,51 @@
 # QNAP nach der Mehrfamilien-Migration bereinigen
 
+## Aktuelle Empfehlung: `famquest-live` behalten
+
+Die Umbenennung nach `famquest` ist zurückgestellt. Für den nächsten Schritt
+`docker-compose.qnap-live-update.yml` verwenden und ausschließlich die bestehende
+Container-Station-Anwendung `famquest-live` bearbeiten. Diese Vorlage enthält
+die vier bisherigen Dienste mit ihren bisherigen Netzwerken, externen Volumes,
+Runtime-/MCP-Korrekturen und dem geprüften lokalen Sternchen-Image. Der vorhandene
+Tunnel bleibt zunächst in `famquest`; dadurch wird beim App-Update kein Tunnel
+verschoben. Die Zusammenführungsvorlage weiter unten ist ein älterer Entwurf
+und soll für diesen Weg nicht angewendet werden.
+
+Der übermittelte tägliche Sicherungsjob sucht `famquest-live` über Compose-Labels
+und verwendet den gestoppten Helfer `famquest-live-manual-backup`. Beide bleiben
+bei diesem Weg erhalten, daher ist keine Umstellung der Dienstsuche nötig.
+`--check` prüft die Dienste und den Lock, erstellt aber kein neues Backup.
+Die tatsächliche Sicherung erfolgt weiterhin über `--run` des vorhandenen Jobs.
+Die Anwendung `famquest-live-manual-backup` samt Helfer vorerst nicht entfernen.
+Für eine spätere Übernahme dieses Helfers wird noch seine Compose-Konfiguration
+benötigt; der Zeitplanerjob enthält den eigentlichen Sicherungsbefehl nicht.
+
+Reihenfolge für den Betreiber:
+
+1. Bestehende private Compose-/Betriebskonfiguration sichern und einen aktuellen
+   vollständigen Lauf des bestehenden Sicherungsjobs bestätigen.
+2. Geprüftes Archiv `famquest-sternchen-review-20261109.tar.gz` auf den QNAP
+   übertragen, mit der bereitgestellten Prüfsumme prüfen und per `docker load`
+   importieren. Erwartete lokale Image-ID:
+   `sha256:7f946f7de8623e3e2dd71272928592ccb96ef5f659a4924917a3e3b22362c78a`.
+3. Die weiterhin ausstehende isolierte zentrale App-/OAuth-/MCP-Prüfung mit dem
+   Kandidaten durchführen. Die vorhandene Cloud-Abnahme verwendete eine lokale
+   Testfamilie und ersetzt diese zentrale Betriebsprobe nicht.
+4. Im geplanten Wartungsfenster die vorhandene Anwendung `famquest-live` mit der
+   neuen Vorlage aktualisieren. Dabei keine zweite Anwendung mit demselben
+   PostgreSQL-Volume starten, kein Volume löschen und keine DB-Migration anstoßen.
+   Der zentrale Start führt nur die bestehende lesende Deploymentprüfung aus.
+5. Anmeldung, vorhandene Familien, Uploads, Level-6-Baby/Interaktion und MCP
+   prüfen. Bestehenden Sicherungsjob erst mit `--check`, dann mit `--run` prüfen.
+6. Danach Tunnel und Backup-Helfer getrennt und geprüft in die Daueranwendung
+   integrieren; erst anschließend die belegten Altanwendungen entfernen.
+
+Es wurde weiterhin nichts auf dem NAS aktualisiert. Die Stage-Datei
+`/share/Container/famquest-central-stage/postgres.env`, der bisherige Tunnel und
+das Netzwerk `famquest_default` bleiben benötigt. Der endgültige Umfang ist
+fünf laufende Dienste plus gegebenenfalls ein gestoppter Backup-Helfer in einer
+Container-Station-Anwendung.
+
 Ziel ist eine Container-Station-Anwendung `famquest` mit App, PostgreSQL,
 Gateway, MCP und dem noch zu übernehmenden Cloudflare-Tunnel (fünf Container). Die Zeilen im Container-Station-Bild
 sind Anwendungen/Compose-Projekte; die Zahl rechts zählt ihre Container.
