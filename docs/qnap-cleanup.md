@@ -1,6 +1,6 @@
 # QNAP nach der Mehrfamilien-Migration bereinigen
 
-Ziel ist eine Container-Station-Anwendung `famquest-live` mit App, PostgreSQL,
+Ziel ist eine Container-Station-Anwendung `famquest` mit App, PostgreSQL,
 Gateway, MCP und dem noch zu übernehmenden Cloudflare-Tunnel (fünf Container). Die Zeilen im Container-Station-Bild
 sind Anwendungen/Compose-Projekte; die Zahl rechts zählt ihre Container.
 Die Dienste zu einem einzelnen Container zusammenzuführen ist für dieses
@@ -66,7 +66,7 @@ vollständigen Liste.
    und Zuordnung bereinigen. Kein globales `docker system prune`, `volume prune`
    oder `compose down -v` für diese Bestandsbereinigung verwenden.
 
-Ergebnis soll nur noch die Anwendung `famquest-live` in Container Station sein;
+Ergebnis soll nur noch die Anwendung `famquest` in Container Station sein;
 private Sicherungen und der dokumentierte Rückweg bleiben außerhalb dieser
 Anwendung erhalten. Eine automatische Löschliste aus den sichtbaren Namen wird
 nicht erstellt. Nach Eingang des Inventars werden die konkreten Löschkandidaten
@@ -149,3 +149,73 @@ Update-Abnahme erhalten. Andere NAS-Anwendungen sind außerhalb des Auftrags.
 Der Bericht wurde ausgewertet; es wurde weiterhin nichts auf dem QNAP geändert.
 Die nächsten Voraussetzungen sind die private Betriebs-/Backup-Zuordnung und
 der nach wie vor fehlende QNAP-Remotezugang dieser Cloud-Sitzung.
+
+
+## Vorbereitete Zusammenführung unter dem Namen `famquest`
+
+Nach Eingang beider Compose-Konfigurationen liegt die konkrete Vorlage in
+`docker-compose.qnap-consolidated.yml`. Sie verwendet die bestehenden Live-Images
+(einschließlich OAuth-/MCP-Startkorrekturen), die drei externen Live-Volumes,
+die bisherigen Dienstnamen `live-db`, `live-app`, `live-gateway`, `live-mcp`
+und zusätzlich `cloudflared`. Sternchens neues Image wird in diesem Schritt
+noch nicht eingesetzt. Die Umbenennung und das App-Update bleiben getrennt.
+
+Der Tunnel bleibt im externen Netzwerk `famquest_default`; der Gateway-Alias
+`famquest-live-gateway` bleibt erhalten. Die bisherigen vollständigen Live-DNS-
+Namen werden auf den neuen internen Netzwerken zusätzlich als Aliasse erhalten,
+damit private Runtime-/Nginx-Dateien diese weiterhin auflösen können.
+Die bestehende Tunnelidentität wird über die vorhandene `.env` eingebunden.
+Weder diese Datei noch das Runtime-Konfigurationsvolume gehören in Git.
+
+Erhalten bleiben müssen auch diese bestehenden Dateien und Ordner:
+
+- `/share/Container/famquest-central-stage/postgres.env`: weiter als `env_file`
+  der Live-Datenbank verwendet; ein Löschen des alten Stage-Ordners wäre deshalb
+  trotz später entbehrlicher Stage-Container falsch.
+- `/share/Container/famquest/.env`: enthält die bestehende Tunnelkonfiguration.
+- Live-Konfigurationsvolume, Live-Uploads und vollständige Backupverzeichnisse.
+
+### Noch vor der Umstellung klären
+
+Der tägliche Sicherungsjob wurde noch nicht übermittelt. Er kann auf
+`famquest-live-live-db-1`, andere Containernamen, `famquest-live_data` oder die
+alte Compose-Datei verweisen. Nach dem Projektwechsel heißen die Container zum
+Beispiel `famquest-live-db-1`; das interne Datennetz heißt `famquest_data`.
+DNS-Aliasse reparieren keine Docker-CLI-Namensreferenzen oder Netzwerkzuordnungen.
+Daher den bestehenden Job zuerst prüfen, seine Anpassung vorbereiten und vor
+Abschluss der Umstellung einen vollständigen Sicherungslauf nachweisen.
+
+### Geplanter Ablauf durch den Betreiber, noch nicht ausführen
+
+1. Bestehende Compose-Konfigurationen privat exportieren, aktuellen vollständigen
+   Sicherungslauf bestätigen und Backupjob-Anpassung vorbereiten. Die Vorlage
+   wurde lokal mit Compose geprüft; NAS-Dateien und geheimnisabhängiger Start
+   wurden damit nicht geprüft.
+2. Wartungsfenster: alte Anwendung `famquest` stoppen (einschließlich Tunnel und
+   alter DB); anschließend `famquest-live` vollständig und geordnet stoppen.
+   Neue und alte Live-Datenbank dürfen nie gleichzeitig auf dasselbe Volume
+   zugreifen. Die vier alten Live-Container müssen tatsächlich gestoppt sein.
+3. In Container Station die vorhandene Anwendung `famquest` bearbeiten und ihre
+   YAML durch `docker-compose.qnap-consolidated.yml` ersetzen. Keine weitere
+   Anwendung neben dem Livebetrieb starten und keine Daten/Volumes löschen.
+   Die bisherigen Legacy-Dienste `db`, `app`, `mcp` sind in der neuen Vorlage
+   nicht enthalten; falls Container Station sie als Altcontainer stehen lässt,
+   bleiben sie gestoppt, bis sie separat entfernt werden. Ein fehlgeschlagenes
+   Anlegen der neuen Dienste ist kein Grund, neue leere Volumes zu erzeugen.
+4. Fünf neue Dienste prüfen: DB und App gesund, Gateway/MCP/Tunnel laufend;
+   öffentliche Anmeldung, alle vorhandenen Familien und Uploads, Aufgaben sowie
+   OAuth/MCP prüfen. Den angepassten täglichen Backupjob vollständig ausführen.
+5. Erst nach erfolgreicher Prüfung alte Anwendungen gezielt entfernen, ohne
+   Datenvolumes, Bind-Mount-Verzeichnisse oder das externe Tunnelnetz zu löschen.
+   Alte Restore- und Stage-Systeme erst nach ihrer gesonderten Zuordnung abbauen.
+
+Rückweg vor dem nächsten App-Update: alle fünf neuen Dienste von `famquest`
+geordnet stoppen; alte `famquest-live`-Konfiguration mit denselben externen
+Volumes wieder starten, danach nur den bisherigen Tunnel aus der gesicherten
+alten `famquest`-Konfiguration starten (alte App/MCP/DB dabei nicht mitstarten).
+Auch beim Rückweg darf es nur einen PostgreSQL-Prozess auf dem Live-Volume und
+nur den beabsichtigten Tunnelbetrieb geben. Die alten Container/Konfigurationen
+bleiben bis zum Abschluss der Prüfungen erhalten.
+
+Die Vorlage ist ein geprüfter Konfigurationsentwurf, kein Nachweis einer
+bereits erfolgten NAS-Umstellung. Die produktive Ausführung bleibt beim Betreiber.
