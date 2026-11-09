@@ -51,7 +51,8 @@ wegen der weiterhin benötigten Dateien nicht pauschal gelöscht werden.
 ## App-Image
 
 Die Vorlage verwendet das geprüfte lokale Image
-`famquest:sternchen-review-20261109` mit `pull_policy: never`.
+`famquest:sternchen-review-20261109-aclfix` mit `pull_policy: never`.
+Der Suffix bezeichnet die zusätzlich erforderliche QNAP-ACL-Korrektur.
 Archiv und Prüfsumme wurden in der Cloud vorbereitet:
 
 - `/workspace/.famquest/famquest-sternchen-review-20261109.tar.gz`
@@ -157,3 +158,30 @@ bisherigen DB-Prozess geordnet stoppen. Dieselben externen Volumes weiter nutzen
 Anschließend den bisherigen Tunnel in `famquest` und den alten Backupjob wieder
 aktivieren. Der alte und der neue Backupjob dürfen nicht gleichzeitig laufen.
 Alte Konfigurationen und Container bleiben bis zur erfolgreichen Prüfung erhalten.
+
+
+## QNAP-ACL-Befund und Reparatur des Kandidaten
+
+Der NAS-Build des ursprünglichen Quellpakets hat POSIX-Zugriffs- und Default-ACLs
+auf Backend-Dateien übernommen. Normale Modi waren korrekt (`755`/`644`), aber
+der App-Benutzer konnte `app.deployment_check` und `app.multitenant_app` nicht
+lesen. Ein fehlendes Modul war hier die Folge der Zugriffsverweigerung.
+Die bisherigen statischen Dateiprüfungen erkannten dieses Backendproblem nicht.
+
+Der normale Dockerfile-Build führt jetzt `backend/docker-normalize-permissions.py`
+aus: explizite POSIX-ACLs der kopierten App-Dateien entfernen und danach die
+Dateimodi setzen. `.venv` und Symlink-Ziele bleiben unberührt. Der Prozess
+läuft danach weiterhin als normaler App-Benutzer.
+
+Für das bereits auf dem NAS gebaute Image `famquest:sternchen-review-20261109`
+gibt es `Dockerfile.qnap-aclfix`. Es kopiert nur dieses Hilfsskript und repariert
+die Berechtigungen im abgeleiteten Image. Mit `-f Dockerfile.qnap-aclfix` das neue
+Tag `famquest:sternchen-review-20261109-aclfix` bauen. NAS-Quelldateien,
+produktive Container und Datenvolumes werden dabei nicht verändert.
+
+Die zuvor dokumentierte Cloud-Image-ID gehört zum alten Cloud-Artefakt. Ein
+NAS-Build bzw. das abgeleitete ACL-Fix-Image hat eine eigene Image-ID; diese nach
+dem erfolgreichen lokalen Build erfassen. Vor der Umstellung die zentralen
+Modulimporte als App-Benutzer und danach die lesende zentrale Deploymentprüfung
+wiederholen. Die NAS-Prüfung und der neue vollständige zentrale Start sind noch
+nicht als erfolgreich behauptet.

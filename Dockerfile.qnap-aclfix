@@ -1,0 +1,8 @@
+# syntax=docker/dockerfile:1
+# Repair the already-built candidate; application source is unchanged.
+FROM famquest:sternchen-review-20261109 AS runtime
+USER root
+COPY backend/docker-normalize-permissions.py /tmp/famquest-normalize-permissions.py
+RUN python /tmp/famquest-normalize-permissions.py \
+    && rm /tmp/famquest-normalize-permissions.py
+USER app
