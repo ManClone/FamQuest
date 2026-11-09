@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import DragonIcon from '~icons/fluent-emoji-flat/dragon'
 
@@ -8,6 +8,7 @@ import { useParentMutation } from '../api/mutations'
 import { PROGRESS_KEY, useMemberProgress } from '../api/points'
 import { errorMessage } from '../errors'
 import { Alert, Button, TextField } from './ui'
+import { DragonModel } from './DragonModel'
 
 export function DragonCompanion({
   member,
@@ -34,10 +35,7 @@ export function DragonCompanion({
       className="flex min-w-0 flex-col gap-3 rounded-3xl border border-emerald-100 bg-emerald-50 p-4"
     >
       <div className="flex min-w-0 items-center gap-4">
-        <DragonIcon
-          className={compact ? 'size-20 shrink-0' : 'size-28 shrink-0'}
-          aria-hidden="true"
-        />
+        {compact && <DragonIcon className="size-20 shrink-0" aria-hidden="true" />}
         <div className="min-w-0">
           <p className="text-sm font-bold text-emerald-800">{t('dragon.title')}</p>
           <h2 className="text-2xl font-extrabold break-words text-slate-800">
@@ -51,6 +49,7 @@ export function DragonCompanion({
           {!compact && <p className="text-sm text-slate-600">{t('dragon.hint')}</p>}
         </div>
       </div>
+      {!compact && <DragonView key={member.id} level={data.level ?? 1} />}
       {!data.dragon_name && !naming && (
         <Button variant="secondary" onClick={() => setNaming(true)}>
           {t('dragon.name_action')}
@@ -84,4 +83,20 @@ export function DragonCompanion({
       )}
     </section>
   )
+}
+
+function DragonView({ level }: { level: number }) {
+  const { t } = useTranslation()
+  const [failed, setFailed] = useState(false)
+  const fail = useCallback(() => setFailed(true), [])
+  if (failed)
+    return (
+      <div className="flex flex-col items-center gap-2 py-4">
+        <DragonIcon className="size-28" aria-hidden="true" />
+        <p role="status" className="text-center text-sm text-slate-600">
+          {t('dragon.model_unavailable')}
+        </p>
+      </div>
+    )
+  return <DragonModel level={level} onError={fail} />
 }

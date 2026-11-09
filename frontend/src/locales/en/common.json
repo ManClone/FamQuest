@@ -1303,6 +1303,10 @@
     "name_action": "Name your dragon",
     "name": "Dragon name",
     "name_hint": "Choose the name together. It is set once and will be kept.",
-    "save": "Set name"
+    "save": "Set name",
+    "model_title": "Your dragon in 3D",
+    "model_loading": "Your dragon is on its way …",
+    "model_play": "Play",
+    "model_unavailable": "Your dragon is shown as an icon for now. You can keep doing your tasks as usual."
   }
 }

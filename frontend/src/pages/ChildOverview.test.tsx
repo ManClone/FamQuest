@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import i18n from '../i18n'
@@ -234,4 +234,23 @@ it('benennt den Drachen einmalig und lädt den gespeicherten Namen neu', async (
   expect(calls.find((call) => call.key === 'PUT /api/members/1/dragon')?.body).toEqual({
     name: 'Funki',
   })
+})
+
+it('keeps the saved dragon name and tasks available when the 3D viewer fails', async () => {
+  setup('/', { dragon_name: 'Sternchen', level: 6 })
+  const frame = (await screen.findByTitle('Your dragon in 3D')) as HTMLIFrameElement
+  expect(frame).toHaveAttribute('src', '/dragon3d/index.html?model=baby')
+  act(() =>
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: location.origin,
+        source: frame.contentWindow,
+        data: { type: 'dragon-error' },
+      }),
+    ),
+  )
+  expect(screen.queryByTitle('Your dragon in 3D')).toBeNull()
+  expect(screen.getByText(/Your dragon is shown as an icon/)).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Sternchen' })).toBeVisible()
+  expect(screen.getByText('Brush teeth')).toBeVisible()
 })

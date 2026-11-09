@@ -1303,6 +1303,10 @@
     "name_action": "Drachen benennen",
     "name": "Drachenname",
     "name_hint": "Wähle den Namen gemeinsam mit deinem Kind. Er wird einmalig festgelegt und bleibt erhalten.",
-    "save": "Namen festlegen"
+    "save": "Namen festlegen",
+    "model_title": "Dein Drache in 3D",
+    "model_loading": "Dein Drache kommt gleich …",
+    "model_play": "Spielen",
+    "model_unavailable": "Dein Drache wird gerade als Symbol angezeigt. Du kannst deine Aufgaben wie gewohnt erledigen."
   }
 }

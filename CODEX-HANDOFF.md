@@ -1,6 +1,38 @@
 # FamQuest – Übergabe an Codex Cloud
 
-## Als Nächstes
+## Fortsetzung in der Cloud (9. November 2026)
+
+Branch `codex/finalize-multitenant`, Basis `82e9b7a`. Die große Kinderkarte bindet
+jetzt den bestehenden Viewer ein; die kompakte Elternkarte behält ihr Symbol.
+Die zwölf ursprünglichen Wachstumsschwellen, der gespeicherte Name, XP-Regeln
+und Datenbankschemata bleiben erhalten. Deutsch und Englisch enthalten die
+Viewer-Texte und eine sichtbare Erklärung beim Rückfall auf das Drachensymbol.
+
+Die technische Browser-Abnahme auf dem gebauten App-Server ist erfolgreich:
+eine isolierte Testfamilie mit Tim und Sternchen erreicht durch Aufgaben-XP und
+Lob Level 6; geladen wird `Baby.glb`. Tippen/Spielen, Wechsel von Schale zu Baby,
+reduzierte Bewegung, ausgeblendete Seite, WebGL-Kontextverlust, fehlgeschlagener
+GLB-Download und erneutes Laden unter Aufgaben wurden geprüft. Die Browserprüfung
+verwendet eine lokale Testdatenbank, keine produktiven Familiendaten.
+
+Prüfungen: 366 Frontendtests mit einem Worker, neun gezielte Backendtests,
+Typprüfung, Lint und Produktionsbuild erfolgreich. Der parallele Frontend-Lauf
+hatte drei zeitabhängige Fehlschläge; die betroffenen Tests bestehen einzeln und
+im vollständigen Lauf mit einem Worker. `frontend/e2e/dragon.spec.ts` ist separat
+auf einer frischen Testdatenbank auszuführen (`npm run e2e -- dragon.spec.ts`).
+Die mitgelieferten Three.js-Dateien sind von React-Lintregeln ausgenommen; der
+eigene Viewer bleibt geprüft. Das Runtime-Image macht auch die statischen
+3D-Dateien für den nicht privilegierten App-Benutzer lesbar.
+
+Automatische Drachenreaktionen auf Lob oder Levelaufstieg sind weiterhin nicht
+angebunden; implementiert sind Wachstumsform und manuelles Spielen. Zentrale
+Anmeldung, Gateway und MCP wurden durch diese Integration nicht geändert.
+Das lokale Runtime-Image wurde zusätzlich als normaler App-Benutzer und in der
+englischen mobilen Kinderansicht geprüft. Vorbereitung und Grenzen stehen in
+[docs/sternchen-3d-update.md](docs/sternchen-3d-update.md).
+Die produktive QNAP-Umstellung erfolgt ausschließlich durch den Nutzer.
+
+## Ausgangslage der Übergabe bei `82e9b7a`
 
 Repository **ManClone/FamQuest**, Branch **codex/finalize-multitenant**. Aktueller Auftrag: den bereits erstellten animierten 3D-Drachen Sternchen in Tims Kinderansicht fertig integrieren und in einer Testumgebung prüfen.
 

@@ -16,13 +16,7 @@ const forms = [
   [70, 'ten'],
 ] as const
 
-export function DragonModel({
-  level,
-  onError,
-}: {
-  level: number
-  onError: () => void
-}) {
+export function DragonModel({ level, onError }: { level: number; onError: () => void }) {
   const model = forms.findLast(([threshold]) => level >= threshold)?.[1] ?? 'egg'
   return <DragonScene key={model} model={model} onError={onError} />
 }
@@ -55,16 +49,19 @@ function DragonScene({ model, onError }: { model: string; onError: () => void })
         send({ type: 'dragon-action', motion: model === 'egg' ? 'heart' : 'play' })
       }
     }
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting
-      syncVisibility()
-    })
-    observer.observe(element)
+    const observer =
+      typeof IntersectionObserver === 'undefined'
+        ? undefined
+        : new IntersectionObserver(([entry]) => {
+            visible = entry.isIntersecting
+            syncVisibility()
+          })
+    observer?.observe(element)
     window.addEventListener('message', receive)
     document.addEventListener('visibilitychange', syncVisibility)
     return () => {
       window.clearTimeout(timeout)
-      observer.disconnect()
+      observer?.disconnect()
       window.removeEventListener('message', receive)
       document.removeEventListener('visibilitychange', syncVisibility)
     }
@@ -76,6 +73,7 @@ function DragonScene({ model, onError }: { model: string; onError: () => void })
         ref={frame}
         src={`/dragon3d/index.html?model=${model}`}
         title={t('dragon.model_title')}
+        onError={onError}
         className="block h-72 w-full border-0 sm:h-80"
         sandbox="allow-scripts allow-same-origin"
       />

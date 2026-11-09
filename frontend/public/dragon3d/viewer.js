@@ -801,6 +801,7 @@ let parentSequence = null
 let parentModel = null
 let reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 const media = matchMedia('(prefers-reduced-motion: reduce)')
+paused = reduced || externallyPaused
 renderer.domElement.dataset.reduced = String(reduced)
 media.addEventListener('change', () => {
   reduced = media.matches
@@ -996,6 +997,8 @@ export function animationStatus() {
     lifeClock,
     paused,
     reduced,
+    externallyPaused,
+    hidden: document.hidden,
     camera: camera.position.toArray(),
     position: active?.group.position.toArray(),
   }
