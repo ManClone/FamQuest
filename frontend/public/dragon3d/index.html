@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Dragon</title
+  ><link rel="icon" href="data:," /><style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    #view {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at 50% 35%, #fff, #e5e6fb);
+      touch-action: pan-y;
+    }
+    canvas {
+      display: block;
+    }
+    #controls {
+      display: none;
+    }
+  </style>
+  <div id="view"></div>
+  <div id="controls">
+    <span id="status"></span><span id="caption"></span><button data-motion="wings"></button
+    ><button data-motion="rear"></button><button data-motion="happy"></button
+    ><button id="skeleton"></button>
+  </div>
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+  <script>
+    addEventListener('error', () => parent.postMessage({ type: 'dragon-error' }, location.origin))
+    addEventListener('unhandledrejection', () =>
+      parent.postMessage({ type: 'dragon-error' }, location.origin),
+    )
+  </script>
+  <script type="module" src="viewer.js"></script>
+</html>

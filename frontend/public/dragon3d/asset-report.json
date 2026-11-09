@@ -1,0 +1,74 @@
+[
+  {
+    "file": "Ei.glb",
+    "before": 42950396,
+    "after": 1470536,
+    "skins": 1
+  },
+  {
+    "file": "Baby.glb",
+    "before": 40722272,
+    "after": 1539752,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-2.glb",
+    "before": 38009180,
+    "after": 2104580,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-3.glb",
+    "before": 33466616,
+    "after": 2066836,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-4-v2.glb",
+    "before": 34159484,
+    "after": 2071704,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-5-v2.glb",
+    "before": 35341572,
+    "after": 2222380,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-5.glb",
+    "before": 35564184,
+    "after": 2189984,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-6.glb",
+    "before": 35216100,
+    "after": 2317960,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-7.glb",
+    "before": 33339060,
+    "after": 2053420,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-8.glb",
+    "before": 35181728,
+    "after": 2192760,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-9.glb",
+    "before": 34547480,
+    "after": 2323896,
+    "skins": 1
+  },
+  {
+    "file": "Stufe-10.glb",
+    "before": 34103404,
+    "after": 2347992,
+    "skins": 1
+  }
+]
