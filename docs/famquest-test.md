@@ -106,3 +106,24 @@ Test-CA: OAuth-Registrierung, Anmeldung, Zustimmung, PKCE-Codeaustausch,
 MCP-Initialisierung und angemeldetes `tools/list`. Es wurden keine produktiven
 Konten oder Daten verwendet. Die Vorbereitung wurde noch nicht auf dem QNAP
 installiert; dessen HTTPS-/Tunnelroute ist nach Erstellung separat zu prüfen.
+
+## Bestehenden A/B/C-Teststand übernehmen
+
+Am 10. November wurde der alte Stage-Cluster in die neuen, getrennten Volumes
+`famquest-test-db-v1` und `famquest-test-uploads-v1` kopiert. Die Quellen waren
+nicht von laufenden Containern benutzt. Eine isolierte SQL-Prüfung der Kopie
+zeigt Testfamilie A, B und C; Grasser ist darin ausdrücklich nicht enthalten.
+Die vier privaten Stage-Konfigurations-/Zugangsdateien wurden nach
+`/share/Container/famquest-test` kopiert. Hintergrundjobs sind dort deaktiviert.
+
+Für diesen vorhandenen Stand den Generator mit `--reuse-config` ausführen.
+Er erzeugt nur die fehlende Compose-/Gateway-Konfiguration und lässt die
+vorhandenen Passwörter/Zugänge erhalten. Bei vorhandenen Deploymentdateien
+oder abweichendem ursprünglichen HTTPS-Ursprung bricht er vor dem Schreiben ab.
+Den frischen Generatorpfad ohne diese Option nicht auf den kopierten Cluster
+anwenden: neu erzeugte Passwörter würden nicht zur Datenbank passen.
+
+Die zusätzliche Übernahme einer Grasser-Datenkopie aus der Live-Sicherung ist
+noch ausstehend. Registry-IDs und Datenbankzuordnungen nicht durch blindes
+Zusammenkopieren der beiden zentralen Registries überschreiben. A/B-Zugänge und
+Daten müssen erhalten bleiben; Live-Datenbanken bleiben unangetastet.

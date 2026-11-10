@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import tempfile
+import shutil
 import unittest
 from pathlib import Path
 
@@ -44,6 +45,43 @@ class PermanentTestPackage(unittest.TestCase):
                 MODULE.prepare(output, 'https://famtest.example.test', image,
                                '/share/Container/famquest-test')
             self.assertEqual(old, (output / 'postgres.env').read_bytes())
+
+    def test_reuse_keeps_copied_credentials_and_refuses_second_render(self):
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root) / 'source'
+            target = Path(root) / 'target'
+            target.mkdir()
+            MODULE.prepare(source, 'https://famtest.example.test', MODULE.DEFAULT_APP,
+                           '/share/Container/famquest-test')
+            private = ['postgres.env', 'runtime.env', 'bootstrap.env', 'TESTZUGAENGE-PRIVAT.txt']
+            for name in private:
+                shutil.copy2(source / name, target / name)
+            before = {name: (target / name).read_bytes() for name in private}
+            MODULE.configure_existing(target, 'https://famtest.example.test', MODULE.DEFAULT_APP,
+                                      '/share/Container/famquest-test', '192.168.1.2')
+            for name in ['postgres.env', 'TESTZUGAENGE-PRIVAT.txt']:
+                self.assertEqual(before[name], (target / name).read_bytes())
+            for name in ['runtime.env', 'bootstrap.env']:
+                self.assertTrue((target / name).read_bytes().startswith(before[name]))
+            with self.assertRaises(ValueError):
+                MODULE.configure_existing(target, 'https://famtest.example.test', MODULE.DEFAULT_APP,
+                                          '/share/Container/famquest-test')
+
+    def test_reuse_rejects_another_origin_before_writing_any_public_config(self):
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root) / 'source'
+            target = Path(root) / 'target'
+            target.mkdir()
+            MODULE.prepare(source, 'https://famtest.example.test', MODULE.DEFAULT_APP,
+                           '/share/Container/famquest-test')
+            for name in ['postgres.env', 'runtime.env', 'bootstrap.env', 'TESTZUGAENGE-PRIVAT.txt']:
+                shutil.copy2(source / name, target / name)
+            before = (target / 'runtime.env').read_bytes()
+            with self.assertRaises(ValueError):
+                MODULE.configure_existing(target, 'https://other.example.test', MODULE.DEFAULT_APP,
+                                          '/share/Container/famquest-test')
+            self.assertFalse((target / 'compose.yml').exists())
+            self.assertEqual(before, (target / 'runtime.env').read_bytes())
 
     def test_rolling_test_channels_use_always_and_keep_live_out(self):
         with tempfile.TemporaryDirectory() as root:
