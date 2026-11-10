@@ -1,0 +1,66 @@
+import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+SPEC = importlib.util.spec_from_file_location(
+    'prepare_test', Path(__file__).parents[1] / 'prepare-famquest-test.py'
+)
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+
+class PermanentTestPackage(unittest.TestCase):
+    def test_own_project_volumes_image_anchor_and_credentials(self):
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / 'private'
+            image = 'ghcr.io/manclone/famquest:test-' + 'a' * 40
+            MODULE.prepare(output, 'https://famtest.example.test', image,
+                           '/share/Container/famquest-test', '192.168.1.2')
+            compose = (output / 'compose.yml').read_text()
+            self.assertIn('name: famquest-test\n', compose)
+            self.assertIn('famquest-test-db-v1', compose)
+            self.assertIn('famquest-test-uploads-v1', compose)
+            self.assertNotIn('famquest-release', compose)
+            self.assertNotIn('famquest-live-config', compose)
+            self.assertNotIn('famquest-central-stage-db-v1', compose)
+            self.assertEqual(compose.count('image: *app-image'), 2)
+            self.assertEqual(compose.count(image), 1)
+            self.assertIn('192.168.1.2:11902:8080', compose)
+            self.assertIn('central-stage-mcp', (output / 'gateway.conf').read_text())
+            runtime = (output / 'runtime.env').read_text()
+            bootstrap = (output / 'bootstrap.env').read_text()
+            self.assertIn('POSTGRES_USER=unused_in_central_mode', runtime)
+            self.assertNotIn('STAGE_A_PARENT_PASSWORD', runtime)
+            self.assertIn('OAUTH_DYNAMIC_REGISTRATION=true', runtime)
+            self.assertNotEqual(runtime, bootstrap)
+            self.assertEqual((output / 'runtime.env').stat().st_mode & 0o777, 0o600)
+            metadata = json.loads((output / 'images.json').read_text())
+            self.assertEqual(metadata['app'], image)
+            self.assertEqual(metadata['project'], 'famquest-test')
+            old = (output / 'postgres.env').read_bytes()
+            with self.assertRaises(ValueError):
+                MODULE.prepare(output, 'https://famtest.example.test', image,
+                               '/share/Container/famquest-test')
+            self.assertEqual(old, (output / 'postgres.env').read_bytes())
+
+    def test_rejects_wrong_images_directory_host_and_origin_before_generation(self):
+        image = 'famquest:sternchen-review-20261109-aclfix'
+        cases = [
+            ('https://famtest.example.test', 'ghcr.io/manclone/famquest:latest', '/share/Container/famquest-test', '127.0.0.1'),
+            ('https://famtest.example.test', image, '/share/Container/famquest-live', '127.0.0.1'),
+            ('https://famtest.example.test', image, '/share/Container/famquest-test', '0.0.0.0;echo bad'),
+            ('http://famtest.example.test', image, '/share/Container/famquest-test', '127.0.0.1'),
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            for args in cases:
+                with self.subTest(args=args):
+                    output = Path(root) / 'private'
+                    with self.assertRaises(ValueError):
+                        MODULE.prepare(output, *args)
+                    self.assertFalse(output.exists())
+
+
+if __name__ == '__main__':
+    unittest.main()

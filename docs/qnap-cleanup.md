@@ -48,28 +48,25 @@ Volumes und Ordnern können bestehen bleiben, obwohl nur eine Anwendung in
 Container Station verbleibt. Die beiden alten Konfigurationsordner dürfen
 wegen der weiterhin benötigten Dateien nicht pauschal gelöscht werden.
 
-## App-Image
+## App-Image und Branches
 
-Die Vorlage verwendet das geprüfte lokale Image
-`famquest:sternchen-review-20261109-aclfix` mit `pull_policy: never`.
-Der Suffix bezeichnet die zusätzlich erforderliche QNAP-ACL-Korrektur.
-Archiv und Prüfsumme wurden in der Cloud vorbereitet:
+Der laufende NAS-Stand wurde zunächst als lokales
+`famquest:sternchen-review-20261109-aclfix` abgenommen. Am 10. November 2026
+wurde der Quellstand nach `main` übernommen. Ein Formatierungsfehler in einem
+OAuth-Test blockierte zunächst die Imageveröffentlichung; der reine Testfix
+`a14c99a` besteht nun beide GitHub-Prüfungen. `latest` wurde veröffentlicht und
+entspricht dem Manifest von
+`ghcr.io/manclone/famquest:sha-a14c99aa04b8f4c4aa997edb2fca26156c04dc2a`.
 
-- `/workspace/.famquest/famquest-sternchen-review-20261109.tar.gz`
-- `/workspace/.famquest/famquest-sternchen-review-20261109.tar.gz.sha256`
+Die finale Vorlage verwendet nun `ghcr.io/manclone/famquest:latest` mit
+`pull_policy: always`. Ein Start auf dem NAS wurde dadurch nicht automatisch
+umgestellt. Vor Aktualisierung des bestehenden Projekts die Registry-Version
+abrufen und den bisherigen lokalen Image-Tag als Rückweg behalten.
 
-Nach Übertragung die Prüfsumme des Archivs prüfen (die Prüfsummendatei enthält
-den Cloud-Dateipfad; zum lokalen Prüfen nur den Dateinamen anpassen), per
-`docker load` importieren und die Image-ID vergleichen:
-
-```
-sha256:7f946f7de8623e3e2dd71272928592ccb96ef5f659a4924917a3e3b22362c78a
-```
-
-Die Cloud-Browserabnahme, 366 Frontendtests, neun Backendtests und Runtime-
-Leserechteprüfung sind dokumentiert in `sternchen-3d-update.md`. Die neue
-zentrale App-/OAuth-/MCP-Prüfung auf einer isolierten Kopie steht noch aus.
-Die lokale Einfamilienprüfung ist kein Ersatz für diese Betriebsprobe.
+Für neue Änderungen existiert `codex/experiments`. Die dauerhafte, getrennte
+Testanwendung ist in `docs/famquest-test.md` beschrieben. Sie verwendet eigene
+Volumes, eigene Testkonten und `test-<Commit>`-Images; Produktion und Tests
+werden niemals auf dieselbe Datenbank geschaltet.
 
 ## Sicherungsjob
 

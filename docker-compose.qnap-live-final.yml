@@ -48,7 +48,7 @@ services:
   live-app:
     restart: unless-stopped
     security_opt: *id001
-    image: famquest:sternchen-review-20261109-aclfix
+    image: ghcr.io/manclone/famquest:latest
     entrypoint:
     - python
     - -c
@@ -93,7 +93,7 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
-    pull_policy: never
+    pull_policy: always
   live-mcp:
     restart: unless-stopped
     security_opt: *id001

@@ -1,0 +1,75 @@
+name: famquest-test
+x-app-image: &app-image "@@IMAGE@@"
+x-mcp-image: &mcp-image "@@MCP_IMAGE@@"
+services:
+  central-stage-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: "@@DIR@@/postgres.env"
+    volumes: ["test-db:/var/lib/postgresql/data"]
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  central-stage-init:
+    image: *app-image
+    restart: "no"
+    entrypoint: [python, -m, app.staging_bootstrap]
+    env_file: "@@DIR@@/bootstrap.env"
+    depends_on:
+      central-stage-db: {condition: service_healthy}
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+  central-stage-app:
+    image: *app-image
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /app/docker-entrypoint.stage.sh]
+    env_file: "@@DIR@@/runtime.env"
+    depends_on:
+      central-stage-init: {condition: service_completed_successfully}
+      central-stage-gateway: {condition: service_started}
+    volumes: ["test-uploads:/data/uploads"]
+    networks: [front, data]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+  central-stage-gateway:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports: ["@@LISTEN@@:11902:8080"]
+    volumes: ["@@DIR@@/gateway.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: [front]
+    security_opt: ["no-new-privileges:true"]
+  central-stage-mcp:
+    image: *mcp-image
+    restart: unless-stopped
+    command:
+      - python
+      - -c
+      - |
+        import asyncio
+        import central_server
+        original = central_server.CentralTransport.handle_async_request
+        async def supported_encoding(self, request):
+            request.headers['accept-encoding'] = 'gzip, deflate'
+            return await original(self, request)
+        central_server.CentralTransport.handle_async_request = supported_encoding
+        asyncio.run(central_server.main())
+    environment:
+      FAMQUEST_PUBLIC_URL: "@@ORIGIN@@"
+    depends_on:
+      central-stage-app: {condition: service_started}
+    networks: [front]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+networks:
+  data: {internal: true}
+  front: {}
+volumes:
+  test-db: {name: famquest-test-db-v1}
+  test-uploads: {name: famquest-test-uploads-v1}

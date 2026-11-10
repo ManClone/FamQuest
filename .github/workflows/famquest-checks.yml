@@ -1,9 +1,10 @@
 name: FamQuest predeployment checks
 on:
   push:
-    branches: [develop, main]
+    branches: [develop, main, codex/experiments]
   pull_request:
     branches: [develop, main]
+  workflow_dispatch:
 jobs:
   frontend:
     runs-on: ubuntu-latest
@@ -20,7 +21,7 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
-      - run: npm run test
+      - run: npm run test -- --maxWorkers=1
         working-directory: frontend
   backend:
     runs-on: ubuntu-latest
@@ -128,13 +129,12 @@ jobs:
             docker compose -f .central-stage/compose.yml down -v --remove-orphans
           fi
   publish-test-images:
-    # Only this repository's explicitly authorized draft branch may publish test
-    # images. Fork PRs cannot reach package credentials. Never touch :latest.
+    # Only pushes/manual runs on the experiments branch may publish test images.
+    # Fork PRs cannot reach package credentials. Production :latest stays separate.
     needs: [frontend, backend, docker, mcp, central-staging]
     if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'feature/multifamily-foundation'
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/codex/experiments'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -142,7 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -155,12 +155,12 @@ jobs:
           context: .
           target: runtime
           push: true
-          tags: ghcr.io/manclone/famquest:test-${{ github.event.pull_request.head.sha }}
-          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+          tags: ghcr.io/manclone/famquest:test-${{ github.event.pull_request.head.sha || github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
       - name: Publish verified central MCP test image
         uses: docker/build-push-action@v6
         with:
           context: mcp
           push: true
-          tags: ghcr.io/manclone/famquest-mcp:test-${{ github.event.pull_request.head.sha }}
-          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+          tags: ghcr.io/manclone/famquest-mcp:test-${{ github.event.pull_request.head.sha || github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
