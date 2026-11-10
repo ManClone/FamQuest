@@ -59,6 +59,8 @@ class PermanentTestPackage(unittest.TestCase):
             before = {name: (target / name).read_bytes() for name in private}
             MODULE.configure_existing(target, 'https://famtest.example.test', MODULE.DEFAULT_APP,
                                       '/share/Container/famquest-test', '192.168.1.2')
+            self.assertIn('test-db: {external: true, name: famquest-test-db-v1}', (target / 'compose.yml').read_text())
+            self.assertIn('test-uploads: {external: true, name: famquest-test-uploads-v1}', (target / 'compose.yml').read_text())
             for name in ['postgres.env', 'TESTZUGAENGE-PRIVAT.txt']:
                 self.assertEqual(before[name], (target / name).read_bytes())
             for name in ['runtime.env', 'bootstrap.env']:

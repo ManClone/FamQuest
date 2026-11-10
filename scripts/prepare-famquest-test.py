@@ -78,10 +78,14 @@ def configure_existing(
             raise ValueError("Copied origin differs; review before reusing the test registry")
         if values.get("POSTGRES_HOST") != "central-stage-db":
             raise ValueError("Copied DB host does not match the isolated test service")
-    return render_config(result, origin, image, target_dir, listen_host, mcp_image)
+    return render_config(
+        result, origin, image, target_dir, listen_host, mcp_image, existing_volumes=True
+    )
 
 
-def render_config(result, origin, image, target_dir, listen_host, mcp_image):
+def render_config(
+    result, origin, image, target_dir, listen_host, mcp_image, existing_volumes=False
+):
     origin = origin.rstrip("/")
     host = urlsplit(origin).netloc
     template = (ROOT / "docker-compose.test.template.yml").read_text()
@@ -93,6 +97,12 @@ def render_config(result, origin, image, target_dir, listen_host, mcp_image):
         "@@ORIGIN@@": origin,
     }.items():
         template = template.replace(key, value)
+    if existing_volumes:
+        for name in ("test-db", "test-uploads"):
+            template = template.replace(
+                f"{name}: {{name: famquest-{name}-v1}}",
+                f"{name}: {{external: true, name: famquest-{name}-v1}}",
+            )
     (result / "compose.yml").write_text(template)
     # Gateway resolves upstream names at request time, allowing image-only restarts.
     headers = f"""        proxy_set_header Host {host};
