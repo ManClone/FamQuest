@@ -4,6 +4,20 @@
 Docker verwendet gebaute Images, keine Git-Branches. Die Testanwendung bekommt
 neue Images ausdrücklich; die Live-Anwendung bleibt unabhängig davon bestehen.
 
+## Vereinbarter Standardablauf
+
+Dauerhaft bestehen nur `famquest-live` und `famquest-test`. Entwicklung und
+Experimente werden im Entwicklungsbranch vorbereitet, in ein Docker-Image
+gebaut und in derselben Testanwendung geprüft. `famquest-test` ist jeweils auf
+eine gewählte Version gepinnt; normale Updates bestehen aus Pull und Wechsel
+auf diese Version, ohne neue Anwendungen oder Testdatenbanken anzulegen.
+
+Nach Abnahme durch den Betreiber: geprüften Stand nach `main` übernehmen,
+CI und Veröffentlichung abwarten, dann `latest` gezielt in der bestehenden
+Live-Anwendung aktualisieren. Branch-Pushes verändern keine laufenden NAS-
+Anwendungen automatisch. Live bleibt auf `latest`, Test auf einem festen Tag
+oder Digest. Diese Vereinbarung steht auch in der rootweiten `AGENTS.md`.
+
 ## Images
 
 - Produktion: Die vorhandene main-Pipeline veröffentlicht nach erfolgreicher
