@@ -45,6 +45,17 @@ class PermanentTestPackage(unittest.TestCase):
                                '/share/Container/famquest-test')
             self.assertEqual(old, (output / 'postgres.env').read_bytes())
 
+    def test_rolling_test_channels_use_always_and_keep_live_out(self):
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / 'private'
+            MODULE.prepare(output, 'https://famtest.example.test', MODULE.DEFAULT_APP,
+                           '/share/Container/famquest-test')
+            compose = (output / 'compose.yml').read_text()
+            self.assertIn('"ghcr.io/manclone/famquest:test"', compose)
+            self.assertIn('"ghcr.io/manclone/famquest-mcp:test"', compose)
+            self.assertEqual(compose.count('pull_policy: always'), 3)
+            self.assertNotIn(':latest', compose)
+
     def test_rejects_wrong_images_directory_host_and_origin_before_generation(self):
         image = 'famquest:sternchen-review-20261109-aclfix'
         cases = [

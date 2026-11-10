@@ -14,20 +14,18 @@ SPEC = importlib.util.spec_from_file_location(
 )
 STAGE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(STAGE)
-DEFAULT_MCP = (
-    "ghcr.io/manclone/famquest-mcp@sha256:"
-    "31ef5593c50ae2db0edeac6d5d18b593aca5bd7d93fdd8d5131d30e0b4d2bb2e"
-)
+DEFAULT_APP = "ghcr.io/manclone/famquest:test"
+DEFAULT_MCP = "ghcr.io/manclone/famquest-mcp:test"
 
 
 def validate_image(image, repository, local=None):
-    if image == local:
+    if image == local or image == repository + ":test":
         return
     if not re.fullmatch(
         re.escape(repository) + r"(?::(?:sha|test)-[a-f0-9]{40}|@sha256:[a-f0-9]{64})", image
     ):
         raise ValueError(
-            "Use an immutable commit/digest image, not latest or an untrusted repository"
+            "Use the test channel or a commit/digest image from the expected repository"
         )
 
 
@@ -97,7 +95,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True)
     parser.add_argument("--origin", default="https://famtest.websiteclone.de")
-    parser.add_argument("--image", default="famquest:sternchen-review-20261109-aclfix")
+    parser.add_argument("--image", default=DEFAULT_APP)
     parser.add_argument("--target-dir", default="/share/Container/famquest-test")
     parser.add_argument("--listen-host", default="127.0.0.1")
     parser.add_argument("--mcp-image", default=DEFAULT_MCP)

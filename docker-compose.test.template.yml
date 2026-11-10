@@ -15,6 +15,7 @@ services:
       retries: 20
   central-stage-init:
     image: *app-image
+    pull_policy: always
     restart: "no"
     entrypoint: [python, -m, app.staging_bootstrap]
     env_file: "@@DIR@@/bootstrap.env"
@@ -26,6 +27,7 @@ services:
     security_opt: ["no-new-privileges:true"]
   central-stage-app:
     image: *app-image
+    pull_policy: always
     restart: unless-stopped
     entrypoint: [/bin/sh, /app/docker-entrypoint.stage.sh]
     env_file: "@@DIR@@/runtime.env"
@@ -46,6 +48,7 @@ services:
     security_opt: ["no-new-privileges:true"]
   central-stage-mcp:
     image: *mcp-image
+    pull_policy: always
     restart: unless-stopped
     command:
       - python

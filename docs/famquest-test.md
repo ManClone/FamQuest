@@ -2,38 +2,35 @@
 
 `main` ist der freigegebene Quellstand, `codex/experiments` der Entwicklungszweig.
 Docker verwendet gebaute Images, keine Git-Branches. Die Testanwendung bekommt
-neue Images ausdrücklich; die Live-Anwendung bleibt unabhängig davon bestehen.
+neue Images durch manuelles Aktualisieren; die Live-Anwendung bleibt unabhängig davon bestehen.
 
 ## Vereinbarter Standardablauf
 
-Dauerhaft bestehen nur `famquest-live` und `famquest-test`. Entwicklung und
-Experimente werden im Entwicklungsbranch vorbereitet, in ein Docker-Image
-gebaut und in derselben Testanwendung geprüft. `famquest-test` ist jeweils auf
-eine gewählte Version gepinnt; normale Updates bestehen aus Pull und Wechsel
-auf diese Version, ohne neue Anwendungen oder Testdatenbanken anzulegen.
+Dauerhaft bestehen nur `famquest-live` und `famquest-test`. Live verwendet
+`ghcr.io/manclone/famquest:latest`, Test `ghcr.io/manclone/famquest:test` und
+`ghcr.io/manclone/famquest-mcp:test`. Die FamQuest-Dienste verwenden
+`pull_policy: always`. Der Betreiber muss für normale Updates nur die bestehende
+Anwendung in Container Station neu erstellen/aktualisieren. Docker zieht die
+aktuell veröffentlichten Images; kein manuelles Ändern der Imageversion nötig.
 
-Nach Abnahme durch den Betreiber: geprüften Stand nach `main` übernehmen,
-CI und Veröffentlichung abwarten, dann `latest` gezielt in der bestehenden
-Live-Anwendung aktualisieren. Branch-Pushes verändern keine laufenden NAS-
-Anwendungen automatisch. Live bleibt auf `latest`, Test auf einem festen Tag
-oder Digest. Diese Vereinbarung steht auch in der rootweiten `AGENTS.md`.
+Die Test-Pinnung auf eine unveränderliche Version wurde damit auf ausdrücklichen
+Wunsch durch den festen Aktualisierungskanal `test` ersetzt. Feste Commit-Tags
+bleiben zusätzlich für Rücksprünge und nachvollziehbare Abnahmen verfügbar.
+Ein neuer Branch-Push allein ändert keine laufenden Container.
+
+Nach Testabnahme durch den Betreiber: geprüften Stand nach `main` übernehmen,
+CI und Veröffentlichung abwarten, dann die bestehende Live-Anwendung
+aktualisieren. Diese Vereinbarung steht auch in der rootweiten `AGENTS.md`.
 
 ## Images
 
-- Produktion: Die vorhandene main-Pipeline veröffentlicht nach erfolgreicher
-  Sicherheitsprüfung `ghcr.io/manclone/famquest:latest` und `:sha-<voller Commit>`.
-- Experimente: Die Prüfungen auf `codex/experiments` veröffentlichen nach Erfolg
-  `ghcr.io/manclone/famquest:test-<voller Commit>` und entsprechend das MCP-Image.
-- Auf dem NAS bevorzugt die Commit-Referenz einsetzen. `latest` bezeichnet nur
-  die zuletzt erfolgreich veröffentlichte main-Version, nicht zwingend den
-  momentanen Git-Commit. Ein fehlgeschlagener Check aktualisiert kein Image.
-
-Am 10. November 2026 wurde `main` auf `a14c99a` korrigiert (nur Formatierung
-einer OAuth-Testassertion). Beide GitHub-Prüfungen bestanden; die Registry-
-Veröffentlichung wurde bestätigt. `latest` und `sha-a14c99aa04b8f4c4aa997edb2fca26156c04dc2a`
-haben identische Manifeste. Die finale Live-Vorlage verwendet jetzt `latest`
-mit `pull_policy: always`. Der tatsächliche NAS-Wechsel wird vom Betreiber
-ausgeführt; die Cloud hat den laufenden Container nicht verändert. Ein Push führt kein NAS-Update aus.
+- main veröffentlicht nach erfolgreichen Prüfungen `:latest` und `:sha-<Commit>`.
+- `codex/experiments` veröffentlicht nach erfolgreichen Prüfungen für App und
+  MCP jeweils `:test` und `:test-<Commit>`. Dieser Workflow verändert `latest` nicht.
+- Bei fehlgeschlagenen Prüfungen bleibt der jeweilige Kanal auf dem zuletzt
+  erfolgreich veröffentlichten Stand.
+- Am 10. November 2026 wurde `latest` für main `a14c99a` geprüft. Der Betreiber
+  hat die Live-Anwendung danach auf die Registry-Referenz umgestellt.
 
 ## Erstmalige Vorbereitung
 
@@ -75,23 +72,21 @@ Secure-Cookies verwendet. Die Testfamilien-Zugänge stehen nur lokal in
 
 ## Spätere Updates
 
-1. Erfolgreiches Testimage aus GitHub Actions auswählen und auf dem NAS abrufen.
-2. Testdaten/Uploads vor relevanten Änderungen sichern.
-3. In der Test-YAML nur `x-app-image` durch den neuen `test-<Commit>` ersetzen.
-   Dieser eine YAML-Anker wird von App und Initialisierungsdienst verwendet.
-   Bei Änderungen am MCP-Dienst zusätzlich `x-mcp-image` aktualisieren.
-4. Bestehende Anwendung **famquest-test** aktualisieren. Volumes behalten,
-   keine neue Anwendung und keine neuen Testkonten erzeugen.
-5. Anmeldung beider Familien, Rechte, Aufgaben, Drachenkarte und gegebenenfalls
-   MCP prüfen. Erst danach den Entwicklungsstand nach `main` übernehmen.
+1. Entwicklung nach `codex/experiments` pushen und erfolgreiche Prüfungen sowie
+   Veröffentlichung der beiden Test-Images abwarten.
+2. Bei relevanten Änderungen Testdaten/Uploads sichern.
+3. Bestehende Anwendung `famquest-test` in Container Station neu erstellen bzw.
+   aktualisieren, ohne ihre Datenvolumes zu löschen. Die beiden `test`-Tags und
+   `pull_policy: always` bleiben in der YAML unverändert.
+4. Anmeldung, Familienrechte, Aufgaben, Drachenkarte und gegebenenfalls MCP prüfen.
+5. Nach Abnahme geprüften Stand nach `main` übernehmen. Veröffentlichung von
+   `latest` abwarten und anschließend `famquest-live` gezielt aktualisieren.
 
-Bei reinen App-Änderungen genügt damit normalerweise der Imagewechsel.
-Schemaänderungen benötigen eine ausdrücklich geplante Testmigration; der
-Start prüft Schemastände und migriert vorhandene Daten nicht heimlich.
-Insbesondere der Erstinitialisierer ist kein allgemeines Updatewerkzeug.
-`app.staging_smoke` setzt die unveränderten generierten Testdaten voraus und
-ist für automatisierte Erstabnahmen geeignet; spätere manuelle Testdaten können
-zusätzliche gezielte Prüfungen erfordern.
+Schemaänderungen benötigen zusätzlich eine ausdrücklich geplante Testmigration.
+Der Start prüft Schemastände und migriert vorhandene Daten nicht heimlich.
+Der Erstinitialisierer ist kein allgemeines Updatewerkzeug. Für Rücksprünge kann
+bewusst ein festes `test-<Commit>`-Image gewählt werden; das ist eine Ausnahme
+vom normalen Aktualisierungskanal.
 
 ## Isolationsregeln
 

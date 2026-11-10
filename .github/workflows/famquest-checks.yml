@@ -155,12 +155,16 @@ jobs:
           context: .
           target: runtime
           push: true
-          tags: ghcr.io/manclone/famquest:test-${{ github.event.pull_request.head.sha || github.sha }}
+          tags: |
+            ghcr.io/manclone/famquest:test-${{ github.event.pull_request.head.sha || github.sha }}
+            ghcr.io/manclone/famquest:test
           labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
       - name: Publish verified central MCP test image
         uses: docker/build-push-action@v6
         with:
           context: mcp
           push: true
-          tags: ghcr.io/manclone/famquest-mcp:test-${{ github.event.pull_request.head.sha || github.sha }}
+          tags: |
+            ghcr.io/manclone/famquest-mcp:test-${{ github.event.pull_request.head.sha || github.sha }}
+            ghcr.io/manclone/famquest-mcp:test
           labels: org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
