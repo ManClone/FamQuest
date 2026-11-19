@@ -1,6 +1,7 @@
 """Create families only in explicitly prepared, empty databases using dedicated roles."""
 
 import logging
+import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -27,10 +28,19 @@ class CreationRequest(BaseModel):
     family_name: str = Field(min_length=1, max_length=100)
     parent_name: str = Field(min_length=1, max_length=50)
     parent_email: Email
-    password: SecretStr = Field(min_length=16, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128)
     language: Literal["de", "en"] = "de"
     timezone: str = Field(default="Europe/Berlin", max_length=64)
     confirmed: Literal[True]
+
+    @field_validator("password")
+    @classmethod
+    def password_characters(cls, value):
+        secret = value.get_secret_value()
+        categories = {unicodedata.category(character) for character in secret}
+        if not {"Lu", "Ll"} <= categories or not any("0" <= c <= "9" for c in secret):
+            raise ValueError("Password requires an uppercase letter, lowercase letter and digit")
+        return value
 
     @field_validator("family_name", "parent_name")
     @classmethod

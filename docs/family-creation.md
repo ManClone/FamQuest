@@ -60,7 +60,8 @@ vorbereiten. `--spare-families 0` lässt sie zunächst weg, damit CI den nachtr�
 ## Bedienablauf
 
 - „Familie anlegen“ öffnen, Familienname und Name/E-Mail des Elternteils eingeben.
-- Ein neues unabhängiges Anfangspasswort (16–128 Zeichen) zweimal eingeben, Sprache und
+- Ein neues unabhängiges Anfangspasswort (8–128 Zeichen, mindestens ein Großbuchstabe,
+  ein Kleinbuchstabe und eine Zahl) zweimal eingeben, Sprache und
   Zeitzone wählen und die Anlage ausdrücklich bestätigen. Die tatsächliche Kennworteingabe
   erfolgt durch den Nutzer; das Passwort wird danach nicht wieder angezeigt.
 - Die neue Familie erhält nur die Rolle `parent`, niemals Betreiberrechte. Zunächst gibt es

@@ -16,7 +16,7 @@ from app.operator_setup import create_operator, migrate_creation_registry
 from app.security import verify_secret
 from tests.test_operator_console import NoFamilyAccess, Registry
 
-PASSWORD = "new-independent-parent-password"
+PASSWORD = "New-independent-parent-password1"
 
 
 @pytest.fixture
@@ -70,6 +70,36 @@ def payload(**extra):
     }
 
 
+@pytest.mark.parametrize("password", ["Abcd1234", "Äbcd1234"])
+def test_eight_character_parent_password_is_accepted(creation_setup, password):
+    client, registry, headers, calls, _ = creation_setup
+    response = client.post(
+        "/operator/api/family-creations", json=payload(password=password), headers=headers
+    )
+    assert response.status_code == 201
+    assert len(calls) == 1
+    with registry.session() as db:
+        parent = db.scalar(select(Identity).where(Identity.email == "parent-new@example.test"))
+        assert verify_secret(parent.password_hash, password)
+
+
+@pytest.mark.parametrize(
+    "password", ["Abc1234", "abcd1234", "ABCD1234", "Abcdefgh", "Aa1" + "x" * 126]
+)
+def test_invalid_parent_password_never_reserves_or_seeds_a_slot(creation_setup, password):
+    client, registry, headers, calls, _ = creation_setup
+    response = client.post(
+        "/operator/api/family-creations", json=payload(password=password), headers=headers
+    )
+    assert response.status_code == 422
+    assert password not in response.text
+    assert calls == []
+    assert client.get("/operator/api/capabilities").json()["family_creation_capacity"] == 1
+    with registry.session() as db:
+        assert db.scalar(select(Tenant)) is None
+        assert db.scalar(select(FamilyCreation)) is None
+
+
 def test_creation_reserves_dedicated_slot_and_parent_only_after_seed(creation_setup):
     client, registry, headers, calls, _ = creation_setup
     assert client.get("/operator/api/capabilities").json()["family_creation_capacity"] == 1
@@ -96,7 +126,7 @@ def test_replay_never_reseeds_or_changes_password_and_conflicts_are_rejected(cre
     first = client.post("/operator/api/family-creations", json=request, headers=headers).json()
     second = client.post(
         "/operator/api/family-creations",
-        json={**request, "password": "a-different-long-password"},
+        json={**request, "password": "A-different-long-password1"},
         headers=headers,
     )
     assert second.json() == first and len(calls) == 1

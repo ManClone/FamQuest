@@ -365,7 +365,8 @@ def run(settings=None, environ=None):
                 "family_creation_capacity"
             ]
             require(capacity > 0, "prepared spare family capacity")
-            new_email, new_password = f"created-{uuid4().hex}@famquest.test", new_token()
+            new_email = f"created-{uuid4().hex}@famquest.test"
+            new_password = "Aa1" + new_token()
             creation = {
                 "request_key": str(uuid4()),
                 "family_name": f"Neue Testfamilie {uuid4().hex[:8]}",

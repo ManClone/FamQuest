@@ -18,7 +18,7 @@ from app.tenant_provisioning import quoted_identifier
 from tests.test_central_auth import ORIGIN
 from tests.test_multitenant_postgres import isolated_databases as isolated_databases
 
-PASSWORD = "new-family-parent-test-password"
+PASSWORD = "New-family-parent-test-password1"
 
 
 def test_existing_family_database_is_never_reused(isolated_databases):
@@ -54,7 +54,7 @@ def test_parallel_creation_uses_one_new_database_and_parent_role(isolated_databa
             "family_name": "New isolated family",
             "parent_name": "New parent",
             "parent_email": "created@example.invalid",
-            "password": PASSWORD,
+            "password": "Abcd1234",
             "language": "de",
             "timezone": "Europe/Berlin",
             "confirmed": True,
@@ -86,7 +86,7 @@ def test_parallel_creation_uses_one_new_database_and_parent_role(isolated_databa
             assert (
                 client.post(
                     "/api/auth/login",
-                    json={"email": "created@example.invalid", "password": PASSWORD},
+                    json={"email": "created@example.invalid", "password": request["password"]},
                 ).status_code
                 == 200
             )
